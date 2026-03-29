@@ -83,24 +83,37 @@ else:
                     st.success("Registrato!")
                     st.rerun()
 
-    # --- 2. ANAGRAFICA & NOTE ---
+        # --- 2. ANAGRAFICA & NOTE ---
     elif menu == "Anagrafica & Note":
         st.title("📝 Gestione Documentale")
         with st.form("nuovo_p"):
             nome = st.text_input("Nuovo Paziente")
             if st.form_submit_button("Aggiungi"):
                 db_query("INSERT INTO pazienti (nome) VALUES (?)", (nome,), commit=True)
+                st.success("Paziente aggiunto!")
                 st.rerun()
         
         st.divider()
-        p_scelto = st.selectbox("Seleziona Paziente per vedere le Note", [p[1] for p in db_query("SELECT nome FROM pazienti")])
-        if p_scelto:
-            pid = db_query("SELECT id FROM pazienti WHERE nome=?", (p_scelto,))[0][0]
-            eventi = db_query("SELECT data, umore, nota FROM eventi WHERE p_id=? ORDER BY id DESC", (pid,))
-            for e in eventi:
-                st.info(f"**Data:** {e[0]} | **Stato:** {e[1]}")
-                st.write(f"✍️ {e[2] if e[2] else 'Nessuna nota inserita.'}")
-                st.divider()
+        
+        # Recuperiamo la lista nomi
+        lista_nomi = [p[1] for p in db_query("SELECT nome FROM pazienti")]
+        
+        if not lista_nomi:
+            st.warning("Nessun paziente in archivio. Aggiungine uno sopra.")
+        else:
+            p_scelto = st.selectbox("Seleziona Paziente per vedere le Note", lista_nomi)
+            if p_scelto:
+                pid_res = db_query("SELECT id FROM pazienti WHERE nome=?", (p_scelto,))
+                if pid_res:
+                    pid = pid_res[0][0]
+                    eventi = db_query("SELECT data, umore, nota FROM eventi WHERE p_id=? ORDER BY id DESC", (pid,))
+                    if not eventi:
+                        st.write("Nessuna nota presente per questo paziente.")
+                    for e in eventi:
+                        st.info(f"**Data:** {e[0]} | **Stato:** {e[1]}")
+                        st.write(f"✍️ {e[2] if e[2] else 'Nessuna nota inserita.'}")
+                        st.divider()
+
 
     # --- 3. ANALISI STORICA ---
     elif menu == "Analisi Storica":
