@@ -3,57 +3,56 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
-# --- 1. CONFIGURAZIONE STILE REPLIT ---
+# --- 1. CONFIGURAZIONE GRAFICA REPLIT MODERN ---
 st.set_page_config(
     page_title="REMS Connect",
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded" # <--- MENU ORA SEMPRE APERTO
 )
 
-# Iniezione CSS per il tema Dark e font professionale
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
-    
+    /* Sfondo grigio scuro Replit (non nero) */
     .stApp {
-        background-color: #0e1525;
+        background-color: #1c2333; 
         color: #f5f9fc;
     }
     
-    html, body, [class*="css"], .stMarkdown, p {
-        font-family: 'Fira Code', monospace !important;
-    }
-
-    /* Sidebar */
+    /* Sidebar più chiara per staccare dal fondo */
     [data-testid="stSidebar"] {
-        background-color: #1c2333;
-        border-right: 1px solid #303b4d;
+        background-color: #2d3548;
+        border-right: 1px solid #3d475c;
     }
 
-    /* Titoli in Azzurro Replit */
+    /* Testi e Sidebar Menu */
+    .st-emotion-cache-10trblm, p, .stMarkdown {
+        color: #f5f9fc !important;
+    }
+
+    /* Titoli in Azzurro Vivace */
     h1, h2, h3 {
-        color: #00adff !important;
-        font-weight: 500;
+        color: #38bdf8 !important;
     }
 
-    /* Bottoni */
+    /* Bottoni stile Replit (Arrotondati e Blu) */
     .stButton>button {
-        background-color: #0053a6;
+        background-color: #0073e6;
         color: white;
-        border-radius: 8px;
+        border-radius: 12px;
         border: none;
-        width: 100%;
-    }
-    
-    /* Input Fields */
-    input, textarea {
-        background-color: #1c2333 !important;
-        color: white !important;
-        border: 1px solid #303b4d !important;
+        padding: 0.5rem 1rem;
+        font-weight: bold;
     }
 
-    /* Nasconde menu Streamlit */
+    /* Expander (Card pazienti) */
+    .stDetails {
+        background-color: #2d3548 !important;
+        border: 1px solid #3d475c !important;
+        border-radius: 12px;
+    }
+
+    /* Nasconde loghi Streamlit per pulizia */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
@@ -72,65 +71,77 @@ def db_query(query, params=(), commit=False):
     conn.close()
     return res
 
-# --- 3. ACCESSO ---
+# --- 3. LOGICA DI ACCESSO ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
     st.title("🏥 REMS Connect")
+    st.write("Area Riservata - Accesso Protetto")
     pwd = st.text_input("Codice Identificativo", type="password")
-    if st.button("Entra nel Sistema"):
+    if st.button("Accedi"):
         if pwd == "rems2026":
             st.session_state.auth = True
             st.rerun()
         else:
-            st.error("Codice errato")
+            st.error("Codice non valido")
     st.stop()
 
 # --- 4. INTERFACCIA PRINCIPALE ---
-st.sidebar.title("Menu")
-menu = st.sidebar.radio("Vai a:", ["Dashboard Umore", "Anagrafica & Note"])
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2966/2966327.png", width=80)
+st.sidebar.title("REMS Connect")
+menu = st.sidebar.radio("Navigazione", ["📊 Dashboard Umore", "📝 Gestione Pazienti"])
 
-if menu == "Dashboard Umore":
-    st.title("📊 Stato Attuale")
+if menu == "📊 Dashboard Umore":
+    st.title("Stato Attuale")
     pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
+    
+    if not pazienti:
+        st.info("Benvenuto! Vai nel menu 'Gestione Pazienti' per aggiungere il primo record.")
     
     for p_id, nome in pazienti:
         with st.expander(f"👤 {nome}"):
             col1, col2 = st.columns([1, 2])
             with col1:
-                umore = st.select_slider(f"Stato per {nome}", options=["Cupo", "Deflesso", "Stabile"], value="Stabile", key=f"u_{p_id}")
+                umore = st.select_slider(f"Stato", options=["Cupo", "Deflesso", "Stabile"], value="Stabile", key=f"u_{p_id}")
             with col2:
-                nota = st.text_area("Nota clinica rapida", key=f"n_{p_id}")
-                if st.button("Registra Aggiornamento", key=f"b_{p_id}"):
+                nota = st.text_area("Nota clinica", key=f"n_{p_id}", placeholder="Scrivi qui l'andamento...")
+                if st.button("Aggiorna Diario", key=f"b_{p_id}"):
                     data_ora = datetime.now().strftime("%d/%m/%Y %H:%M")
                     db_query("INSERT INTO eventi (p_id, data, umore, nota) VALUES (?,?,?,?)", 
                              (p_id, data_ora, umore, nota), commit=True)
-                    st.success("Registrato!")
+                    st.success(f"Dato salvato per {nome}")
 
-elif menu == "Anagrafica & Note":
-    st.title("📝 Gestione Pazienti")
+elif menu == "📝 Gestione Pazienti":
+    st.title("Archivio Anagrafico")
     
-    with st.expander("➕ Aggiungi Nuovo"):
+    # Aggiunta
+    with st.expander("➕ Inserisci Nuovo Paziente"):
         nuovo_n = st.text_input("Nome e Cognome")
-        if st.button("Salva in Archivio"):
-            db_query("INSERT INTO pazienti (nome) VALUES (?)", (nuovo_n,), commit=True)
-            st.rerun()
+        if st.button("Registra"):
+            if nuovo_n:
+                db_query("INSERT INTO pazienti (nome) VALUES (?)", (nuovo_n,), commit=True)
+                st.success("Paziente registrato!")
+                st.rerun()
 
     st.divider()
     
+    # Storico e Modifiche
     pazienti_raw = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     if pazienti_raw:
-        opzioni = {f"{p[1]} (ID: {p[0]})": p[0] for p in pazienti_raw}
-        scelta = st.selectbox("Seleziona per storico o modifica", list(opzioni.keys()))
+        opzioni = {f"{p[1]}": p[0] for p in pazienti_raw}
+        scelta = st.selectbox("Seleziona Paziente", list(opzioni.keys()))
         p_id_scelto = opzioni[scelta]
         
-        if st.button("Elimina Paziente selezionato"):
+        if st.button("🗑️ Elimina Paziente (Azione Irreversibile)"):
             db_query("DELETE FROM pazienti WHERE id=?", (p_id_scelto,), commit=True)
+            db_query("DELETE FROM eventi WHERE p_id=?", (p_id_scelto,), commit=True)
             st.rerun()
             
         st.subheader("Diario Storico")
         eventi = db_query("SELECT data, umore, nota FROM eventi WHERE p_id=? ORDER BY id DESC", (p_id_scelto,))
+        if not eventi:
+            st.write("Nessuna nota presente.")
         for e in eventi:
-            st.markdown(f"**{e[0]}** - Stato: `{e[1]}`")
-            st.write(e[2])
+            st.info(f"📅 **{e[0]}** | Stato: **{e[1]}**")
+            st.write(f"_{e[2]}_")
             st.divider()
