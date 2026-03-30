@@ -32,6 +32,12 @@ def db_query(query, params=(), commit=False):
         res = c.fetchall()
     conn.close()
     return res
+def cancella_paziente(p_id):
+    db_query("DELETE FROM eventi WHERE p_id=?", (p_id,), commit=True)
+    db_query("DELETE FROM pazienti WHERE id=?", (p_id,), commit=True)
+
+def rinomina_paziente(p_id, nuovo_nome):
+    db_query("UPDATE pazienti SET nome=? WHERE id=?", (nuovo_nome, p_id), commit=True)
 
 # --- LOGICA APP ---
 init_db()
@@ -83,36 +89,62 @@ else:
                     st.success("Registrato!")
                     st.rerun()
 
-        # --- 2. ANAGRAFICA & NOTE ---
+    # --- 2. ANAGRAFICA & NOTE ---
     elif menu == "Anagrafica & Note":
-        st.title("📝 Gestione Documentale")
-        with st.form("nuovo_p"):
-            nome = st.text_input("Nuovo Paziente")
-            if st.form_submit_button("Aggiungi"):
-                db_query("INSERT INTO pazienti (nome) VALUES (?)", (nome,), commit=True)
-                st.success("Paziente aggiunto!")
-                st.rerun()
+        st.title("📝 Gestione Anagrafica")
+        
+        # Sottosezione: Aggiunta
+        with st.expander("➕ Aggiungi Nuovo Paziente"):
+            with st.form("nuovo_p"):
+                nome = st.text_input("Nome e Cognome")
+                if st.form_submit_button("Salva"):
+                    db_query("INSERT INTO pazienti (nome) VALUES (?)", (nome,), commit=True)
+                    st.success("Paziente aggiunto!")
+                    st.rerun()
         
         st.divider()
         
-        # Recuperiamo la lista nomi
-        lista_nomi = [p[1] for p in db_query("SELECT nome FROM pazienti")]
+        # Recuperiamo la lista con gli ID per distinguere i doppioni
+        pazienti_raw = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
         
-        if not lista_nomi:
-            st.warning("Nessun paziente in archivio. Aggiungine uno sopra.")
+        if not pazienti_raw:
+            st.warning("Archivio vuoto.")
         else:
-            p_scelto = st.selectbox("Seleziona Paziente per vedere le Note", lista_nomi)
-            if p_scelto:
-                pid_res = db_query("SELECT id FROM pazienti WHERE nome=?", (p_scelto,))
-                if pid_res:
-                    pid = pid_res[0][0]
-                    eventi = db_query("SELECT data, umore, nota FROM eventi WHERE p_id=? ORDER BY id DESC", (pid,))
-                    if not eventi:
-                        st.write("Nessuna nota presente per questo paziente.")
-                    for e in eventi:
-                        st.info(f"**Data:** {e[0]} | **Stato:** {e[1]}")
-                        st.write(f"✍️ {e[2] if e[2] else 'Nessuna nota inserita.'}")
-                        st.divider()
+            # Creiamo una lista leggibile per il selettore: "Nome (ID: 12)"
+            opzioni = {f"{p[1]} (ID: {p[0]})": p[0] for p in pazienti_raw}
+            scelta_label = st.selectbox("Seleziona Paziente per Gestione/Note", list(opzioni.keys()))
+            p_id_scelto = opzioni[scelta_label]
+            
+            # --- AZIONI SUL PAZIENTE SELEZIONATO ---
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # MODIFICA NOME
+                nuovo_n = st.text_input("Modifica Nome", value=scelta_label.split(" (ID:")[0])
+                if st.button("Aggiorna Nome"):
+                    rinomina_paziente(p_id_scelto, nuovo_n)
+                    st.success("Nome aggiornato!")
+                    st.rerun()
+            
+            with col2:
+                # CANCELLAZIONE (Con conferma)
+                st.write("⚠️ Zona Pericolo")
+                if st.button(f"ELIMINA {scelta_label}"):
+                    cancella_paziente(p_id_scelto)
+                    st.warning("Paziente e storico eliminati.")
+                    st.rerun()
+
+            st.divider()
+            
+            # Visualizzazione Note Storiche
+            st.subheader(f"Diario Clinico: {scelta_label}")
+            eventi = db_query("SELECT data, umore, nota FROM eventi WHERE p_id=? ORDER BY id DESC", (p_id_scelto,))
+            if not eventi:
+                st.info("Nessuna nota presente.")
+            for e in eventi:
+                st.info(f"**Data:** {e[0]} | **Stato:** {e[1]}")
+                st.write(f"✍️ {e[2] if e[2] else 'Nessuna nota.'}")
+                
 
 
     # --- 3. ANALISI STORICA ---
