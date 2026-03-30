@@ -9,47 +9,42 @@ st.set_page_config(page_title="REMS Connect PRO", layout="wide")
 
 st.markdown("""
 <style>
-    /* Riduzione spazi superiori */
     .block-container {padding-top: 1rem;}
-    
-    /* Menu compatto: tasti vicini tra loro */
-    [data-testid="column"] {
-        padding-left: 3px !important;
-        padding-right: 3px !important;
-    }
-    
+    [data-testid="column"] { padding-left: 3px !important; padding-right: 3px !important; }
     .stButton>button {
         width: 100%; border-radius: 6px; height: 42px !important; 
         background-color: white !important; color: #1e3a8a !important; 
         border: 1px solid #cbd5e1; font-size: 0.85rem !important; font-weight: 600;
     }
-    .active-btn button {
-        background-color: #1e3a8a !important; color: white !important; 
-        border: 1px solid #1e3a8a !important;
-    }
-    
-    /* Stile Card */
+    .active-btn button { background-color: #1e3a8a !important; color: white !important; border: 1px solid #1e3a8a !important; }
     .card {padding: 12px; margin: 8px 0; border-radius: 10px; background: white; border-left: 5px solid #64748b; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
     .nota-header {font-size: 0.75rem; color: #64748b; border-bottom: 1px solid #f1f5f9; margin-bottom: 5px;}
     .agitato {border-left-color: #ef4444 !important; background-color: #fef2f2 !important;}
     .terapia-card {border-left-color: #10b981 !important; background-color: #f0fdf4 !important;}
-    
     #MainMenu, footer, header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE ---
+# --- 2. DATABASE & MIGRAZIONE ---
 DB_NAME = "rems_connect_data.db"
 
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
+        # Inizializzazione Tabelle
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS agenda (p_id INTEGER, tipo TEXT, d_ora TEXT, note TEXT, rif TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
-        # Tabella terapie aggiornata con colonna 'medico'
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dosaggio TEXT, data TEXT, medico TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS documenti (p_id INTEGER, nome_doc TEXT, file_blob BLOB, data TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
+        
+        # --- FIX: Migrazione automatica per colonna 'medico' ---
+        try:
+            cur.execute("SELECT medico FROM terapie LIMIT 1")
+        except sqlite3.OperationalError:
+            cur.execute("ALTER TABLE terapie ADD COLUMN medico TEXT DEFAULT 'N.D.'")
+            conn.commit()
+
         cur.execute(query, params)
         if commit: conn.commit()
         return cur.fetchall()
@@ -71,7 +66,7 @@ if not st.session_state.auth:
             st.rerun()
     st.stop()
 
-# --- 5. NAVIGAZIONE COMPATTA ---
+# --- 5. NAVIGAZIONE ---
 menu_items = ["Monitoraggio", "Agenda", "Terapie", "Statistiche", "Documenti"]
 icons = ["📊", "📅", "💊", "📈", "📂"]
 if st.session_state.role == "admin":
@@ -131,7 +126,7 @@ elif st.session_state.menu == "Terapie":
         st.subheader(f"Piano Terapeutico: {sel_p}")
         for f, ds, dt, med, rid in db_run("SELECT farmaco, dosaggio, data, medico, row_id FROM terapie WHERE p_id=? ORDER BY data DESC", (pid,)):
             st.markdown(f'''<div class="card terapia-card">
-                <div class="nota-header">Modifica del {dt} | Prescritta da: {med}</div>
+                <div class="nota-header">Modifica del {dt} | Medico: {med}</div>
                 💊 <b>{f}</b><br>Dosaggio: {ds}
             </div>''', unsafe_allow_html=True)
             if st.session_state.role == "admin":
