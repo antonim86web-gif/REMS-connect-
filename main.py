@@ -2,7 +2,7 @@ import streamlit as st
 import sqlite3
 from datetime import datetime
 
-# --- 1. CONFIGURAZIONE E STILE ---
+# --- 1. CONFIGURAZIONE E FIX PULSANTE MENU ---
 st.set_page_config(
     page_title="REMS Connect", 
     page_icon="🏥", 
@@ -10,13 +10,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS CORRETTO (Senza errori di virgolette)
 st.markdown("""
 <style>
+    /* FORZA IL PULSANTE MENU (☰) A ESSERE SEMPRE VISIBILE E GRANDE */
+    button[kind="headerNoSpacing"] {
+        display: block !important;
+        background-color: #2563eb !important; /* Blu acceso */
+        color: white !important;
+        width: 60px !important;
+        height: 60px !important;
+        border-radius: 50% !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        z-index: 99999 !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* Icona bianca dentro il pulsante blu */
+    button[kind="headerNoSpacing"] svg {
+        fill: white !important;
+        width: 30px !important;
+        height: 30px !important;
+    }
+
+    /* SFONDO E TESTI GRANDI */
     .stApp { background-color: #f1f5f9; color: #1e293b; }
     html, body, [class*="css"] { font-size: 19px !important; }
-    [data-testid="stSidebar"] { background-color: #1e293b !important; min-width: 260px !important; }
-    [data-testid="stSidebar"] * { color: white !important; }
+    
+    /* SIDEBAR SCURA */
+    [data-testid="stSidebar"] { background-color: #1e293b !important; min-width: 280px !important; }
+    [data-testid="stSidebar"] * { color: white !important; font-size: 1.1rem !important; }
+
+    /* PULSANTI AZIONE GIGANTI */
     .stButton>button {
         height: 4rem !important;
         font-size: 1.3rem !important;
@@ -27,8 +53,14 @@ st.markdown("""
         width: 100% !important;
         border: none !important;
     }
-    .stExpander { border: 2px solid #cbd5e1 !important; border-radius: 15px !important; background-color: white !important; }
-    .nota-card { background-color: #f8fafc; padding: 15px; border-left: 6px solid #2563eb; margin-bottom: 12px; border-radius: 8px; color: #1e293b; }
+
+    /* CARD PAZIENTI */
+    .stExpander { border: 2px solid #cbd5e1 !important; border-radius: 15px !important; background-color: white !important; margin-bottom: 15px !important; }
+    
+    /* BOX DIARIO */
+    .nota-card { background-color: #f8fafc; padding: 15px; border-left: 6px solid #2563eb; margin-bottom: 12px; border-radius: 8px; color: #1e293b; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+    /* PULIZIA INTERFACCIA */
     #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
@@ -56,35 +88,38 @@ if not st.session_state.auth:
 
 # --- 4. MENU ---
 st.sidebar.title("REMS Connect")
-menu = st.sidebar.radio("VAI A:", ["📊 MONITORAGGIO", "⚙️ IMPOSTAZIONI"])
+st.sidebar.markdown("---")
+menu = st.sidebar.radio("NAVIGAZIONE:", ["📊 MONITORAGGIO", "⚙️ IMPOSTAZIONI"])
 
-# --- 5. DASHBOARD ---
+# --- 5. MONITORAGGIO ---
 if menu == "📊 MONITORAGGIO":
     st.title("Diario Clinico")
     pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     for p_id, nome in pazienti:
         with st.expander(f"👤 {nome.upper()}"):
             umore = st.select_slider("Stato", options=["Cupo", "Deflesso", "Stabile"], value="Stabile", key=f"u_{p_id}")
-            nota = st.text_area("Nota", key=f"n_{p_id}", height=120)
-            if st.button("SALVA", key=f"b_{p_id}"):
-                data_ora = datetime.now().strftime("%d/%m/%Y %H:%M")
-                db_query("INSERT INTO eventi (p_id, data, umore, nota) VALUES (?,?,?,?)", (p_id, data_ora, umore, nota), commit=True)
-                st.rerun()
-            st.markdown("---")
+            nota = st.text_area("Annotazioni", key=f"n_{p_id}", height=150)
+            if st.button("SALVA NOTA", key=f"b_{p_id}"):
+                if nota:
+                    data_ora = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    db_query("INSERT INTO eventi (p_id, data, umore, nota) VALUES (?,?,?,?)", (p_id, data_ora, umore, nota), commit=True)
+                    st.success("Salvato!")
+                    st.rerun()
+            st.divider()
             eventi = db_query("SELECT data, umore, nota FROM eventi WHERE p_id=? ORDER BY id DESC LIMIT 10", (p_id,))
             for e in eventi:
-                st.markdown(f'<div class="nota-card"><b>{e[0]}</b> | {e[1]}<br>{e[2]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="nota-card"><b>{e[0]}</b> | Stato: {e[1]}<br><div style="margin-top:5px;">{e[2]}</div></div>', unsafe_allow_html=True)
 
 # --- 6. IMPOSTAZIONI ---
 elif menu == "⚙️ IMPOSTAZIONI":
-    st.title("Gestione")
+    st.title("Gestione Archivio")
     nuovo = st.text_input("Nuovo Paziente")
     if st.button("AGGIUNGI"):
         if nuovo: db_query("INSERT INTO pazienti (nome) VALUES (?)", (nuovo,), commit=True); st.rerun()
     st.divider()
-    pazienti_list = db_query("SELECT id, nome FROM pazienti")
-    if pazienti_list:
-        p_canc = st.selectbox("Elimina", {p[1]: p[0] for p in pazienti_list})
-        if st.button("ELIMINA"):
+    p_list = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
+    if p_list:
+        p_canc = st.selectbox("Elimina record", [p[1] for p in p_list])
+        if st.button("ELIMINA DEFINITIVAMENTE"):
             db_query("DELETE FROM pazienti WHERE nome=?", (p_canc,), commit=True)
             st.rerun()
