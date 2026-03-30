@@ -35,7 +35,6 @@ def db_query(query, params=(), commit=False):
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    # Nuova tabella per Agenda e Uscite
     cur.execute("""CREATE TABLE IF NOT EXISTS agenda 
                    (id INTEGER PRIMARY KEY, p_id INTEGER, tipo TEXT, data_ora TEXT, note TEXT, operatore_rif TEXT)""")
     cur.execute(query, params)
@@ -78,77 +77,4 @@ with c_nav3:
 if st.session_state.menu_val == "📊 Monitoraggio":
     pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     for p_id, nome in pazienti:
-        with st.expander(f"👤 {nome.upper()}"):
-            # (Codice salvataggio note identico a prima...)
-            c1, c2 = st.columns(2)
-            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"r_{p_id}")
-            with c2: operatore = st.text_input("Firma:", key=f"f_{p_id}")
-            umore = st.radio("Stato", ["Stabile", "Cupo", "Deflesso", "Agitato"], key=f"u_{p_id}", horizontal=True)
-            nota = st.text_area("Nota:", key=f"n_{p_id}")
-            if st.button("SALVA NOTA", key=f"b_{p_id}"):
-                if nota and operatore:
-                    dt = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", (p_id, dt, umore, nota, ruolo, operatore), True)
-                    st.rerun()
-            st.divider()
-            # Visualizzazione note...
-            eventi = db_query("SELECT data, umore, ruolo, operatore, nota FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
-            for e in eventi:
-                cls = "allerta-agitato" if e[1] == "Agitato" else ""
-                st.markdown(f'<div class="nota-card nota-{e[2]} {cls}"><small>{e[0]} | {e[2]} | {e[3]}</small><br><b>{e[1]}</b><br>{e[4]}</div>', unsafe_allow_html=True)
-
-# --- AGENDA & USCITE (LA NOVITÀ) ---
-elif st.session_state.menu_val == "📅 Agenda":
-    st.title("Agenda Visite ed Uscite")
-    pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-    p_dict = {p[1]: p[0] for p in pazienti}
-
-    with st.expander("➕ REGISTRA NUOVO EVENTO (Visita/Uscita/Udienza)"):
-        p_sel = st.selectbox("Paziente:", list(p_dict.keys()))
-        tipo = st.selectbox("Tipo Evento:", ["Visita con Parenti", "Uscita con Operatore", "Udienza / Perizia", "Visita Medica Esterna"])
-        data_ev = st.date_input("Data:")
-        ora_ev = st.time_input("Ora:")
-        accompagnatore = st.text_input("Operatore di riferimento / Accompagnatore:")
-        dettagli = st.text_area("Note (es: Nomi parenti, destinazione uscita, autorizzazione magistrato)")
-        
-        if st.button("PROGRAMMA EVENTO"):
-            dt_str = f"{data_ev} {ora_ev.strftime('%H:%M')}"
-            db_query("INSERT INTO agenda (p_id, tipo, data_ora, note, operatore_rif) VALUES (?,?,?,?,?)", 
-                     (p_dict[p_sel], tipo, dt_str, dettagli, accompagnatore), True)
-            st.success("Evento registrato correttamente!")
-            st.rerun()
-
-    st.divider()
-    
-    # Filtro rapido
-    filtro_tipo = st.multiselect("Filtra per tipo:", ["Visita con Parenti", "Uscita con Operatore", "Udienza / Perizia", "Visita Medica Esterna"])
-    
-    eventi_agenda = db_query("""SELECT agenda.tipo, agenda.data_ora, agenda.note, agenda.operatore_rif, pazienti.nome 
-                                FROM agenda JOIN pazienti ON agenda.p_id = pazienti.id 
-                                ORDER BY agenda.data_ora ASC""")
-    
-    for ev in eventi_agenda:
-        if filtro_tipo and ev[0] not in filtro_tipo: continue
-        
-        col_icon = "👥" if "Parenti" in ev[0] else "🚶‍♂️" if "Uscita" in ev[0] else "⚖️" if "Udienza" in ev[0] else "🏥"
-        st.markdown(f"""
-        <div class="agenda-card">
-            <div style="display: flex; justify-content: space-between;">
-                <b>{col_icon} {ev[0].upper()}</b>
-                <span style="color: #2563eb;">📅 {ev[1]}</span>
-            </div>
-            <div style="font-size: 1.2rem; margin: 10px 0;">Paziente: <b>{ev[4].upper()}</b></div>
-            <div style="font-size: 0.9rem; color: #475569;">
-                Rif/Accompagnatore: <b>{ev[3]}</b><br>
-                Note: <i>{ev[2]}</i>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-# --- GESTIONE ---
-elif st.session_state.menu_val == "⚙️ Gestione" and st.session_state.role == "admin":
-    st.title("Gestione Anagrafica")
-    # (Codice gestione anagrafica identico a prima...)
-    with st.expander("➕ Aggiungi"):
-        nome_n = st.text_input("Nome")
-        if st.button("Salva"): db_query("INSERT INTO pazienti (nome) VALUES (?)", (nome_n,), True); st.rerun()
+        with st.expander(f"
