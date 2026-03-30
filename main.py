@@ -24,6 +24,7 @@ st.markdown("""
     .saldo-box {padding: 20px; border-radius: 10px; background-color: #f8fafc; text-align: center; border: 2px solid #1e3a8a; margin-bottom: 20px;}
     .entrata {color: #10b981; font-weight: bold;}
     .uscita {color: #ef4444; font-weight: bold;}
+    .card {padding: 12px; margin: 5px 0; border-radius: 8px; background: #f8fafc; border-left: 5px solid #64748b; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,8 +57,8 @@ if not st.session_state.auth:
                 st.rerun()
     st.stop()
 
-# --- 4. NAVIGAZIONE ---
-menu = st.sidebar.radio("NAVIGAZIONE", ["Monitoraggio", "Equipe", "Gestione Soldi", "Agenda", "Terapie", "Documenti", "Gestione"])
+# --- 4. NAVIGAZIONE (Rimosso 'Gestione Soldi' dal menu principale) ---
+menu = st.sidebar.radio("NAVIGAZIONE", ["Monitoraggio", "Equipe", "Agenda", "Terapie", "Documenti", "Gestione"])
 
 # --- 5. MONITORAGGIO ---
 if menu == "Monitoraggio":
@@ -80,54 +81,105 @@ if menu == "Monitoraggio":
                     html += f'<tr class="{r_cl}"><td>{d}</td><td>{um}</td><td>{ru} ({fi})</td><td>{tx}</td></tr>'
                 st.markdown(html + '</tbody></table>', unsafe_allow_html=True)
 
-# --- 6. SEZIONE EQUIPE (NUOVA) ---
+# --- 6. AREA EQUIPE ---
 elif menu == "Equipe":
     st.subheader("👥 Area Professionale Equipe")
     figura = st.selectbox("Seleziona Figura Professionale", ["Psichiatra", "Psicologo", "Educatore", "Assistente Sociale", "Infermiere", "OSS", "Opsi"])
     
-    st.info(f"Accesso Area: **{figura.upper()}**")
-    
-    # Switch per le diverse figure
-    if figura == "Psichiatra":
-        st.write("📋 *Funzioni: Relazioni Cliniche, Valutazione Rischio, Piani Terapeutici.*")
+    st.divider()
+
+    if figura == "Educatore":
+        st.markdown("### 🎨 Area Educativa")
+        tabs = st.tabs(["Gestione Soldi", "Progetti (PEI)", "Attività"])
+        
+        with tabs[0]: # Spostata qui la gestione soldi
+            st.write("#### 💰 Contabilità Pazienti")
+            paz = db_run("SELECT * FROM pazienti ORDER BY nome")
+            if paz:
+                sel_p = st.selectbox("Seleziona Paziente", [p[1] for p in paz], key="sel_s_edu")
+                p_id = [p[0] for p in paz if p[1] == sel_p][0]
+                
+                movimenti = db_run("SELECT importo, tipo FROM soldi WHERE p_id=?", (p_id,))
+                saldo = sum([m[0] if m[1] == "Entrata" else -m[0] for m in movimenti])
+                
+                st.markdown(f'<div class="saldo-box"><h5>SALDO DISPONIBILE</h5><h2 style="color:#1e3a8a;">€ {saldo:.2f}</h2></div>', unsafe_allow_html=True)
+                
+                with st.expander("➕ REGISTRA NUOVA OPERAZIONE"):
+                    c1, c2 = st.columns(2)
+                    tipo_m = c1.radio("Tipo Movimento", ["Entrata", "Uscita"])
+                    imp_m = c2.number_input("Importo (€)", min_value=0.0, step=0.50)
+                    desc_m = st.text_input("Causale")
+                    f_m = st.text_input("Firma Educatore")
+                    if st.button("SALVA MOVIMENTO"):
+                        if desc_m and f_m:
+                            db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)",
+                                   (p_id, date.today().strftime("%d/%m/%Y"), desc_m, imp_m, tipo_m, f_m), True)
+                            st.success("Registrato!"); st.rerun()
+
+                st.divider()
+                storico = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY row_id DESC", (p_id,))
+                if storico:
+                    html_s = '<table class="clinica-table"><thead><tr><th>DATA</th><th>DESCRIZIONE</th><th>ENTRATA</th><th>USCITA</th><th>OP</th></tr></thead><tbody>'
+                    for d, ds, im, tp, op in storico:
+                        en = f"€ {im:.2f}" if tp == "Entrata" else ""
+                        us = f"€ {im:.2f}" if tp == "Uscita" else ""
+                        html_s += f'<tr><td>{d}</td><td>{ds}</td><td class="entrata">{en}</td><td class="uscita">{us}</td><td>{op}</td></tr>'
+                    st.markdown(html_s + '</tbody></table>', unsafe_allow_html=True)
+        
+        with tabs[1]:
+            st.info("Sezione PEI in fase di sviluppo.")
+            
+    elif figura == "Psichiatra":
+        st.write("📋 *Funzioni Psichiatriche: Relazioni e Piani Clinici.*")
     elif figura == "Psicologo":
-        st.write("🧠 *Funzioni: Colloqui Individuali, Test Psicometrici, Supporto Psicologico.*")
-    elif figura == "Educatore":
-        st.write("🎨 *Funzioni: Progetti Educativi (PEI), Attività di Gruppo, Riabilitazione.*")
+        st.write("🧠 *Funzioni Psicologiche: Colloqui e Test.*")
     elif figura == "Assistente Sociale":
-        st.write("🏠 *Funzioni: Rapporti con il territorio, Dimissioni protette, Contatti Familiari.*")
+        st.write("🏠 *Funzioni Sociali: Rapporti con il territorio.*")
     elif figura == "Infermiere":
-        st.write("💉 *Funzioni: Parametri Vitali, Somministrazione Terapia, Medicazioni.*")
+        st.write("💉 *Funzioni Infermieristiche: Somministrazione e Parametri.*")
     elif figura == "OSS":
-        st.write("🧼 *Funzioni: Igiene Personale, Supporto ai Pasti, Monitoraggio Comportamentale.*")
+        st.write("🧼 *Funzioni OSS: Igiene e monitoraggio base.*")
     elif figura == "Opsi":
-        st.write("🛡️ *Funzioni: Vigilanza, Sicurezza, Accompagnamenti.*")
+        st.write("🛡️ *Funzioni Opsi: Sicurezza e Vigilanza.*")
 
-# --- 7. GESTIONE SOLDI ---
-elif menu == "Gestione Soldi":
-    st.subheader("💰 Gestione Contabilità")
-    paz = db_run("SELECT * FROM pazienti ORDER BY nome")
-    if paz:
-        sel_p = st.selectbox("Seleziona Paziente", [p[1] for p in paz])
-        p_id = [p[0] for p in paz if p[1] == sel_p][0]
-        movimenti = db_run("SELECT importo, tipo FROM soldi WHERE p_id=?", (p_id,))
-        saldo = sum([m[0] if m[1] == "Entrata" else -m[0] for m in movimenti])
-        st.markdown(f'<div class="saldo-box"><h5>SALDO ATTUALE</h5><h2>€ {saldo:.2f}</h2></div>', unsafe_allow_html=True)
-        # Form per movimenti (già presente)
-
-# --- (ALTRE SEZIONI RIMANENTI) ---
+# --- 7. AGENDA ---
 elif menu == "Agenda":
     st.subheader("📅 Agenda")
-    # ... codice agenda esistente ...
+    paz = db_run("SELECT * FROM pazienti ORDER BY nome")
+    if paz:
+        with st.expander("Nuovo Evento"):
+            ps = st.selectbox("Paziente", [p[1] for p in paz])
+            ts = st.selectbox("Tipo", ["Uscita", "Udienza", "Visita", "Permesso"])
+            ds = st.date_input("Data")
+            if st.button("AGGIUNGI"):
+                pid = [p[0] for p in paz if p[1] == ps][0]
+                db_run("INSERT INTO agenda (p_id,tipo,d_ora,note,rif) VALUES (?,?,?,?,?)", (pid, ts, str(ds), "", ""), True); st.rerun()
+    for t, d, r, pn, rid in db_run("SELECT a.tipo, a.d_ora, a.rif, p.nome, a.row_id FROM agenda a JOIN pazienti p ON a.p_id = p.id ORDER BY d_ora DESC"):
+        st.markdown(f'<div class="card"><b>{d}</b> | {pn} | {t.upper()}</div>', unsafe_allow_html=True)
 
+# --- 8. TERAPIE ---
 elif menu == "Terapie":
-    st.subheader("💊 Terapie")
-    # ... codice terapie esistente ...
+    pazienti = db_run("SELECT * FROM pazienti ORDER BY nome")
+    for p_id, nome in pazienti:
+        with st.expander(f"💊 TERAPIA: {nome.upper()}"):
+            for fa, do, da, me, rid in db_run("SELECT farmaco, dosaggio, data, medico, row_id FROM terapie WHERE p_id=?", (p_id,)):
+                st.info(f"**{fa}** - {do}")
 
+# --- 9. DOCUMENTI ---
 elif menu == "Documenti":
-    st.subheader("📂 Documentazione")
-    # ... codice documenti esistente ...
+    paz = db_run("SELECT * FROM pazienti ORDER BY nome")
+    if paz:
+        sel_p = st.selectbox("Paziente", [p[1] for p in paz])
+        pid = [p[0] for p in paz if p[1] == sel_p][0]
+        up = st.file_uploader("Carica File")
+        if up and st.button("SALVA"):
+            db_run("INSERT INTO documenti (p_id, nome_doc, file_blob, data) VALUES (?,?,?,?)", (pid, up.name, up.read(), str(date.today())), True); st.rerun()
 
+# --- 10. GESTIONE ---
 elif menu == "Gestione":
-    st.subheader("⚙️ Amministrazione")
-    # ... codice gestione esistente ...
+    if st.session_state.role == "admin":
+        nuovo = st.text_input("Nuovo Paziente")
+        if st.button("AGGIUNGI"):
+            if nuovo: db_run("INSERT INTO pazienti (nome) VALUES (?)", (nuovo,), True); st.rerun()
+        for pid, pnome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
+            st.write(f"👤 {pnome}")
