@@ -12,7 +12,7 @@ st.markdown("""
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
     .rems-header {
         text-align: center; color: #1e3a8a; font-family: 'Orbitron', sans-serif;
-        font-size: 2.8rem !important; font-weight: 700; margin-bottom: 20px;
+        font-size: 2.5rem !important; font-weight: 700; margin-bottom: 20px;
         text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
     }
     .stButton>button { 
@@ -20,7 +20,7 @@ st.markdown("""
         background-color: #2563eb !important; color: white !important; font-weight: bold !important; 
         width: 100%; font-family: 'Orbitron', sans-serif;
     }
-    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; }
     .agenda-card { background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; border-top: 4px solid #2563eb; }
     .nota-Psichiatra { border-left-color: #ef4444 !important; }
     .nota-Infermiere { border-left-color: #3b82f6 !important; }
@@ -30,47 +30,9 @@ st.markdown("""
     .allerta-agitato { background-color: #fee2e2 !important; border: 2px solid #dc2626 !important; animation: blinker 2s linear infinite; }
     @keyframes blinker { 50% { opacity: 0.8; } }
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 10px; }
-    #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE ENGINE ---
-def db_query(query, params=(), commit=False):
-    conn = sqlite3.connect("rems_connect_v1.db", check_same_thread=False)
-    cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
-    cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    cur.execute("CREATE TABLE IF NOT EXISTS agenda (id INTEGER PRIMARY KEY, p_id INTEGER, tipo TEXT, data_ora TEXT, note TEXT, operatore_rif TEXT)")
-    cur.execute(query, params)
-    res = cur.fetchall()
-    if commit: conn.commit()
-    conn.close()
-    return res
-
-# --- 3. SESSION STATE ---
-if 'auth' not in st.session_state: st.session_state.auth = False
-if 'role' not in st.session_state: st.session_state.role = "user"
-if 'menu_val' not in st.session_state: st.session_state.menu_val = "📊 Monitoraggio"
-if 'v_agenda' not in st.session_state: st.session_state.v_agenda = 0
-
-# --- 4. LOGIN ---
-if not st.session_state.auth:
-    st.markdown('<h1 class="rems-header">REMS CONNECT</h1>', unsafe_allow_html=True)
-    pwd = st.text_input("Codice Identificativo", type="password")
-    if st.button("ENTRA"):
-        if pwd == "rems2026": st.session_state.auth = True; st.session_state.role = "user"; st.rerun()
-        elif pwd == "admin2026": st.session_state.auth = True; st.session_state.role = "admin"; st.rerun()
-        else: st.error("Codice errato")
-    st.stop()
-
-# --- 5. LAYOUT PRINCIPALE ---
-st.markdown('<h1 class="rems-header">REMS CONNECT</h1>', unsafe_allow_html=True)
-
-c_nav1, c_nav2, c_nav3 = st.columns(3)
-with c_nav1:
-    if st.button("📊 Monitoraggio"): st.session_state.menu_val = "📊 Monitoraggio"; st.rerun()
-with c_nav2:
-    if st.button("📅 Agenda & Uscite"): st.session_state.menu_val = "📅 Agenda"; st.rerun()
-with c_nav3:
-    if st.session_state.role == "admin":
-        if st.button("⚙️ Gestione"): st.session_
+# --- 2. DATABASE (CON AUTO-REPAIR) ---
+def init_db():
+    conn = sqlite3.connect("rems_connect_v1.db", check_same_thread=
