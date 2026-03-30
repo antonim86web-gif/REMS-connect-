@@ -7,6 +7,7 @@ st.set_page_config(page_title="REMS Connect", page_icon="🏥", layout="wide", i
 
 st.markdown("""
 <style>
+    /* PULSANTE MENU SEMPRE ATTIVO */
     button[kind="headerNoSpacing"] {
         display: block !important; position: fixed !important; top: 15px !important; left: 15px !important;
         background-color: #2563eb !important; color: white !important; width: 55px !important; height: 55px !important;
@@ -15,95 +16,119 @@ st.markdown("""
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
     [data-testid="stSidebar"] { background-color: #1e293b !important; min-width: 280px !important; }
     [data-testid="stSidebar"] * { color: white !important; }
-    .stButton>button { height: 4.2rem !important; font-size: 1.3rem !important; border-radius: 15px !important; background-color: #2563eb !important; color: white !important; font-weight: bold !important; }
+    .stButton>button { height: 4rem !important; font-size: 1.2rem !important; border-radius: 12px !important; background-color: #2563eb !important; color: white !important; font-weight: bold !important; width: 100%; }
     
-    .nota-Psichiatra { border-left: 6px solid #ef4444; background-color: #fef2f2; }
-    .nota-Infermiere { border-left: 6px solid #3b82f6; background-color: #eff6ff; }
-    .nota-Psicologo { border-left: 6px solid #10b981; background-color: #ecfdf5; }
-    .nota-Educatore { border-left: 6px solid #f59e0b; background-color: #fffbeb; }
-    .nota-OSS { border-left: 6px solid #8b5cf6; background-color: #f5f3ff; }
+    /* CARD DIARIO CON COLORI DI EMERGENZA */
+    .nota-card { padding: 12px; margin-bottom: 10px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .nota-Psichiatra { border-left-color: #ef4444 !important; background-color: #fef2f2 !important; }
+    .nota-Infermiere { border-left-color: #3b82f6 !important; background-color: #eff6ff !important; }
+    .nota-OSS { border-left-color: #8b5cf6 !important; background-color: #f5f3ff !important; }
+    .nota-Psicologo { border-left-color: #10b981 !important; background-color: #ecfdf5 !important; }
+    .nota-Educatore { border-left-color: #f59e0b !important; background-color: #fffbeb !important; }
     
-    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.95rem; }
-    .date-header { background-color: #e2e8f0; padding: 5px 15px; border-radius: 20px; font-weight: bold; color: #475569; margin: 15px 0 10px 0; display: inline-block; font-size: 0.85rem; }
-    #MainMenu, footer { visibility: hidden; }
+    #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE ---
+# --- 2. DATABASE ULTRA-RESISTENTE ---
 def db_query(query, params=(), commit=False):
-    conn = sqlite3.connect("rems_connect_v1.db")
+    conn = sqlite3.connect("rems_connect_v1.db", check_same_thread=False)
     cur = conn.cursor()
+    # Creazione tabelle base
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    try: 
-        cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT")
-        cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT")
-    except: pass
+    
+    # Check colonne mancanti (per evitare che il diario sparisca)
+    columns = [info[1] for info in cur.execute("PRAGMA table_info(eventi)").fetchall()]
+    if "ruolo" not in columns:
+        cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT DEFAULT 'Nota'")
+    if "operatore" not in columns:
+        cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT DEFAULT 'Anonimo'")
+    
     cur.execute(query, params)
     res = cur.fetchall()
     if commit: conn.commit()
     conn.close()
     return res
 
-# --- 3. LOGIN ---
+# --- 3. ACCESSO ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
     st.title("🏥 REMS Connect")
-    pwd = st.text_input("Codice", type="password")
-    if st.button("ACCEDI"):
+    pwd = st.text_input("Codice Identificativo", type="password")
+    if st.button("ENTRA"):
         if pwd == "rems2026": st.session_state.auth = True; st.rerun()
     st.stop()
 
 # --- 4. NAVIGAZIONE ---
 st.sidebar.title("REMS Connect")
-menu = st.sidebar.radio("VAI A:", ["📊 MONITORAGGIO", "⚙️ GESTIONE"])
+menu = st.sidebar.radio("MENU", ["Monitoraggio", "Gestione"])
 
 # --- 5. MONITORAGGIO ---
-if menu == "📊 MONITORAGGIO":
-    st.title("Diario di Equipe")
+if menu == "Monitoraggio":
+    st.title("Diario Clinico")
     pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     
+    if not pazienti:
+        st.info("Nessun paziente. Vai in 'Gestione' per aggiungerne uno.")
+
     for p_id, nome in pazienti:
         with st.expander(f"👤 {nome.upper()}"):
-            if f"reset_{p_id}" not in st.session_state: st.session_state[f"reset_{p_id}"] = 0
+            # Setup reset campi
+            if f"r_{p_id}" not in st.session_state: st.session_state[f"r_{p_id}"] = 0
             
+            # Input
             c1, c2 = st.columns(2)
-            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"r_{p_id}_{st.session_state[f'reset_{p_id}']}")
-            with c2: operatore = st.text_input("Operatore:", key=f"op_{p_id}_{st.session_state[f'reset_{p_id}']}", placeholder="Nome Cognome")
+            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'r_{p_id}']}")
+            with c2: operatore = st.text_input("Tuo Nome:", key=f"op_{p_id}_{st.session_state[f'r_{p_id}']}", placeholder="Firma")
             
-            umore = st.select_slider("Stato", options=["Cupo", "Deflesso", "Stabile", "Agitato"], value="Stabile", key=f"u_{p_id}_{st.session_state[f'reset_{p_id}']}")
-            nota = st.text_area("Nota", key=f"n_{p_id}_{st.session_state[f'reset_{p_id}']}", height=100)
+            umore = st.select_slider("Stato:", options=["Cupo", "Deflesso", "Stabile", "Agitato"], value="Stabile", key=f"u_{p_id}_{st.session_state[f'r_{p_id}']}")
+            nota = st.text_area("Nota di Turno:", key=f"n_{p_id}_{st.session_state[f'r_{p_id}']}", height=100)
             
-            if st.button("SALVA NOTA", key=f"b_{p_id}"):
+            if st.button("SALVA NOTA", key=f"btn_{p_id}"):
                 if nota and operatore:
                     dt = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", (p_id, dt, umore, nota, ruolo, operatore), commit=True)
-                    st.session_state[f"reset_{p_id}"] += 1
+                    db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", 
+                             (p_id, dt, umore, nota, ruolo, operatore), commit=True)
+                    st.session_state[f"r_{p_id}"] += 1
                     st.rerun()
+                else:
+                    st.error("Inserisci Nome e Nota!")
 
             st.divider()
-            st.subheader("Consultazione Diario")
-            filtro_ruolo = st.multiselect("Filtra per Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"fr_{p_id}")
-
-            eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
             
-            current_date = ""
+            # LETTURA DIARIO (Corretta per evitare sparizioni)
+            eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY id DESC LIMIT 30", (p_id,))
+            
+            if not eventi:
+                st.write("Ancora nessuna nota per questo paziente.")
+            
             for e in eventi:
-                if filtro_ruolo and e[3] not in filtro_ruolo:
-                    continue
+                # Pulizia dati per il CSS
+                raw_ruolo = str(e[3]) if e[3] else "Nota"
+                r_class = f"nota-{raw_ruolo.strip()}"
+                f_operatore = str(e[4]) if e[4] else "Operatore"
+                f_data = str(e[0])
                 
-                # FIX PER IL CRASH DELLE DATE
-                raw_date = e[0]
-                try:
-                    # Prova formato nuovo (ISO)
-                    dt_obj = datetime.strptime(raw_date.split(" ")[0], "%Y-%m-%d")
-                    nice_date = dt_obj.strftime("%d/%m/%Y")
-                    time_str = raw_date.split(" ")[1]
-                except:
-                    # Se fallisce, usa formato vecchio o mostra data grezza
-                    nice_date = raw_date.split(" ")[0]
-                    time_str = raw_date.split(" ")[1] if " " in raw_date else ""
-                
-                if nice_date != current_date:
-                    st.markdown(f'<div class="date-header">📅 {nice_date}</div>', unsafe_allow_html=True)
-                    current_date = nice_date
+                st.markdown(f"""
+                <div class="nota-card {r_class}">
+                    <div style="font-size:0.8rem; color: #64748b; margin-bottom: 5px;">
+                        <b>{f_data}</b> | <b>{raw_ruolo.upper()}</b> | {f_operatore}
+                    </div>
+                    <b>Stato: {e[1]}</b><br>
+                    <div style="margin-top:5px; line-height: 1.4;">{e[2]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+# --- 6. GESTIONE ---
+elif menu == "Gestione":
+    st.title("Anagrafica")
+    nuovo = st.text_input("Nome e Cognome Paziente")
+    if st.button("AGGIUNGI"):
+        if nuovo: db_query("INSERT INTO pazienti (nome) VALUES (?)", (nuovo,), commit=True); st.rerun()
+    st.divider()
+    p_list = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
+    if p_list:
+        p_del = st.selectbox("Seleziona per eliminare", [p[1] for p in p_list])
+        if st.button("ELIMINA"):
+            db_query("DELETE FROM pazienti WHERE nome=?", (p_del,), commit=True); st.rerun()
