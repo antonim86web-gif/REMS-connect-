@@ -7,14 +7,38 @@ st.set_page_config(page_title="REMS Connect", page_icon="🏥", layout="wide", i
 
 st.markdown("""
 <style>
-    button[kind="headerNoSpacing"] {
-        display: block !important; position: fixed !important; top: 15px !important; left: 15px !important;
-        background-color: #2563eb !important; color: white !important; width: 55px !important; height: 55px !important;
-        border-radius: 50% !important; z-index: 999999 !important; border: 2px solid white !important;
+    /* FORZATURA VISIBILITÀ PULSANTE MENU (Il cerchio blu) */
+    .st-emotion-cache-18ni7ap { 
+        display: flex !important; 
     }
+    
+    /* STILE PERSONALIZZATO PER IL PULSANTE MENU LATERALE */
+    button[kind="headerNoSpacing"] {
+        display: flex !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        background-color: #2563eb !important; 
+        color: white !important;
+        width: 50px !important;
+        height: 50px !important;
+        border-radius: 50% !important;
+        z-index: 9999999 !important;
+        border: 2px solid white !important;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    /* SISTEMAZIONE SPAZIATURA TITOLO PER NON COPRIRE IL MENU */
+    .main .block-container {
+        padding-top: 60px !important;
+    }
+
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
-    [data-testid="stSidebar"] { background-color: #1e293b !important; min-width: 280px !important; }
+    [data-testid="stSidebar"] { background-color: #1e293b !important; }
     [data-testid="stSidebar"] * { color: white !important; }
+    
     .stButton>button { height: 4rem !important; font-size: 1.2rem !important; border-radius: 12px !important; background-color: #2563eb !important; color: white !important; font-weight: bold !important; width: 100%; }
     
     .nota-card { padding: 12px; margin-bottom: 10px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
@@ -25,6 +49,8 @@ st.markdown("""
     .nota-Educatore { border-left-color: #f59e0b !important; background-color: #fffbeb !important; }
     
     .date-header { background-color: #e2e8f0; padding: 5px 15px; border-radius: 20px; font-weight: bold; color: #475569; margin: 15px 0 10px 0; display: inline-block; font-size: 0.85rem; }
+    
+    /* NASCONDI ELEMENTI STANDARD DI STREAMLIT */
     #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -56,11 +82,12 @@ if not st.session_state.auth:
     st.stop()
 
 # --- 4. NAVIGAZIONE ---
-st.sidebar.title("REMS Connect")
-menu = st.sidebar.radio("MENU", ["Monitoraggio", "Gestione"])
+# Titolo nella sidebar per confermare dove ci si trova
+st.sidebar.markdown("### 🏥 REMS Connect")
+menu = st.sidebar.radio("NAVIGAZIONE:", ["📊 Monitoraggio", "⚙️ Gestione"])
 
 # --- 5. MONITORAGGIO ---
-if menu == "Monitoraggio":
+if menu == "📊 Monitoraggio":
     st.title("Monitoraggio Clinico")
     pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     
@@ -68,7 +95,6 @@ if menu == "Monitoraggio":
         with st.expander(f"👤 {nome.upper()}"):
             if f"v_{p_id}" not in st.session_state: st.session_state[f"v_{p_id}"] = 0
             
-            # --- INSERIMENTO ---
             c1, c2 = st.columns(2)
             with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'v_{p_id}']}")
             with c2: operatore = st.text_input("Nome:", key=f"op_{p_id}_{st.session_state[f'v_{p_id}']}", placeholder="Firma")
@@ -84,28 +110,19 @@ if menu == "Monitoraggio":
                     st.rerun()
 
             st.divider()
-            
-            # --- RICERCA E FILTRI ---
             st.subheader("Filtra Diario")
             f_ruolo = st.multiselect("Mostra solo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"filter_{p_id}")
             
-            # --- VISUALIZZAZIONE DIARIO ---
             eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
-            
             current_date = ""
             for e in eventi:
-                # Filtro per figura
                 if f_ruolo and e[3] not in f_ruolo: continue
-                
-                # Gestione Data e Raggruppamento (Sicuro contro errori di formato)
                 raw_dt = str(e[0])
                 try:
-                    # Tenta di leggere il formato nuovo (2026-03-30) per raggruppare
                     dt_obj = datetime.strptime(raw_dt.split(" ")[0], "%Y-%m-%d")
                     nice_date = dt_obj.strftime("%d/%m/%Y")
                     time_part = raw_dt.split(" ")[1]
                 except:
-                    # Se è formato vecchio (30/03/2026), lo usa direttamente
                     nice_date = raw_dt.split(" ")[0]
                     time_part = raw_dt.split(" ")[1] if " " in raw_dt else ""
 
@@ -123,7 +140,7 @@ if menu == "Monitoraggio":
                 """, unsafe_allow_html=True)
 
 # --- 6. GESTIONE ---
-elif menu == "Gestione":
+elif menu == "⚙️ Gestione":
     st.title("Anagrafica")
     nuovo = st.text_input("Nuovo Paziente")
     if st.button("AGGIUNGI"):
