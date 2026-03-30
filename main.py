@@ -86,13 +86,9 @@ st.divider()
 
 if st.session_state.menu == "Monitoraggio":
     ruoli_list = ["Tutti", "Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"]
-    
     for p_id, nome in db_run("SELECT * FROM pazienti ORDER BY nome"):
         with st.expander(f"👤 {nome.upper()}"):
             vi = st.session_state.get(f"v_{p_id}", 0)
-            
-            # --- SEZIONE INSERIMENTO ---
-            st.markdown("### Nuova Nota")
             c1, c2 = st.columns(2)
             r = c1.selectbox("Ruolo", ruoli_list[1:], key=f"r{p_id}{vi}")
             o = c2.text_input("Firma Operatore", key=f"f{p_id}{vi}")
@@ -100,45 +96,26 @@ if st.session_state.menu == "Monitoraggio":
             n = st.text_area("Nota Clinica", key=f"n{p_id}{vi}")
             if st.button("SALVA NOTA", key=f"btn{p_id}"):
                 if n and o:
-                    db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", 
-                           (p_id, datetime.now().strftime("%Y-%m-%d %H:%M"), u, n, r, o), True)
+                    db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%Y-%m-%d %H:%M"), u, n, r, o), True)
                     st.session_state[f"v_{p_id}"] = vi + 1; st.rerun()
             
             st.divider()
-            
-            # --- SEZIONE RICERCA E STORICO ---
-            st.markdown("### Ricerca nello Storico")
             col_f1, col_f2 = st.columns([2, 1])
-            search_query = col_f1.text_input("🔍 Cerca parole chiave (es. farmaco, notte, udienza...)", key=f"search{p_id}")
+            search_query = col_f1.text_input("🔍 Cerca nelle note", key=f"search{p_id}")
             filter_role = col_f2.selectbox("Filtra per Ruolo", ruoli_list, key=f"frole{p_id}")
-
-            # Costruzione Query di Ricerca
-            query = "SELECT data, umore, nota, ruolo, op, row_id FROM eventi WHERE id=?"
+            q = "SELECT data, umore, nota, ruolo, op, row_id FROM eventi WHERE id=?"
             params = [p_id]
-            
-            if search_query:
-                query += " AND nota LIKE ?"
-                params.append(f"%{search_query}%")
-            if filter_role != "Tutti":
-                query += " AND ruolo = ?"
-                params.append(filter_role)
-            
-            query += " ORDER BY data DESC"
-            
-            results = db_run(query, tuple(params))
-            
+            if search_query: q += " AND nota LIKE ?"; params.append(f"%{search_query}%")
+            if filter_role != "Tutti": q += " AND ruolo = ?"; params.append(filter_role)
+            q += " ORDER BY data DESC"
+            results = db_run(q, tuple(params))
             if results:
                 for d, um, tx, ru, fi, rid in results:
                     cl = "card agitato" if um=="Agitato" else "card"
-                    st.markdown(f'''<div class="{cl}">
-                        <div class="nota-header">{d} | {ru} | {fi}</div>
-                        <b>{um}</b><br>{tx}
-                    </div>''', unsafe_allow_html=True)
+                    st.markdown(f'<div class="{cl}"><div class="nota-header">{d} | {ru} | {fi}</div><b>{um}</b><br>{tx}</div>', unsafe_allow_html=True)
                     if st.session_state.role == "admin":
                         if st.button(f"Elimina Nota #{rid}", key=f"del_ev_{rid}"):
                             db_run("DELETE FROM eventi WHERE row_id=?", (rid,), True); st.rerun()
-            else:
-                st.info("Nessuna nota trovata con questi criteri.")
 
 elif st.session_state.menu == "Terapie":
     paz = db_run("SELECT * FROM pazienti ORDER BY nome")
@@ -146,7 +123,6 @@ elif st.session_state.menu == "Terapie":
         p_map = {p[1]: p[0] for p in paz}
         sel_p = st.selectbox("Seleziona Paziente", list(p_map.keys()))
         pid = p_map[sel_p]
-        
         if st.session_state.role == "admin":
             with st.expander("➕ AGGIUNGI/VARIA TERAPIA"):
                 f = st.text_input("Farmaco", key=f"tf{st.session_state.v_t}")
@@ -154,25 +130,20 @@ elif st.session_state.menu == "Terapie":
                 m = st.text_input("Medico Prescrittore", key=f"tm{st.session_state.v_t}")
                 if st.button("REGISTRA VARIAZIONE"):
                     if f and m:
-                        db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, data, medico) VALUES (?,?,?,?,?)", 
-                               (pid, f, d, datetime.now().strftime("%Y-%m-%d"), m), True)
+                        db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, data, medico) VALUES (?,?,?,?,?)", (pid, f, d, datetime.now().strftime("%Y-%m-%d"), m), True)
                         st.session_state.v_t += 1; st.rerun()
-        
-        st.subheader(f"Piano Terapeutico: {sel_p}")
         for f, ds, dt, med, rid in db_run("SELECT farmaco, dosaggio, data, medico, row_id FROM terapie WHERE p_id=? ORDER BY data DESC", (pid,)):
-            st.markdown(f'''<div class="card terapia-card">
-                <div class="nota-header">Modifica del {dt} | Medico: {med}</div>
-                💊 <b>{f}</b><br>Dosaggio: {ds}
-            </div>''', unsafe_allow_html=True)
+            st.markdown(f'<div class="card terapia-card"><div class="nota-header">{dt} | Medico: {med}</div>💊 <b>{f}</b><br>{ds}</div>', unsafe_allow_html=True)
+            if st.session_state.role == "admin":
+                if st.button(f"Elimina farmaco #{rid}", key=f"del_t_{rid}"):
+                    db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
 elif st.session_state.menu == "Statistiche":
     res = db_run("SELECT p.nome, e.umore, e.data FROM eventi e JOIN pazienti p ON e.id = p.id")
     if res:
         df = pd.DataFrame(res, columns=["Paziente", "Umore", "Data"])
-        fig = px.pie(df, names="Umore", title="Distribuzione Umore", color="Umore", 
-                     color_discrete_map={"Agitato":"#ef4444", "Stabile":"#10b981", "Cupo":"#1e3a8a", "Deflesso":"#f59e0b"})
+        fig = px.pie(df, names="Umore", title="Distribuzione Umore", color="Umore", color_discrete_map={"Agitato":"#ef4444", "Stabile":"#10b981", "Cupo":"#1e3a8a", "Deflesso":"#f59e0b"})
         st.plotly_chart(fig, use_container_width=True)
-    else: st.info("Dati insufficienti.")
 
 elif st.session_state.menu == "Documenti":
     paz = db_run("SELECT * FROM pazienti ORDER BY nome")
@@ -186,6 +157,9 @@ elif st.session_state.menu == "Documenti":
             st.rerun()
         for n, b, d, rid in db_run("SELECT nome_doc, file_blob, data, row_id FROM documenti WHERE p_id=?", (pid,)):
             st.download_button(f"📄 {n} ({d})", b, file_name=n, key=f"dl_{rid}")
+            if st.session_state.role == "admin":
+                if st.button(f"Rimuovi Doc #{rid}", key=f"del_doc_{rid}"):
+                    db_run("DELETE FROM documenti WHERE row_id=?", (rid,), True); st.rerun()
 
 elif st.session_state.menu == "Agenda":
     paz = db_run("SELECT * FROM pazienti ORDER BY nome")
@@ -202,11 +176,39 @@ elif st.session_state.menu == "Agenda":
                 st.session_state.v_a += 1; st.rerun()
     for t, d, n, r, pn, rid in db_run("SELECT a.tipo, a.d_ora, a.note, a.rif, p.nome, a.row_id FROM agenda a JOIN pazienti p ON a.p_id = p.id ORDER BY d_ora ASC"):
         st.markdown(f'<div class="card"><b>{t}</b> | {d}<br>Paziente: {pn} | Rif: {r}</div>', unsafe_allow_html=True)
+        if st.session_state.role == "admin":
+            if st.button(f"Cancella Appuntamento #{rid}", key=f"del_ag_{rid}"):
+                db_run("DELETE FROM agenda WHERE row_id=?", (rid,), True); st.rerun()
 
 elif st.session_state.menu == "Gestione":
+    st.subheader("Anagrafica Pazienti")
     vg = st.session_state.v_g
-    nn = st.text_input("Nuovo Paziente", key=f"nn{vg}")
-    if st.button("AGGIUNGI"):
-        if nn: db_run("INSERT INTO pazienti (nome) VALUES (?)", (nn,), True); st.session_state.v_g += 1; st.rerun()
+    
+    # 1. AGGIUNGI
+    c_add1, c_add2 = st.columns([3, 1])
+    nn = c_add1.text_input("Inserisci nome e cognome", key=f"nn{vg}")
+    if c_add2.button("➕ AGGIUNGI"):
+        if nn: 
+            db_run("INSERT INTO pazienti (nome) VALUES (?)", (nn,), True)
+            st.session_state.v_g += 1; st.rerun()
+    
+    st.divider()
+    
+    # 2. MODIFICA ED ELIMINA
+    pl = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    if pl:
+        for pid, pnome in pl:
+            with st.container():
+                col1, col2, col3 = st.columns([3, 1, 1])
+                nuovo_nome = col1.text_input(f"Modifica", value=pnome, key=f"edit_{pid}", label_visibility="collapsed")
+                if col2.button("💾", key=f"sav_{pid}", help="Rinomina"):
+                    db_run("UPDATE pazienti SET nome=? WHERE id=?", (nuovo_nome, pid), True)
+                    st.rerun()
+                if col3.button("🗑️", key=f"del_{pid}", help="Elimina Paziente e tutti i suoi dati"):
+                    db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
+                    db_run("DELETE FROM eventi WHERE id=?", (pid,), True) # Pulisce anche i dati collegati
+                    st.rerun()
+    
+    st.divider()
     with open(DB_NAME, "rb") as f:
-        st.download_button("📥 BACKUP DB", f, file_name=f"rems_backup.db")
+        st.download_button("📥 SCARICA BACKUP DATABASE COMPLETO", f, file_name=f"rems_backup_{datetime.now().strftime('%Y%m%d')}.db")
