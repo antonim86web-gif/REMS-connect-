@@ -16,8 +16,8 @@ st.markdown("""
     .nota-Psicologo { border-left-color: #10b981 !important; }
     .nota-Educatore { border-left-color: #f59e0b !important; }
     
-    /* Stile per l'expander della data */
-    .stExpander { border: none !important; box-shadow: none !important; background-color: transparent !important; }
+    /* Pulizia estetica expander */
+    .stExpander { border: 1px solid #e2e8f0 !important; margin-bottom: 5px !important; }
     #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -72,7 +72,7 @@ if menu == "📊 Monitoraggio":
         with st.expander(f"👤 {nome.upper()}", expanded=False):
             if f"v_{p_id}" not in st.session_state: st.session_state[f"v_{p_id}"] = 0
             
-            # INSERIMENTO
+            # INSERIMENTO NOTA
             c1, c2 = st.columns(2)
             with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'v_{p_id}']}")
             with c2: operatore = st.text_input("Nome:", key=f"op_{p_id}_{st.session_state[f'v_{p_id}']}", placeholder="Firma")
@@ -92,7 +92,6 @@ if menu == "📊 Monitoraggio":
             # DIARIO RAGGRUPPATO PER DATA
             eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
             
-            # Creiamo un dizionario per raggruppare le note per giorno
             diario_per_data = {}
             for e in eventi:
                 raw_dt = str(e[0])
@@ -106,18 +105,27 @@ if menu == "📊 Monitoraggio":
                 
                 if nice_date not in diario_per_data:
                     diario_per_data[nice_date] = []
-                diario_per_data[nice_date].append((time_part, e[1], e[2], e[3], e[4]))
+                diario_per_data[nice_date].append({"ora": time_part, "umore": e[1], "testo": e[2], "ruolo": e[3], "firma": e[4]})
 
-            # Visualizzazione con Expander per ogni data
+            # Visualizzazione con Expander per ogni data + FILTRO INTERNO
             for data_label, note_del_giorno in diario_per_data.items():
                 with st.expander(f"📅 Diario del {data_label} ({len(note_del_giorno)} note)"):
+                    
+                    # FILTRO PER FIGURA (interno alla data)
+                    ruoli_presenti = sorted(list(set(n['ruolo'] for n in note_del_giorno)))
+                    filtro_f = st.multiselect(f"Filtra figure del {data_label}:", ruoli_presenti, key=f"f_{p_id}_{data_label}")
+                    
                     for n in note_del_giorno:
-                        r_style = f"nota-{n[3].replace(' ', '')}" if n[3] else ""
+                        # Se il filtro è attivo e il ruolo non è tra quelli scelti, salta la nota
+                        if filtro_f and n['ruolo'] not in filtro_f:
+                            continue
+                            
+                        r_style = f"nota-{n['ruolo'].replace(' ', '')}" if n['ruolo'] else ""
                         st.markdown(f"""
                         <div class="nota-card {r_style}">
-                            <small><b>{n[0]}</b> | <b>{n[3].upper()}</b> | {n[4]}</small><br>
-                            <b>Stato: {n[1]}</b><br>
-                            <div style="margin-top:5px; white-space: pre-wrap;">{n[2]}</div>
+                            <small><b>{n['ora']}</b> | <b>{n['ruolo'].upper()}</b> | {n['firma']}</small><br>
+                            <b>Stato: {n['umore']}</b><br>
+                            <div style="margin-top:5px; white-space: pre-wrap;">{n['testo']}</div>
                         </div>
                         """, unsafe_allow_html=True)
 
