@@ -22,6 +22,11 @@ st.markdown("""
     }
     .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .agenda-card { background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; border-top: 4px solid #2563eb; }
+    .nota-Psichiatra { border-left-color: #ef4444 !important; }
+    .nota-Infermiere { border-left-color: #3b82f6 !important; }
+    .nota-OSS { border-left-color: #8b5cf6 !important; }
+    .nota-Psicologo { border-left-color: #10b981 !important; }
+    .nota-Educatore { border-left-color: #f59e0b !important; }
     .allerta-agitato { background-color: #fee2e2 !important; border: 2px solid #dc2626 !important; border-left: 10px solid #dc2626 !important; animation: blinker 2s linear infinite; }
     @keyframes blinker { 50% { opacity: 0.8; } }
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 10px; }
@@ -67,14 +72,4 @@ with c_nav1:
 with c_nav2:
     if st.button("📅 Agenda & Uscite"): st.session_state.menu_val = "📅 Agenda"; st.rerun()
 with c_nav3:
-    if st.session_state.role == "admin":
-        if st.button("⚙️ Gestione"): st.session_state.menu_val = "⚙️ Gestione"; st.rerun()
-    else: st.button("⚙️ Gestione (Admin)", disabled=True)
-
-# --- 6. LOGICA MENU ---
-
-# --- MONITORAGGIO ---
-if st.session_state.menu_val == "📊 Monitoraggio":
-    pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-    for p_id, nome in pazienti:
-        with st.expander(f"
+    if st.session
