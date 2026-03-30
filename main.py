@@ -25,20 +25,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE & MIGRAZIONE ---
+# --- 2. DATABASE ---
 DB_NAME = "rems_connect_data.db"
 
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        # Inizializzazione Tabelle
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS agenda (p_id INTEGER, tipo TEXT, d_ora TEXT, note TEXT, rif TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dosaggio TEXT, data TEXT, medico TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS documenti (p_id INTEGER, nome_doc TEXT, file_blob BLOB, data TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         
-        # --- FIX: Migrazione automatica per colonna 'medico' ---
         try:
             cur.execute("SELECT medico FROM terapie LIMIT 1")
         except sqlite3.OperationalError:
@@ -87,11 +85,16 @@ st.divider()
 # --- 6. MODULI ---
 
 if st.session_state.menu == "Monitoraggio":
+    ruoli_list = ["Tutti", "Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"]
+    
     for p_id, nome in db_run("SELECT * FROM pazienti ORDER BY nome"):
         with st.expander(f"👤 {nome.upper()}"):
             vi = st.session_state.get(f"v_{p_id}", 0)
+            
+            # --- SEZIONE INSERIMENTO ---
+            st.markdown("### Nuova Nota")
             c1, c2 = st.columns(2)
-            r = c1.selectbox("Ruolo", ["Psichiatra", "Infermiere", "OSS", "Psicologo"], key=f"r{p_id}{vi}")
+            r = c1.selectbox("Ruolo", ruoli_list[1:], key=f"r{p_id}{vi}")
             o = c2.text_input("Firma Operatore", key=f"f{p_id}{vi}")
             u = st.radio("Stato", ["Stabile", "Cupo", "Deflesso", "Agitato"], key=f"u{p_id}{vi}", horizontal=True)
             n = st.text_area("Nota Clinica", key=f"n{p_id}{vi}")
@@ -101,9 +104,41 @@ if st.session_state.menu == "Monitoraggio":
                            (p_id, datetime.now().strftime("%Y-%m-%d %H:%M"), u, n, r, o), True)
                     st.session_state[f"v_{p_id}"] = vi + 1; st.rerun()
             
-            for d, um, tx, ru, fi, rid in db_run("SELECT data, umore, nota, ruolo, op, row_id FROM eventi WHERE id=? ORDER BY data DESC LIMIT 5", (p_id,)):
-                cl = "card agitato" if um=="Agitato" else "card"
-                st.markdown(f'<div class="{cl}"><div class="nota-header">{d} | {ru} | {fi}</div><b>{um}</b><br>{tx}</div>', unsafe_allow_html=True)
+            st.divider()
+            
+            # --- SEZIONE RICERCA E STORICO ---
+            st.markdown("### Ricerca nello Storico")
+            col_f1, col_f2 = st.columns([2, 1])
+            search_query = col_f1.text_input("🔍 Cerca parole chiave (es. farmaco, notte, udienza...)", key=f"search{p_id}")
+            filter_role = col_f2.selectbox("Filtra per Ruolo", ruoli_list, key=f"frole{p_id}")
+
+            # Costruzione Query di Ricerca
+            query = "SELECT data, umore, nota, ruolo, op, row_id FROM eventi WHERE id=?"
+            params = [p_id]
+            
+            if search_query:
+                query += " AND nota LIKE ?"
+                params.append(f"%{search_query}%")
+            if filter_role != "Tutti":
+                query += " AND ruolo = ?"
+                params.append(filter_role)
+            
+            query += " ORDER BY data DESC"
+            
+            results = db_run(query, tuple(params))
+            
+            if results:
+                for d, um, tx, ru, fi, rid in results:
+                    cl = "card agitato" if um=="Agitato" else "card"
+                    st.markdown(f'''<div class="{cl}">
+                        <div class="nota-header">{d} | {ru} | {fi}</div>
+                        <b>{um}</b><br>{tx}
+                    </div>''', unsafe_allow_html=True)
+                    if st.session_state.role == "admin":
+                        if st.button(f"Elimina Nota #{rid}", key=f"del_ev_{rid}"):
+                            db_run("DELETE FROM eventi WHERE row_id=?", (rid,), True); st.rerun()
+            else:
+                st.info("Nessuna nota trovata con questi criteri.")
 
 elif st.session_state.menu == "Terapie":
     paz = db_run("SELECT * FROM pazienti ORDER BY nome")
@@ -129,15 +164,12 @@ elif st.session_state.menu == "Terapie":
                 <div class="nota-header">Modifica del {dt} | Medico: {med}</div>
                 💊 <b>{f}</b><br>Dosaggio: {ds}
             </div>''', unsafe_allow_html=True)
-            if st.session_state.role == "admin":
-                if st.button(f"Elimina farmaco #{rid}", key=f"del_t_{rid}"):
-                    db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
 elif st.session_state.menu == "Statistiche":
     res = db_run("SELECT p.nome, e.umore, e.data FROM eventi e JOIN pazienti p ON e.id = p.id")
     if res:
         df = pd.DataFrame(res, columns=["Paziente", "Umore", "Data"])
-        fig = px.pie(df, names="Umore", title="Riepilogo Stati d'Animo", color="Umore", 
+        fig = px.pie(df, names="Umore", title="Distribuzione Umore", color="Umore", 
                      color_discrete_map={"Agitato":"#ef4444", "Stabile":"#10b981", "Cupo":"#1e3a8a", "Deflesso":"#f59e0b"})
         st.plotly_chart(fig, use_container_width=True)
     else: st.info("Dati insufficienti.")
@@ -148,8 +180,8 @@ elif st.session_state.menu == "Documenti":
         p_map = {p[1]: p[0] for p in paz}
         sel_p = st.selectbox("Seleziona Paziente", list(p_map.keys()))
         pid = p_map[sel_p]
-        up = st.file_uploader("Carica Perizia (PDF/JPG)", type=['pdf', 'jpg', 'png'])
-        if up and st.button("SALVA FILE"):
+        up = st.file_uploader("Carica File", type=['pdf', 'jpg', 'png'])
+        if up and st.button("SALVA"):
             db_run("INSERT INTO documenti (p_id, nome_doc, file_blob, data) VALUES (?,?,?,?)", (pid, up.name, up.read(), datetime.now().strftime("%Y-%m-%d")), True)
             st.rerun()
         for n, b, d, rid in db_run("SELECT nome_doc, file_blob, data, row_id FROM documenti WHERE p_id=?", (pid,)):
@@ -164,8 +196,8 @@ elif st.session_state.menu == "Agenda":
             ps = st.selectbox("Paziente", list(p_map.keys()), key=f"ap{va}")
             ts = st.selectbox("Tipo", ["Udienza", "Visita", "Uscita"], key=f"at{va}")
             ds = st.date_input("Data", key=f"ad{va}")
-            rs = st.text_input("Accompagnatore", key=f"ar{va}")
-            if st.button("REGISTRA"):
+            rs = st.text_input("Rif", key=f"ar{va}")
+            if st.button("SALVA"):
                 db_run("INSERT INTO agenda (p_id,tipo,d_ora,note,rif) VALUES (?,?,?,?,?)", (p_map[ps], ts, str(ds), "", rs), True)
                 st.session_state.v_a += 1; st.rerun()
     for t, d, n, r, pn, rid in db_run("SELECT a.tipo, a.d_ora, a.note, a.rif, p.nome, a.row_id FROM agenda a JOIN pazienti p ON a.p_id = p.id ORDER BY d_ora ASC"):
@@ -177,4 +209,4 @@ elif st.session_state.menu == "Gestione":
     if st.button("AGGIUNGI"):
         if nn: db_run("INSERT INTO pazienti (nome) VALUES (?)", (nn,), True); st.session_state.v_g += 1; st.rerun()
     with open(DB_NAME, "rb") as f:
-        st.download_button("📥 BACKUP DATABASE", f, file_name=f"rems_backup.db")
+        st.download_button("📥 BACKUP DB", f, file_name=f"rems_backup.db")
