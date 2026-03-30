@@ -40,7 +40,7 @@ if not st.session_state.auth:
     if st.button("ACCEDI"):
         if pwd in ["rems2026", "admin2026"]:
             st.session_state.auth = True
-            st.session_state.role = "admin" if "admin" in pwd else "user"
+            st.session_state.role = "admin" if pwd == "admin2026" else "user"
             st.rerun()
     st.stop()
 
@@ -122,21 +122,27 @@ elif menu == "Documenti":
         for n, b, d, rid in db_run("SELECT nome_doc, file_blob, data, row_id FROM documenti WHERE p_id=?", (pid,)):
             st.download_button(f"📥 Scarica: {n}", b, file_name=n, key=f"dl_{rid}")
 
-# --- GESTIONE (CON MODIFICA NOME) ---
+# --- GESTIONE (RESTRIZIONE ADMIN) ---
 elif menu == "Gestione":
     st.subheader("Anagrafica Pazienti")
-    n = st.text_input("Nuovo Paziente")
-    if st.button("AGGIUNGI"):
-        if n: db_run("INSERT INTO pazienti (nome) VALUES (?)", (n,), True); st.rerun()
     
-    st.divider()
-    for pid, pnome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
-        with st.container():
-            col1, col2, col3 = st.columns([4, 1, 1])
-            new_name = col1.text_input(f"Nome ID:{pid}", value=pnome, label_visibility="collapsed", key=f"edit_{pid}")
-            if col2.button("💾", key=f"save_{pid}", help="Salva Modifica"):
-                db_run("UPDATE pazienti SET nome=? WHERE id=?", (new_name, pid), True)
-                st.rerun()
-            if col3.button("🗑️", key=f"del_{pid}", help="Elimina"):
-                db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
-                st.rerun()
+    if st.session_state.role == "admin":
+        n = st.text_input("Nuovo Paziente")
+        if st.button("AGGIUNGI"):
+            if n: db_run("INSERT INTO pazienti (nome) VALUES (?)", (n,), True); st.rerun()
+        st.divider()
+        
+        for pid, pnome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
+            with st.container():
+                col1, col2, col3 = st.columns([4, 1, 1])
+                new_name = col1.text_input(f"Nome ID:{pid}", value=pnome, label_visibility="collapsed", key=f"edit_{pid}")
+                if col2.button("💾", key=f"save_{pid}"):
+                    db_run("UPDATE pazienti SET nome=? WHERE id=?", (new_name, pid), True)
+                    st.rerun()
+                if col3.button("🗑️", key=f"del_{pid}"):
+                    db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
+                    st.rerun()
+    else:
+        st.warning("Accesso limitato. Solo l'Amministratore può modificare l'anagrafica.")
+        for pid, pnome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
+            st.markdown(f'<div class="card">👤 {pnome}</div>', unsafe_allow_html=True)
