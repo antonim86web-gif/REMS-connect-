@@ -12,15 +12,15 @@ st.markdown("""
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
     .rems-header {
         text-align: center; color: #1e3a8a; font-family: 'Orbitron', sans-serif;
-        font-size: 3rem !important; font-weight: 700; margin-bottom: 20px;
-        text-transform: uppercase; letter-spacing: 4px; text-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+        font-size: 2.8rem !important; font-weight: 700; margin-bottom: 20px;
+        text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
     }
     .stButton>button { 
         height: 3.5rem !important; font-size: 1.1rem !important; border-radius: 12px !important; 
         background-color: #2563eb !important; color: white !important; font-weight: bold !important; 
         width: 100%; font-family: 'Orbitron', sans-serif;
     }
-    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; }
+    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .agenda-card { background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; border-top: 4px solid #2563eb; }
     .nota-Psichiatra { border-left-color: #ef4444 !important; }
     .nota-Infermiere { border-left-color: #3b82f6 !important; }
@@ -34,7 +34,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE ---
+# --- 2. DATABASE ENGINE ---
 def db_query(query, params=(), commit=False):
     conn = sqlite3.connect("rems_connect_v1.db", check_same_thread=False)
     cur = conn.cursor()
@@ -63,7 +63,7 @@ if not st.session_state.auth:
         else: st.error("Codice errato")
     st.stop()
 
-# --- 5. INTERFACCIA ---
+# --- 5. LAYOUT PRINCIPALE ---
 st.markdown('<h1 class="rems-header">REMS CONNECT</h1>', unsafe_allow_html=True)
 
 c_nav1, c_nav2, c_nav3 = st.columns(3)
@@ -73,37 +73,4 @@ with c_nav2:
     if st.button("📅 Agenda & Uscite"): st.session_state.menu_val = "📅 Agenda"; st.rerun()
 with c_nav3:
     if st.session_state.role == "admin":
-        if st.button("⚙️ Gestione"): st.session_state.menu_val = "⚙️ Gestione"; st.rerun()
-    else: st.button("⚙️ Gestione (Admin)", disabled=True)
-
-# --- 6. LOGICA MENU ---
-
-# MONITORAGGIO
-if st.session_state.menu_val == "📊 Monitoraggio":
-    pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-    for p_id, nome in pazienti:
-        with st.expander(f"👤 {nome.upper()}", expanded=False):
-            if f"v_{p_id}" not in st.session_state: st.session_state[f"v_{p_id}"] = 0
-            v_idx = st.session_state[f"v_{p_id}"]
-            c1, c2 = st.columns(2)
-            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"r_{p_id}_{v_idx}")
-            with c2: operatore = st.text_input("Firma:", key=f"f_{p_id}_{v_idx}")
-            umore = st.radio("Stato", ["🟢 Stabile", "🟡 Cupo", "🟠 Deflesso", "🔴 Agitato"], key=f"u_{p_id}_{v_idx}", horizontal=True)
-            nota = st.text_area("Nota:", key=f"n_{p_id}_{v_idx}")
-            if st.button("SALVA NOTA", key=f"btn_save_{p_id}"):
-                if nota and operatore:
-                    dt = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    u_cl = umore.split(" ")[1]
-                    db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", (p_id, dt, u_cl, nota, ruolo, operatore), True)
-                    st.session_state[f"v_{p_id}"] += 1
-                    st.rerun()
-            st.divider()
-            eventi = db_query("SELECT data, umore, ruolo, operatore, nota FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
-            for e in eventi:
-                cls = "allerta-agitato" if e[1] == "Agitato" else ""
-                st.markdown(f'<div class="nota-card nota-{e[2]} {cls}"><small>{e[0]} | {e[2]} | {e[3]}</small><br><b>{e[1]}</b><br>{e[4]}</div>', unsafe_allow_html=True)
-
-# AGENDA (CON PULIZIA CAMPI)
-elif st.session_state.menu_val == "📅 Agenda":
-    st.title("Agenda Visite ed Uscite")
-    paz
+        if st.button("⚙️ Gestione"): st.session_
