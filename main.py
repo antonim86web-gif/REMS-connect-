@@ -9,13 +9,15 @@ st.markdown("""
 <style>
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
     .stButton>button { height: 4rem !important; font-size: 1.2rem !important; border-radius: 12px !important; background-color: #2563eb !important; color: white !important; font-weight: bold !important; width: 100%; }
-    .nota-card { padding: 12px; margin-bottom: 10px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .nota-Psichiatra { border-left-color: #ef4444 !important; background-color: #fef2f2 !important; }
-    .nota-Infermiere { border-left-color: #3b82f6 !important; background-color: #eff6ff !important; }
-    .nota-OSS { border-left-color: #8b5cf6 !important; background-color: #f5f3ff !important; }
-    .nota-Psicologo { border-left-color: #10b981 !important; background-color: #ecfdf5 !important; }
-    .nota-Educatore { border-left-color: #f59e0b !important; background-color: #fffbeb !important; }
-    .date-header { background-color: #e2e8f0; padding: 5px 15px; border-radius: 20px; font-weight: bold; color: #475569; margin: 15px 0 10px 0; display: inline-block; font-size: 0.85rem; }
+    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .nota-Psichiatra { border-left-color: #ef4444 !important; }
+    .nota-Infermiere { border-left-color: #3b82f6 !important; }
+    .nota-OSS { border-left-color: #8b5cf6 !important; }
+    .nota-Psicologo { border-left-color: #10b981 !important; }
+    .nota-Educatore { border-left-color: #f59e0b !important; }
+    
+    /* Stile per l'expander della data */
+    .stExpander { border: none !important; box-shadow: none !important; background-color: transparent !important; }
     #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -26,12 +28,9 @@ def db_query(query, params=(), commit=False):
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    
-    # Aggiornamento automatico colonne
     columns = [info[1] for info in cur.execute("PRAGMA table_info(eventi)").fetchall()]
     if "ruolo" not in columns: cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT DEFAULT 'Nota'")
     if "operatore" not in columns: cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT DEFAULT 'Anonimo'")
-    
     cur.execute(query, params)
     res = cur.fetchall()
     if commit: conn.commit()
@@ -50,8 +49,7 @@ if not st.session_state.auth:
     st.stop()
 
 # --- 4. NAVIGAZIONE ---
-if 'menu_val' not in st.session_state: 
-    st.session_state.menu_val = "📊 Monitoraggio"
+if 'menu_val' not in st.session_state: st.session_state.menu_val = "📊 Monitoraggio"
 
 col_nav1, col_nav2 = st.columns(2)
 with col_nav1:
@@ -71,15 +69,13 @@ if menu == "📊 Monitoraggio":
     pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     
     for p_id, nome in pazienti:
-        with st.expander(f"👤 {nome.upper()}"):
-            if f"v_{p_id}" not in st.session_state: 
-                st.session_state[f"v_{p_id}"] = 0
+        with st.expander(f"👤 {nome.upper()}", expanded=False):
+            if f"v_{p_id}" not in st.session_state: st.session_state[f"v_{p_id}"] = 0
             
+            # INSERIMENTO
             c1, c2 = st.columns(2)
-            with c1: 
-                ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'v_{p_id}']}")
-            with c2: 
-                operatore = st.text_input("Nome:", key=f"op_{p_id}_{st.session_state[f'v_{p_id}']}", placeholder="Firma")
+            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'v_{p_id}']}")
+            with c2: operatore = st.text_input("Nome:", key=f"op_{p_id}_{st.session_state[f'v_{p_id}']}", placeholder="Firma")
             
             umore = st.select_slider("Stato:", options=["Cupo", "Deflesso", "Stabile", "Agitato"], value="Stabile", key=f"u_{p_id}_{st.session_state[f'v_{p_id}']}")
             nota = st.text_area("Nota:", key=f"n_{p_id}_{st.session_state[f'v_{p_id}']}", height=100)
@@ -92,12 +88,13 @@ if menu == "📊 Monitoraggio":
                     st.rerun()
 
             st.divider()
-            f_ruolo = st.multiselect("Filtra per figura:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"filter_{p_id}")
             
+            # DIARIO RAGGRUPPATO PER DATA
             eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
-            current_date = ""
+            
+            # Creiamo un dizionario per raggruppare le note per giorno
+            diario_per_data = {}
             for e in eventi:
-                if f_ruolo and e[3] not in f_ruolo: continue
                 raw_dt = str(e[0])
                 try:
                     dt_obj = datetime.strptime(raw_dt.split(" ")[0], "%Y-%m-%d")
@@ -106,37 +103,37 @@ if menu == "📊 Monitoraggio":
                 except:
                     nice_date = raw_dt.split(" ")[0]
                     time_part = raw_dt.split(" ")[1] if " " in raw_dt else ""
-
-                if nice_date != current_date:
-                    st.markdown(f'<div class="date-header">📅 {nice_date}</div>', unsafe_allow_html=True)
-                    current_date = nice_date
                 
-                r_style = f"nota-{e[3].replace(' ', '')}" if e[3] else ""
-                st.markdown(f"""
-                <div class="nota-card {r_style}">
-                    <small><b>{time_part}</b> | <b>{e[3].upper()}</b> | {e[4]}</small><br>
-                    <b>Stato: {e[1]}</b><br>
-                    <div style="margin-top:5px; white-space: pre-wrap;">{e[2]}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                if nice_date not in diario_per_data:
+                    diario_per_data[nice_date] = []
+                diario_per_data[nice_date].append((time_part, e[1], e[2], e[3], e[4]))
+
+            # Visualizzazione con Expander per ogni data
+            for data_label, note_del_giorno in diario_per_data.items():
+                with st.expander(f"📅 Diario del {data_label} ({len(note_del_giorno)} note)"):
+                    for n in note_del_giorno:
+                        r_style = f"nota-{n[3].replace(' ', '')}" if n[3] else ""
+                        st.markdown(f"""
+                        <div class="nota-card {r_style}">
+                            <small><b>{n[0]}</b> | <b>{n[3].upper()}</b> | {n[4]}</small><br>
+                            <b>Stato: {n[1]}</b><br>
+                            <div style="margin-top:5px; white-space: pre-wrap;">{n[2]}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
 
 # --- 6. GESTIONE ---
 elif menu == "⚙️ Gestione":
     st.title("Anagrafica Pazienti")
-    
-    # AGGIUNTA
     with st.expander("➕ AGGIUNGI NUOVO"):
         nuovo = st.text_input("Nome e Cognome")
         if st.button("SALVA NUOVO"):
             if nuovo: 
                 db_query("INSERT INTO pazienti (nome) VALUES (?)", (nuovo,), commit=True)
                 st.rerun()
-
-    st.divider()
-
-    # MODIFICA (La tua nuova funzione)
+    
     p_list = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
     if p_list:
+        st.divider()
         with st.expander("✏️ MODIFICA NOME"):
             p_da_mod = st.selectbox("Paziente da rinominare", [p[1] for p in p_list], key="sel_mod")
             nuovo_nome = st.text_input("Correggi Nome", value=p_da_mod)
@@ -144,10 +141,7 @@ elif menu == "⚙️ Gestione":
                 if nuovo_nome and nuovo_nome != p_da_mod:
                     db_query("UPDATE pazienti SET nome=? WHERE nome=?", (nuovo_nome, p_da_mod), commit=True)
                     st.rerun()
-
-        st.divider()
-
-        # ELIMINA
+        
         with st.expander("🗑️ ELIMINA"):
             p_del = st.selectbox("Seleziona da rimuovere", [p[1] for p in p_list], key="sel_del")
             if st.button("ELIMINA DEFINITIVAMENTE"):
