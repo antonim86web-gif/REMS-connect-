@@ -2,55 +2,21 @@ import streamlit as st
 import sqlite3
 from datetime import datetime
 
-# --- 1. CONFIGURAZIONE E STILE ---
-st.set_page_config(page_title="REMS Connect", page_icon="🏥", layout="wide", initial_sidebar_state="expanded")
+# --- 1. CONFIGURAZIONE ---
+st.set_page_config(page_title="REMS Connect", page_icon="🏥", layout="wide")
 
+# CSS Semplificato: rimosse le forzature sul pulsante menu che causavano il bug
 st.markdown("""
 <style>
-    /* FORZATURA VISIBILITÀ PULSANTE MENU (Il cerchio blu) */
-    .st-emotion-cache-18ni7ap { 
-        display: flex !important; 
-    }
-    
-    /* STILE PERSONALIZZATO PER IL PULSANTE MENU LATERALE */
-    button[kind="headerNoSpacing"] {
-        display: flex !important;
-        position: fixed !important;
-        top: 10px !important;
-        left: 10px !important;
-        background-color: #2563eb !important; 
-        color: white !important;
-        width: 50px !important;
-        height: 50px !important;
-        border-radius: 50% !important;
-        z-index: 9999999 !important;
-        border: 2px solid white !important;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    /* SISTEMAZIONE SPAZIATURA TITOLO PER NON COPRIRE IL MENU */
-    .main .block-container {
-        padding-top: 60px !important;
-    }
-
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
-    [data-testid="stSidebar"] { background-color: #1e293b !important; }
-    [data-testid="stSidebar"] * { color: white !important; }
-    
     .stButton>button { height: 4rem !important; font-size: 1.2rem !important; border-radius: 12px !important; background-color: #2563eb !important; color: white !important; font-weight: bold !important; width: 100%; }
-    
     .nota-card { padding: 12px; margin-bottom: 10px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .nota-Psichiatra { border-left-color: #ef4444 !important; background-color: #fef2f2 !important; }
     .nota-Infermiere { border-left-color: #3b82f6 !important; background-color: #eff6ff !important; }
     .nota-OSS { border-left-color: #8b5cf6 !important; background-color: #f5f3ff !important; }
     .nota-Psicologo { border-left-color: #10b981 !important; background-color: #ecfdf5 !important; }
     .nota-Educatore { border-left-color: #f59e0b !important; background-color: #fffbeb !important; }
-    
     .date-header { background-color: #e2e8f0; padding: 5px 15px; border-radius: 20px; font-weight: bold; color: #475569; margin: 15px 0 10px 0; display: inline-block; font-size: 0.85rem; }
-    
-    /* NASCONDI ELEMENTI STANDARD DI STREAMLIT */
     #MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
@@ -61,11 +27,9 @@ def db_query(query, params=(), commit=False):
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    
     columns = [info[1] for info in cur.execute("PRAGMA table_info(eventi)").fetchall()]
     if "ruolo" not in columns: cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT DEFAULT 'Nota'")
     if "operatore" not in columns: cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT DEFAULT 'Anonimo'")
-    
     cur.execute(query, params)
     res = cur.fetchall()
     if commit: conn.commit()
@@ -81,10 +45,17 @@ if not st.session_state.auth:
         if pwd == "rems2026": st.session_state.auth = True; st.rerun()
     st.stop()
 
-# --- 4. NAVIGAZIONE ---
-# Titolo nella sidebar per confermare dove ci si trova
-st.sidebar.markdown("### 🏥 REMS Connect")
-menu = st.sidebar.radio("NAVIGAZIONE:", ["📊 Monitoraggio", "⚙️ Gestione"])
+# --- 4. NAVIGAZIONE DI EMERGENZA (Se il menu sparisce) ---
+if 'menu_val' not in st.session_state: st.session_state.menu_val = "📊 Monitoraggio"
+
+# Creiamo due pulsanti in alto per navigare senza dipendere dal menu laterale
+col_nav1, col_nav2 = st.columns(2)
+with col_nav1:
+    if st.button("📊 Monitoraggio"): st.session_state.menu_val = "📊 Monitoraggio"; st.rerun()
+with col_nav2:
+    if st.button("⚙️ Gestione"): st.session_state.menu_val = "⚙️ Gestione"; st.rerun()
+
+menu = st.session_state.menu_val
 
 # --- 5. MONITORAGGIO ---
 if menu == "📊 Monitoraggio":
@@ -110,8 +81,7 @@ if menu == "📊 Monitoraggio":
                     st.rerun()
 
             st.divider()
-            st.subheader("Filtra Diario")
-            f_ruolo = st.multiselect("Mostra solo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"filter_{p_id}")
+            f_ruolo = st.multiselect("Filtra per figura:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"filter_{p_id}")
             
             eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
             current_date = ""
