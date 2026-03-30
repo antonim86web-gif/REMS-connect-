@@ -56,11 +56,18 @@ if not st.session_state.auth:
 st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>REMS CONNECT</h4>", unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 
+# Correzione SyntaxError: Uso di virgolette singole all'interno di f-string
 with c1:
-    st.markdown(f'<div class="{"active-btn" if st.session_state.menu=="Monitoraggio" else ""}">', unsafe_allow_html=True)
+    is_active = "active-btn" if st.session_state.menu == "Monitoraggio" else ""
+    st.markdown(f'<div class="{is_active}">', unsafe_allow_html=True)
     if st.button("📊 Monitoraggio"):
         st.session_state.menu = "Monitoraggio"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
+
 with c2:
-    st.markdown(f'<div class="{"active-btn" if st.session_state.menu=="Agenda"
+    is_active = "active-btn" if st.session_state.menu == "Agenda" else ""
+    st.markdown(f'<div class="{is_active}">', unsafe_allow_html=True)
+    if st.button("📅 Agenda"):
+        st.session_state.menu = "Agenda"
+        st
