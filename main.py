@@ -23,10 +23,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE ---
+# --- 2. DATABASE (NOME DEFINITIVO) ---
+DB_NAME = "rems_connect_data.db"
+
 def db_run(query, params=(), commit=False):
-    with sqlite3.connect("rems_final_v1.db", check_same_thread=False) as conn:
+    with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
+        # Inizializzazione tabelle
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS agenda (p_id INTEGER, tipo TEXT, d_ora TEXT, note TEXT, rif TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
@@ -55,7 +58,6 @@ if not st.session_state.auth:
 st.markdown("<h4 style='text-align:center; color:#1e3a8a;'>REMS CONNECT</h4>", unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 
-# Calcolo classi fuori dalle f-string per stabilità
 cls_mon = "active-btn" if st.session_state.menu == "Monitoraggio" else ""
 cls_age = "active-btn" if st.session_state.menu == "Agenda" else ""
 cls_ges = "active-btn" if st.session_state.menu == "Gestione" else ""
@@ -94,7 +96,7 @@ if st.session_state.menu == "Monitoraggio":
             o = c_b.text_input("Firma", key=f"f{p_id}{vi}")
             u = st.radio("Stato", ["Stabile", "Cupo", "Deflesso", "Agitato"], key=f"u{p_id}{vi}", horizontal=True)
             n = st.text_area("Nota", key=f"n{p_id}{vi}")
-            if st.button("SALVA", key=f"btn{p_id}"):
+            if st.button("SALVA NOTA", key=f"btn{p_id}"):
                 if n and o:
                     db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%Y-%m-%d %H:%M"), u, n, r, o), True)
                     st.session_state[f"v_{p_id}"] = vi + 1
@@ -102,12 +104,9 @@ if st.session_state.menu == "Monitoraggio":
             q = "SELECT data, umore, nota, ruolo, op, row_id FROM eventi WHERE id=?"
             pa = [p_id]
             if filtro != "TUTTI": q += " AND ruolo=?"; pa.append(filtro)
-            cur_d = ""
             for d, um, tx, ru, fi, rid in db_run(q + " ORDER BY data DESC", tuple(pa)):
-                dp = d.split(" ")[0]
-                if dp != cur_d: st.markdown(f"**📅 {dp}**"); cur_d = dp
                 cl = "card agitato" if um=="Agitato" else "card"
-                st.markdown(f'<div class="{cl}"><div class="nota-header">{d.split(" ")[1]} | {ru} | {fi}</div><b>{um}</b><br>{tx}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="{cl}"><div class="nota-header">{d} | {ru} | {fi}</div><b>{um}</b><br>{tx}</div>', unsafe_allow_html=True)
                 if st.session_state.role == "admin":
                     if st.button(f"Elimina Nota #{rid}", key=f"del_ev_{rid}"):
                         db_run("DELETE FROM eventi WHERE row_id=?", (rid,), True); st.rerun()
