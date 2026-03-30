@@ -41,13 +41,17 @@ def rinomina_paziente(p_id, nuovo_nome):
 
 # --- LOGICA APP ---
 init_db()
-st.set_page_config(page_title="REMS Connect Pro", layout="wide")
+st.set_page_config(
+    page_title="REMS Connect",
+    page_icon="🏥",  # <--- Cambia questa emoji
+    layout="wide"
+)
 
 # Configurazione Stati
 stati_config = {
-    "Stabile": {"color": "green", "icon": "🙂", "punti": 3},
-    "Deflesso": {"color": "orange", "icon": "😐", "punti": 2},
-    "Cupo": {"color": "red", "icon": "☹️", "punti": 1}
+    "Stabile": {"color": "green", "icon": "🟢", "punti": 3},
+    "Deflesso": {"color": "orange", "icon": "🟠", "punti": 2},
+    "Cupo": {"color": "red", "icon": "🔴", "punti": 1}
 }
 
 if "auth" not in st.session_state: st.session_state.auth = False
