@@ -70,7 +70,6 @@ with st.sidebar:
 # --- 6. MODULI ---
 st.title(f"{st.session_state.menu}")
 
-# --- MONITORAGGIO ---
 if st.session_state.menu == "Monitoraggio":
     ruoli_list = ["Tutti", "Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"]
     pazienti = db_run("SELECT * FROM pazienti ORDER BY nome")
@@ -102,7 +101,6 @@ if st.session_state.menu == "Monitoraggio":
                 if st.session_state.role == "admin" and st.button(f"Elimina #{rid}", key=f"del_ev_{rid}"):
                     db_run("DELETE FROM eventi WHERE row_id=?", (rid,), True); st.rerun()
 
-# --- AGENDA ---
 elif st.session_state.menu == "Agenda":
     paz = db_run("SELECT * FROM pazienti ORDER BY nome")
     if paz:
@@ -120,7 +118,6 @@ elif st.session_state.menu == "Agenda":
         if st.session_state.role == "admin" and st.button(f"Elimina App. #{rid}", key=f"del_ag_{rid}"):
             db_run("DELETE FROM agenda WHERE row_id=?", (rid,), True); st.rerun()
 
-# --- TERAPIE ---
 elif st.session_state.menu == "Terapie":
     paz = db_run("SELECT * FROM pazienti ORDER BY nome")
     if paz:
@@ -140,7 +137,6 @@ elif st.session_state.menu == "Terapie":
             if st.session_state.role == "admin" and st.button(f"Elimina farmaco #{rid}", key=f"del_t_{rid}"):
                 db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
-# --- STATISTICHE ---
 elif st.session_state.menu == "Statistiche":
     paz_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
     if paz_list:
@@ -150,4 +146,44 @@ elif st.session_state.menu == "Statistiche":
         if res:
             df = pd.DataFrame(res, columns=["Data", "Umore"])
             c1, c2 = st.columns(2)
-            with c1: st.plotly_chart(px.pie(df, names="Umore", color="Umore", color_discrete_map={"Agitato":"#ef4444", "Stabile":"#10b981
+            with c1: 
+                fig_pie = px.pie(df, names="Umore", color="Umore", color_discrete_map={"Agitato":"#ef4444", "Stabile":"#10b981", "Cupo":"#1e3a8a", "Deflesso":"#f59e0b"})
+                st.plotly_chart(fig_pie, use_container_width=True)
+            with c2: 
+                df['Data'] = pd.to_datetime(df['Data'])
+                df['Livello'] = df['Umore'].map({"Agitato": 0, "Cupo": 1, "Deflesso": 2, "Stabile": 3})
+                fig_line = px.line(df, x="Data", y="Livello", markers=True)
+                fig_line.update_yaxes(tickvals=[0, 1, 2, 3], ticktext=["Agitato", "Cupo", "Deflesso", "Stabile"])
+                st.plotly_chart(fig_line, use_container_width=True)
+        else: st.warning("Dati insufficienti per questo paziente.")
+    else: st.info("Nessun paziente in anagrafica.")
+
+elif st.session_state.menu == "Documenti":
+    paz = db_run("SELECT * FROM pazienti ORDER BY nome")
+    if paz:
+        p_map = {p[1]: p[0] for p in paz}
+        sel_p = st.selectbox("Paziente", list(p_map.keys()))
+        up = st.file_uploader("Carica File", type=['pdf', 'jpg', 'png'])
+        if up and st.button("SALVA"):
+            db_run("INSERT INTO documenti (p_id, nome_doc, file_blob, data) VALUES (?,?,?,?)", (p_map[sel_p], up.name, up.read(), datetime.now().strftime("%Y-%m-%d")), True)
+            st.rerun()
+        for n, b, d, rid in db_run("SELECT nome_doc, file_blob, data, row_id FROM documenti WHERE p_id=?", (p_map[sel_p],)):
+            st.download_button(f"📥 {n} ({d})", b, file_name=n, key=f"dl_{rid}")
+            if st.session_state.role == "admin" and st.button(f"Elimina Doc #{rid}", key=f"del_doc_{rid}"):
+                db_run("DELETE FROM documenti WHERE row_id=?", (rid,), True); st.rerun()
+
+elif st.session_state.menu == "Gestione":
+    st.subheader("Anagrafica Pazienti")
+    nn = st.text_input("Aggiungi Paziente")
+    if st.button("➕ AGGIUNGI"):
+        if nn: db_run("INSERT INTO pazienti (nome) VALUES (?)", (nn,), True); st.rerun()
+    st.divider()
+    for pid, pnome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
+        c1, c2, c3 = st.columns([3, 1, 1])
+        nuovo = c1.text_input(f"Edita", value=pnome, key=f"ed_{pid}", label_visibility="collapsed")
+        if c2.button("💾", key=f"s_{pid}"):
+            db_run("UPDATE pazienti SET nome=? WHERE id=?", (nuovo, pid), True); st.rerun()
+        if c3.button("🗑️", key=f"d_{pid}"):
+            db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); st.rerun()
+    st.divider()
+    with open(DB_NAME, "rb") as f: st.download_button("📥 BACKUP DB", f, file_name="rems_backup.db")
