@@ -31,26 +31,23 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE (Aggiunto campo 'operatore') ---
+# --- 2. DATABASE ---
 def db_query(query, params=(), commit=False):
     conn = sqlite3.connect("rems_connect_v1.db")
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    
-    # Aggiornamento automatico colonne se necessario
     try: cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT")
     except: pass
     try: cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT")
     except: pass
-    
     cur.execute(query, params)
     res = cur.fetchall()
     if commit: conn.commit()
     conn.close()
     return res
 
-# --- 3. ACCESSO ---
+# --- 3. LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
     st.title("🏥 REMS Connect")
@@ -72,28 +69,35 @@ if menu == "📊 MONITORAGGIO":
         with st.expander(f"👤 {nome.upper()}"):
             st.subheader("Registrazione Turno")
             
+            # Gestione del reset campi tramite session_state
+            if f"reset_{p_id}" not in st.session_state:
+                st.session_state[f"reset_{p_id}"] = 0
+
+            # Usiamo un container per gestire i widget che devono resettarsi
             c1, c2 = st.columns(2)
             with c1:
-                ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"r_{p_id}")
+                ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"r_{p_id}_{st.session_state[f'reset_{p_id}']}")
             with c2:
-                operatore = st.text_input("Nome Operatore:", key=f"op_{p_id}", placeholder="es. Rossi M.")
+                operatore = st.text_input("Nome Operatore:", key=f"op_{p_id}_{st.session_state[f'reset_{p_id}']}", placeholder="es. Rossi M.")
             
-            umore = st.select_slider("Stato del Paziente", options=["Cupo", "Deflesso", "Stabile", "Agitato"], value="Stabile", key=f"u_{p_id}")
-            nota = st.text_area("Note e Osservazioni", key=f"n_{p_id}", height=120)
+            umore = st.select_slider("Stato del Paziente", options=["Cupo", "Deflesso", "Stabile", "Agitato"], value="Stabile", key=f"u_{p_id}_{st.session_state[f'reset_{p_id}']}")
+            nota = st.text_area("Note e Osservazioni", key=f"n_{p_id}_{st.session_state[f'reset_{p_id}']}", height=120)
             
             if st.button("SALVA NOTA", key=f"b_{p_id}"):
                 if nota and operatore:
                     dt = datetime.now().strftime("%d/%m/%Y %H:%M")
                     db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", 
                              (p_id, dt, umore, nota, ruolo, operatore), commit=True)
-                    st.success("Registrato!")
+                    
+                    # INCREMENTIAMO IL RESET: questo svuota istantaneamente i widget
+                    st.session_state[f"reset_{p_id}"] += 1
+                    st.success("Nota registrata e campi puliti!")
                     st.rerun()
                 elif not operatore:
-                    st.error("Inserisci il tuo nome (Firma Operatore)")
+                    st.error("Manca la firma dell'operatore.")
             
             st.divider()
             st.subheader("Diario Clinico Recente")
-            # Carichiamo anche il campo operatore dal database
             eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY id DESC LIMIT 15", (p_id,))
             for e in eventi:
                 r_style = f"nota-{e[3].replace(' ', '')}" if e[3] else ""
