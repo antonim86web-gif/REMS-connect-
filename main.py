@@ -26,26 +26,130 @@ def db_query(query, params=(), commit=False):
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
+    
+    # Aggiornamento automatico colonne
     columns = [info[1] for info in cur.execute("PRAGMA table_info(eventi)").fetchall()]
     if "ruolo" not in columns: cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT DEFAULT 'Nota'")
     if "operatore" not in columns: cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT DEFAULT 'Anonimo'")
+    
     cur.execute(query, params)
     res = cur.fetchall()
     if commit: conn.commit()
     conn.close()
     return res
 
-# --- 3. ACCESSO ---
+# --- 3. LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if not st.session_state.auth:
     st.title("🏥 REMS Connect")
     pwd = st.text_input("Codice", type="password")
     if st.button("ENTRA"):
-        if pwd == "rems2026": st.session_state.auth = True; st.rerun()
+        if pwd == "rems2026": 
+            st.session_state.auth = True
+            st.rerun()
     st.stop()
 
 # --- 4. NAVIGAZIONE ---
-if 'menu_val' not in st.session_state: st.session_state.menu_val = "📊 Monitoraggio"
+if 'menu_val' not in st.session_state: 
+    st.session_state.menu_val = "📊 Monitoraggio"
 
 col_nav1, col_nav2 = st.columns(2)
 with col_nav1:
+    if st.button("📊 Monitoraggio"): 
+        st.session_state.menu_val = "📊 Monitoraggio"
+        st.rerun()
+with col_nav2:
+    if st.button("⚙️ Gestione"): 
+        st.session_state.menu_val = "⚙️ Gestione"
+        st.rerun()
+
+menu = st.session_state.menu_val
+
+# --- 5. MONITORAGGIO ---
+if menu == "📊 Monitoraggio":
+    st.title("Monitoraggio Clinico")
+    pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
+    
+    for p_id, nome in pazienti:
+        with st.expander(f"👤 {nome.upper()}"):
+            if f"v_{p_id}" not in st.session_state: 
+                st.session_state[f"v_{p_id}"] = 0
+            
+            c1, c2 = st.columns(2)
+            with c1: 
+                ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'v_{p_id}']}")
+            with c2: 
+                operatore = st.text_input("Nome:", key=f"op_{p_id}_{st.session_state[f'v_{p_id}']}", placeholder="Firma")
+            
+            umore = st.select_slider("Stato:", options=["Cupo", "Deflesso", "Stabile", "Agitato"], value="Stabile", key=f"u_{p_id}_{st.session_state[f'v_{p_id}']}")
+            nota = st.text_area("Nota:", key=f"n_{p_id}_{st.session_state[f'v_{p_id}']}", height=100)
+            
+            if st.button("SALVA NOTA", key=f"btn_{p_id}"):
+                if nota and operatore:
+                    dt = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", (p_id, dt, umore, nota, ruolo, operatore), commit=True)
+                    st.session_state[f"v_{p_id}"] += 1
+                    st.rerun()
+
+            st.divider()
+            f_ruolo = st.multiselect("Filtra per figura:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"filter_{p_id}")
+            
+            eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
+            current_date = ""
+            for e in eventi:
+                if f_ruolo and e[3] not in f_ruolo: continue
+                raw_dt = str(e[0])
+                try:
+                    dt_obj = datetime.strptime(raw_dt.split(" ")[0], "%Y-%m-%d")
+                    nice_date = dt_obj.strftime("%d/%m/%Y")
+                    time_part = raw_dt.split(" ")[1]
+                except:
+                    nice_date = raw_dt.split(" ")[0]
+                    time_part = raw_dt.split(" ")[1] if " " in raw_dt else ""
+
+                if nice_date != current_date:
+                    st.markdown(f'<div class="date-header">📅 {nice_date}</div>', unsafe_allow_html=True)
+                    current_date = nice_date
+                
+                r_style = f"nota-{e[3].replace(' ', '')}" if e[3] else ""
+                st.markdown(f"""
+                <div class="nota-card {r_style}">
+                    <small><b>{time_part}</b> | <b>{e[3].upper()}</b> | {e[4]}</small><br>
+                    <b>Stato: {e[1]}</b><br>
+                    <div style="margin-top:5px; white-space: pre-wrap;">{e[2]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+# --- 6. GESTIONE ---
+elif menu == "⚙️ Gestione":
+    st.title("Anagrafica Pazienti")
+    
+    # AGGIUNTA
+    with st.expander("➕ AGGIUNGI NUOVO"):
+        nuovo = st.text_input("Nome e Cognome")
+        if st.button("SALVA NUOVO"):
+            if nuovo: 
+                db_query("INSERT INTO pazienti (nome) VALUES (?)", (nuovo,), commit=True)
+                st.rerun()
+
+    st.divider()
+
+    # MODIFICA (La tua nuova funzione)
+    p_list = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
+    if p_list:
+        with st.expander("✏️ MODIFICA NOME"):
+            p_da_mod = st.selectbox("Paziente da rinominare", [p[1] for p in p_list], key="sel_mod")
+            nuovo_nome = st.text_input("Correggi Nome", value=p_da_mod)
+            if st.button("CONFERMA MODIFICA"):
+                if nuovo_nome and nuovo_nome != p_da_mod:
+                    db_query("UPDATE pazienti SET nome=? WHERE nome=?", (nuovo_nome, p_da_mod), commit=True)
+                    st.rerun()
+
+        st.divider()
+
+        # ELIMINA
+        with st.expander("🗑️ ELIMINA"):
+            p_del = st.selectbox("Seleziona da rimuovere", [p[1] for p in p_list], key="sel_del")
+            if st.button("ELIMINA DEFINITIVAMENTE"):
+                db_query("DELETE FROM pazienti WHERE nome=?", (p_del,), commit=True)
+                st.rerun()
