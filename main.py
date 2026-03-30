@@ -17,7 +17,6 @@ st.markdown("""
     [data-testid="stSidebar"] * { color: white !important; }
     .stButton>button { height: 4.2rem !important; font-size: 1.3rem !important; border-radius: 15px !important; background-color: #2563eb !important; color: white !important; font-weight: bold !important; }
     
-    /* STILI RUOLI */
     .nota-Psichiatra { border-left: 6px solid #ef4444; background-color: #fef2f2; }
     .nota-Infermiere { border-left: 6px solid #3b82f6; background-color: #eff6ff; }
     .nota-Psicologo { border-left: 6px solid #10b981; background-color: #ecfdf5; }
@@ -36,7 +35,9 @@ def db_query(query, params=(), commit=False):
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    try: cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT"); cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT")
+    try: 
+        cur.execute("ALTER TABLE eventi ADD COLUMN ruolo TEXT")
+        cur.execute("ALTER TABLE eventi ADD COLUMN operatore TEXT")
     except: pass
     cur.execute(query, params)
     res = cur.fetchall()
@@ -64,7 +65,6 @@ if menu == "📊 MONITORAGGIO":
     
     for p_id, nome in pazienti:
         with st.expander(f"👤 {nome.upper()}"):
-            # --- SEZIONE INSERIMENTO ---
             if f"reset_{p_id}" not in st.session_state: st.session_state[f"reset_{p_id}"] = 0
             
             c1, c2 = st.columns(2)
@@ -76,60 +76,34 @@ if menu == "📊 MONITORAGGIO":
             
             if st.button("SALVA NOTA", key=f"b_{p_id}"):
                 if nota and operatore:
-                    dt = datetime.now().strftime("%Y-%m-%d %H:%M") # Formato ISO per ordinamento facile
+                    dt = datetime.now().strftime("%Y-%m-%d %H:%M")
                     db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", (p_id, dt, umore, nota, ruolo, operatore), commit=True)
                     st.session_state[f"reset_{p_id}"] += 1
                     st.rerun()
-            
-            st.divider()
-            
-            # --- SEZIONE DIARIO CALENDARIZZATO ---
-            st.subheader("Consultazione Diario")
-            
-            # FILTRI RAPIDI
-            col_f1, col_f2 = st.columns([1, 1])
-            with col_f1:
-                filtro_ruolo = st.multiselect("Filtra per Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"fr_{p_id}")
-            with col_f2:
-                # Per ora mostriamo le ultime, ma predisposto per ricerca data
-                st.write("") # Spazio vuoto per allineamento
 
-            # Caricamento note
-            query = "SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC"
-            eventi = db_query(query, (p_id,))
+            st.divider()
+            st.subheader("Consultazione Diario")
+            filtro_ruolo = st.multiselect("Filtra per Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"fr_{p_id}")
+
+            eventi = db_query("SELECT data, umore, nota, ruolo, operatore FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
             
             current_date = ""
             for e in eventi:
-                # Filtro Ruolo Logic
                 if filtro_ruolo and e[3] not in filtro_ruolo:
                     continue
                 
-                # Raggruppamento per Data
-                date_str = e[0].split(" ")[0]
-                time_str = e[0].split(" ")[1]
-                nice_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+                # FIX PER IL CRASH DELLE DATE
+                raw_date = e[0]
+                try:
+                    # Prova formato nuovo (ISO)
+                    dt_obj = datetime.strptime(raw_date.split(" ")[0], "%Y-%m-%d")
+                    nice_date = dt_obj.strftime("%d/%m/%Y")
+                    time_str = raw_date.split(" ")[1]
+                except:
+                    # Se fallisce, usa formato vecchio o mostra data grezza
+                    nice_date = raw_date.split(" ")[0]
+                    time_str = raw_date.split(" ")[1] if " " in raw_date else ""
                 
                 if nice_date != current_date:
                     st.markdown(f'<div class="date-header">📅 {nice_date}</div>', unsafe_allow_html=True)
                     current_date = nice_date
-                
-                r_style = f"nota-{e[3].replace(' ', '')}" if e[3] else ""
-                st.markdown(f"""
-                <div class="nota-card {r_style}">
-                    <small><b>{time_str}</b> - {e[4]} ({e[3]})</small><br>
-                    <b>Stato: {e[1]}</b><br>
-                    {e[2]}
-                </div>
-                """, unsafe_allow_html=True)
-
-elif menu == "⚙️ GESTIONE":
-    st.title("Anagrafica")
-    n_paz = st.text_input("Nuovo Paziente")
-    if st.button("AGGIUNGI"):
-        if n_paz: db_query("INSERT INTO pazienti (nome) VALUES (?)", (n_paz,), commit=True); st.rerun()
-    st.divider()
-    p_list = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-    if p_list:
-        p_del = st.selectbox("Rimuovi", [p[1] for p in p_list])
-        if st.button("ELIMINA"):
-            db_query("DELETE FROM pazienti WHERE nome=?", (p_del,), commit=True); st.rerun()
