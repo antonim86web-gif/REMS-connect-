@@ -3,38 +3,18 @@ import sqlite3
 import pandas as pd
 from datetime import datetime, date
 
-# --- 1. CONFIGURAZIONE & STILE CSS AVANZATO ---
+# --- 1. CONFIGURAZIONE & STILE ---
 st.set_page_config(page_title="REMS Connect PRO", layout="wide")
 
 st.markdown("""
 <style>
     .main-title {text-align: center; color: #1e3a8a; font-weight: bold; margin-bottom:20px;}
-    
-    /* Tabella Professionale Lineare */
-    .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 10px 0;
-        font-size: 0.85rem;
-        background-white;
-    }
-    .custom-table th {
-        background-color: #1e3a8a;
-        color: white;
-        padding: 10px;
-        text-align: left;
-        border: 1px solid #dee2e6;
-    }
-    .custom-table td {
-        padding: 10px;
-        border: 1px solid #dee2e6;
-        vertical-align: middle;
-    }
-    .custom-table tr:nth-child(even) { background-color: #f8fafc; }
-    
-    /* Badge Stati */
-    .badge-m { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-    .status-ok { color: #10b981; font-weight: bold; }
+    .custom-table {width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white;}
+    .custom-table th {background-color: #1e3a8a; color: white; padding: 10px; text-align: left; border: 1px solid #dee2e6;}
+    .custom-table td {padding: 10px; border: 1px solid #dee2e6; vertical-align: middle;}
+    .badge-m { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; border: 1px solid #166534; }
+    .status-ok { color: #10b981; font-weight: bold; border: 1px solid #10b981; padding: 2px 5px; border-radius: 4px; background: #f0fdf4; }
+    .card-terapia { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,7 +62,7 @@ if menu == "Equipe":
         p_id = [p[0] for p in paz if p[1] == sel_p][0]
         st.divider()
 
-        # --- PSICHIATRA ---
+        # --- SEZIONE PSICHIATRA ---
         if figura == "Psichiatra":
             st.subheader("📋 Nuova Prescrizione")
             with st.form("presc_form"):
@@ -90,15 +70,10 @@ if menu == "Equipe":
                 d = st.text_input("Dosaggio")
                 st.write("Turni:")
                 c1, c2, c3 = st.columns(3)
-                tm = c1.checkbox("M")
-                tp = c2.checkbox("P")
-                tn = c3.checkbox("N")
+                tm, tp, tn = c1.checkbox("M"), c2.checkbox("P"), c3.checkbox("N")
                 med = st.text_input("Medico")
                 if st.form_submit_button("CONFERMA VARIAZIONE"):
-                    t_list = []
-                    if tm: t_list.append("M")
-                    if tp: t_list.append("P")
-                    if tn: t_list.append("N")
+                    t_list = [s for s, b in zip(["M", "P", "N"], [tm, tp, tn]) if b]
                     dt = datetime.now().strftime("%d/%m/%y %H:%M")
                     db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", 
                            (p_id, f, d, ",".join(t_list), med, dt), True)
@@ -106,67 +81,63 @@ if menu == "Equipe":
 
             st.write("### 💊 Terapie Attive")
             terapie = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
-            
             if terapie:
-                # Costruiamo la tabella HTML per garantire la linearità su mobile
-                html = """<table class='custom-table'>
-                <tr><th>DATA</th><th>FARMACO</th><th>DOS</th><th>T</th><th>MED</th><th>AZIONE</th></tr>"""
+                html = "<table class='custom-table'><tr><th>DATA</th><th>FARMACO</th><th>DOS</th><th>T</th><th>MED</th></tr>"
                 for da, fa, do, tu, me, rid in terapie:
-                    html += f"""<tr>
-                        <td>{da if da else '-'}</td>
-                        <td><b>{fa}</b></td>
-                        <td>{do}</td>
-                        <td><span class='badge-m'>{tu}</span></td>
-                        <td>{me}</td>
-                        <td></td>
-                    </tr>"""
+                    html += f"<tr><td>{da}</td><td><b>{fa}</b></td><td>{do}</td><td><span class='badge-m'>{tu}</span></td><td>{me}</td></tr>"
                 st.markdown(html + "</table>", unsafe_allow_html=True)
-                
-                # Per gestire i bottoni Streamlit "dentro" una riga lineare, usiamo un espander di pulizia
-                with st.expander("Azioni Rapide (Sospensione)"):
+                with st.expander("Sospendi Farmaci"):
                     for da, fa, do, tu, me, rid in terapie:
-                        if st.button(f"Sospendi {fa}", key=f"s_{rid}"):
+                        if st.button(f"Sospendi {fa}", key=f"del_{rid}"):
                             db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", 
                                    (p_id, datetime.now().strftime("%d/%m/%y %H:%M"), "Stabile", f"❌ SOSPESO {fa}", "Psichiatra", "Sistema"), True)
                             st.rerun()
 
-        # --- INFERMIERE ---
+        # --- SEZIONE INFERMIERE (MODIFICATA) ---
         elif figura == "Infermiere":
-            st.subheader("💉 Somministrazione")
+            st.subheader("💉 Gestione Somministrazione")
             col_a, col_b = st.columns(2)
             d_sel = col_a.date_input("Data", date.today())
-            t_sel = col_b.selectbox("Turno", ["Mattina", "Pomeriggio", "Notte"])
+            t_sel = col_b.selectbox("Turno Operativo", ["Mattina", "Pomeriggio", "Notte"])
             sigla = t_sel[0]
-            inf_f = st.text_input("Firma Infermiere")
+            inf_f = st.text_input("Firma Infermiere in Turno")
             
-            st.write(f"**Turno {t_sel}**")
             data_s = d_sel.strftime("%d/%m/%Y")
             terapie = db_run("SELECT farmaco, dosaggio, turni, row_id FROM terapie WHERE p_id=?", (p_id,))
             
+            st.write(f"#### 💊 Farmaci Turno {t_sel}")
             for f, d, turni_f, rid in terapie:
                 if turni_f and sigla in turni_f:
                     tag = f"[REP_{sigla}] {f}"
-                    fatto = db_run("SELECT op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%{tag}%", f"{data_s}%"))
+                    fatto = db_run("SELECT op, nota FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%{tag}%", f"{data_s}%"))
                     
                     with st.container():
-                        c1, c2 = st.columns([2, 1])
-                        c1.markdown(f"**{f}** ({d})")
+                        st.markdown(f"<div class='card-terapia'>", unsafe_allow_html=True)
+                        c1, c2, c3 = st.columns([2, 2, 1])
+                        c1.markdown(f"**{f}**<br><small>{d}</small>", unsafe_allow_html=True)
+                        
                         if fatto:
-                            c2.markdown(f"<span class='status-ok'>✅ {fatto[0][0]}</span>", unsafe_allow_html=True)
+                            c2.markdown(f"<span class='status-ok'>✅ {fatto[0][1].split('->')[-1].strip()} da {fatto[0][0]}</span>", unsafe_allow_html=True)
+                            c3.write("") # Spazio vuoto se già fatto
                         else:
-                            if st.button(f"CONVALIDA {f}", key=f"inf_{rid}_{sigla}"):
+                            # SELETTORE ASSUNTO / RIFIUTATO
+                            scelta = c2.radio("Esito:", ["Assunta", "Rifiutata", "Parziale"], key=f"opt_{rid}_{sigla}", horizontal=True)
+                            if c3.button("CONVALIDA", key=f"inf_{rid}_{sigla}"):
                                 if inf_f:
+                                    ora_min = datetime.now().strftime("%H:%M")
+                                    log_nota = f"{tag} ({d}) -> {scelta}"
                                     db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", 
-                                           (p_id, f"{data_s} {datetime.now().strftime('%H:%M')}", "Stabile", f"{tag} -> Somministrata", "Infermiere", inf_f), True)
+                                           (p_id, f"{data_s} {ora_min}", "Stabile", log_nota, "Infermiere", inf_f), True)
                                     st.rerun()
-                                else: st.error("Firma!")
+                                else: st.error("Firma obbligatoria!")
+                        st.markdown("</div>", unsafe_allow_html=True)
 
             st.divider()
-            st.write("#### 📑 Report Odierni")
-            reps = db_run("SELECT data, nota, op FROM eventi WHERE id=? AND nota LIKE '%[REP_%' ORDER BY row_id DESC LIMIT 10", (p_id,))
+            st.write("#### 📑 Registro Somministrazioni del Giorno")
+            reps = db_run("SELECT data, nota, op FROM eventi WHERE id=? AND nota LIKE '%[REP_%' AND data LIKE ? ORDER BY row_id DESC", (p_id, f"{data_s}%"))
             if reps:
-                st.table(pd.DataFrame(reps, columns=["Data/Ora", "Nota", "Op"]))
+                st.table(pd.DataFrame(reps, columns=["Data/Ora", "Esito Somministrazione", "Operatore"]))
 
 # --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
@@ -177,12 +148,13 @@ elif menu == "Monitoraggio":
             if note:
                 html = "<table class='custom-table'><tr><th>DATA</th><th>RUOLO</th><th>NOTA</th></tr>"
                 for d, ru, op, nt in note:
-                    html += f"<tr><td>{d}</td><td><b>{ru}</b><br>{op}</td><td>{nt}</td></tr>"
+                    bg = "#f0fdf4" if "REP_" in nt else ("#fff1f2" if "SOSPESO" in nt else "#ffffff")
+                    html += f"<tr style='background:{bg}'><td>{d}</td><td><b>{ru}</b><br>{op}</td><td>{nt}</td></tr>"
                 st.markdown(html + "</table>", unsafe_allow_html=True)
 
 # --- GESTIONE ---
 elif menu == "Gestione":
-    st.subheader("⚙️ Gestione")
-    nuovo = st.text_input("Aggiungi Paziente")
+    st.subheader("⚙️ Gestione Pazienti")
+    nuovo = st.text_input("Inserisci Nome e Cognome")
     if st.button("SALVA"):
         if nuovo: db_run("INSERT INTO pazienti (nome) VALUES (?)", (nuovo,), True); st.rerun()
