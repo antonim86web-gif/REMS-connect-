@@ -6,14 +6,13 @@ from datetime import datetime
 # --- 1. CONFIGURAZIONE ---
 st.set_page_config(page_title="REMS Connect PRO", page_icon="🏥", layout="wide")
 
-# Caricamento Font Particolare (Orbitron) e Stili CSS
+# Caricamento Font Orbitron e Stili CSS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
     html, body, [class*="css"] { font-size: 19px !important; background-color: #f1f5f9; }
     
-    /* TITOLO PRINCIPALE CON FONT PARTICOLARE */
     .rems-header {
         text-align: center;
         color: #1e3a8a;
@@ -23,7 +22,6 @@ st.markdown("""
         margin-bottom: 25px;
         text-transform: uppercase;
         letter-spacing: 5px;
-        /* Effetto Bagliore */
         text-shadow: 0 0 10px rgba(37, 99, 235, 0.2), 2px 2px 0px #ffffff;
     }
 
@@ -35,7 +33,7 @@ st.markdown("""
         color: white !important; 
         font-weight: bold !important; 
         width: 100%; 
-        font-family: 'Orbitron', sans-serif; /* Font anche sui tasti principali */
+        font-family: 'Orbitron', sans-serif;
     }
     
     .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
@@ -99,42 +97,4 @@ with col_nav2:
 
 menu = st.session_state.menu_val
 
-# --- 5. MONITORAGGIO ---
-if menu == "📊 Monitoraggio":
-    pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-    
-    for p_id, nome in pazienti:
-        with st.expander(f"👤 {nome.upper()}", expanded=False):
-            if f"v_{p_id}" not in st.session_state: st.session_state[f"v_{p_id}"] = 0
-            
-            c1, c2 = st.columns(2)
-            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"sel_{p_id}_{st.session_state[f'v_{p_id}']}")
-            with c2: operatore = st.text_input("Firma:", key=f"op_{p_id}_{st.session_state[f'v_{p_id}']}")
-            
-            st.markdown("---")
-            st.write("**Stato Attuale del Paziente:**")
-            umore = st.radio(
-                label="Stato",
-                options=["🟢 Stabile", "🟡 Cupo", "🟠 Deflesso", "🔴 Agitato"],
-                index=0,
-                key=f"u_{p_id}_{st.session_state[f'v_{p_id}']}",
-                horizontal=True,
-                label_visibility="collapsed"
-            )
-            
-            nota = st.text_area("Nota di Turno:", key=f"n_{p_id}_{st.session_state[f'v_{p_id}']}", height=120)
-            
-            if st.button("SALVA NOTA", key=f"btn_{p_id}"):
-                if nota and operatore:
-                    dt = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    umore_clean = umore.split(" ")[1]
-                    db_query("INSERT INTO eventi (p_id, data, umore, nota, ruolo, operatore) VALUES (?,?,?,?,?,?)", (p_id, dt, umore_clean, nota, ruolo, operatore), commit=True)
-                    st.session_state[f"v_{p_id}"] += 1
-                    st.rerun()
-
-            st.divider()
-            
-            # DIARIO RAGGRUPPATO
-            eventi_raw = db_query("SELECT data, umore, ruolo, operatore, nota FROM eventi WHERE p_id=? ORDER BY data DESC", (p_id,))
-            if eventi_raw:
-                df = pd.DataFrame(eventi_raw, columns=['Data', 'Umore', 'Ruolo
+# --- 5.
