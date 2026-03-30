@@ -3,7 +3,7 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 
-# --- 1. CONFIGURAZIONE ---
+# --- 1. CONFIGURAZIONE & CSS ---
 st.set_page_config(page_title="REMS Connect PRO", page_icon="🏥", layout="wide")
 
 st.markdown("""
@@ -20,14 +20,14 @@ st.markdown("""
         background-color: #2563eb !important; color: white !important; font-weight: bold !important; 
         width: 100%; font-family: 'Orbitron', sans-serif;
     }
-    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .nota-card { padding: 12px; margin-bottom: 8px; border-radius: 8px; color: #1e293b; border-left: 6px solid #cbd5e1; background-color: #f8fafc; }
     .agenda-card { background-color: white; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 10px; border-top: 4px solid #2563eb; }
     .nota-Psichiatra { border-left-color: #ef4444 !important; }
     .nota-Infermiere { border-left-color: #3b82f6 !important; }
     .nota-OSS { border-left-color: #8b5cf6 !important; }
     .nota-Psicologo { border-left-color: #10b981 !important; }
     .nota-Educatore { border-left-color: #f59e0b !important; }
-    .allerta-agitato { background-color: #fee2e2 !important; border: 2px solid #dc2626 !important; border-left: 10px solid #dc2626 !important; animation: blinker 2s linear infinite; }
+    .allerta-agitato { background-color: #fee2e2 !important; border: 2px solid #dc2626 !important; animation: blinker 2s linear infinite; }
     @keyframes blinker { 50% { opacity: 0.8; } }
     div[data-testid="stRadio"] > div { flex-direction: row !important; gap: 10px; }
     #MainMenu, footer, header { visibility: hidden; }
@@ -40,8 +40,7 @@ def db_query(query, params=(), commit=False):
     cur = conn.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER PRIMARY KEY, p_id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, operatore TEXT)")
-    cur.execute("""CREATE TABLE IF NOT EXISTS agenda 
-                   (id INTEGER PRIMARY KEY, p_id INTEGER, tipo TEXT, data_ora TEXT, note TEXT, operatore_rif TEXT)""")
+    cur.execute("CREATE TABLE IF NOT EXISTS agenda (id INTEGER PRIMARY KEY, p_id INTEGER, tipo TEXT, data_ora TEXT, note TEXT, operatore_rif TEXT)")
     cur.execute(query, params)
     res = cur.fetchall()
     if commit: conn.commit()
@@ -72,4 +71,18 @@ with c_nav1:
 with c_nav2:
     if st.button("📅 Agenda & Uscite"): st.session_state.menu_val = "📅 Agenda"; st.rerun()
 with c_nav3:
-    if st.session
+    if st.session_state.role == "admin":
+        if st.button("⚙️ Gestione"): st.session_state.menu_val = "⚙️ Gestione"; st.rerun()
+    else: st.button("⚙️ Gestione (Admin)", disabled=True)
+
+# --- 6. LOGICA MENU ---
+if st.session_state.menu_val == "📊 Monitoraggio":
+    pazienti = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
+    for p_id, nome in pazienti:
+        with st.expander(f"👤 {nome.upper()}", expanded=False):
+            if f"v_{p_id}" not in st.session_state: st.session_state[f"v_{p_id}"] = 0
+            c1, c2 = st.columns(2)
+            with c1: ruolo = st.selectbox("Ruolo:", ["Psichiatra", "Infermiere", "OSS", "Psicologo", "Educatore"], key=f"r_{p_id}_{st.session_state[f'v_{p_id}']}")
+            with c2: operatore = st.text_input("Firma:", key=f"f_{p_id}_{st.session_state[f'v_{p_id}']}")
+            umore = st.radio("Stato", ["🟢 Stabile", "🟡 Cupo", "🟠 Deflesso", "🔴 Agitato"], key=f"u_{p_id}_{st.session_state[f'v_{p_id}']}", horizontal=True)
+            nota = st.text_area("Nota:", key=f"n_{p_id}_{st.session_state[f'
