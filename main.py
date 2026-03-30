@@ -27,4 +27,13 @@ def db_run(query, params=(), commit=False):
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS agenda (p_id INTEGER, tipo TEXT, d_ora TEXT, note TEXT, rif TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dosaggio TEXT, data TEXT, medico TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS documenti (
+        cur.execute("CREATE TABLE IF NOT EXISTS documenti (p_id INTEGER, nome_doc TEXT, file_blob BLOB, data TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
+        cur.execute(query, params)
+        if commit: conn.commit()
+        return cur.fetchall()
+
+# --- 3. LOGIN ---
+if 'auth' not in st.session_state: st.session_state.auth = False
+if not st.session_state.auth:
+    st.markdown("<h1 class='main-title'>REMS CONNECT</h1>", unsafe_allow_html=True)
+    pwd = st.
