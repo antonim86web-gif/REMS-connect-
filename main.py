@@ -1,4 +1,4 @@
-import streamlit as st
+mi import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime
@@ -57,7 +57,7 @@ stati_config = {
 if "auth" not in st.session_state: st.session_state.auth = False
 
 if not st.session_state.auth:
-    st.title("🔐 Accesso Perito")
+    st.title("REMS-connect")
     if st.text_input("Codice", type="password") == "rems2026":
         if st.button("Sblocca"):
             st.session_state.auth = True
