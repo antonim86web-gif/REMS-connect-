@@ -218,12 +218,42 @@ elif menu == "📅 Agenda":
             if c2.button("🗑️", key=f"a_{rid}"): db_run("DELETE FROM appuntamenti WHERE id_u=?", (rid,), True); st.rerun()
 
 elif menu == "⚙️ Gestione":
-    st.header("Anagrafica Pazienti ed Export Legale")
-    nuovo = st.text_input("Inserisci Nuovo Paziente")
-    if st.button("SALVA"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (nuovo.upper(),), True); st.rerun()
+    st.markdown("<h2 class='main-title'>Anagrafica ed Export Legale</h2>", unsafe_allow_html=True)
     
-    for pid, n in db_run("SELECT id, nome FROM pazienti"):
-        c1, c2, c3 = st.columns([4, 2, 1])
-        c1.write(f"👤 **{n}**")
-        c2.markdown(get_csv_download_link(pid, n), unsafe_allow_html=True)
-        if c3.button("Elimina", key=f"delp_{pid}"): db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); st.rerun()
+    # Form per aggiungere un nuovo paziente
+    with st.container():
+        nuovo = st.text_input("Nome e Cognome Nuovo Paziente")
+        if st.button("SALVA NUOVO PAZIENTE"):
+            if nuovo:
+                db_run("INSERT INTO pazienti (nome) VALUES (?)", (nuovo.upper(),), True)
+                st.success(f"Paziente {nuovo.upper()} aggiunto!")
+                st.rerun()
+            else:
+                st.error("Inserisci un nome!")
+
+    st.markdown("---")
+    st.subheader("Elenco Pazienti Attivi")
+
+    # Lista pazienti con i nuovi tasti Export e Elimina
+    pazienti_attivi = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    
+    if pazienti_attivi:
+        for pid, n in pazienti_attivi:
+            # Creiamo una riga con 3 colonne per rendere tutto ordinato
+            col_nome, col_export, col_delete = st.columns([3, 2, 1])
+            
+            with col_nome:
+                st.markdown(f"👤 **{n}**")
+            
+            with col_export:
+                # Questo è il link che mancava nello screenshot
+                st.markdown(get_csv_download_link(pid, n), unsafe_allow_html=True)
+            
+            with col_delete:
+                if st.button("Elimina", key=f"delp_{pid}"):
+                    db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
+                    st.warning(f"Paziente {n} eliminato.")
+                    st.rerun()
+    else:
+        st.info("Nessun paziente in archivio.")
+        
