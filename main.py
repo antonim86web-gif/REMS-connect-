@@ -14,6 +14,27 @@ st.markdown("""
         background-color: #1e3a8a !important;
     }
     
+    /* TITOLO PERSONALIZZATO SIDEBAR */
+    .sidebar-title {
+        color: #ffffff !important;
+        font-size: 1.8rem !important;
+        font-weight: 800 !important;
+        text-align: center;
+        margin-bottom: 1rem;
+        padding-top: 10px;
+        border-bottom: 2px solid #ffffff33;
+    }
+
+    /* CREDITI SIDEBAR IN BASSO */
+    .sidebar-footer {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        color: #ffffff99 !important;
+        font-size: 0.7rem !important;
+        line-height: 1.2;
+    }
+    
     /* FORZA BIANCO ASSOLUTO SU TUTTE LE SCRITTE DEL MENU LATERALE */
     [data-testid="stSidebar"] *, 
     [data-testid="stSidebar"] .stRadio label, 
@@ -109,10 +130,23 @@ if not st.session_state.user_session:
 u = st.session_state.user_session
 firma = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 
-# SIDEBAR
+# --- SIDEBAR PERSONALIZZATA ---
+st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"### 👤 {u['nome']} {u['cognome']}")
+
 nav = st.sidebar.radio("MENU DI NAVIGAZIONE", ["📊 Monitoraggio Generale", "👥 Modulo Equipe", "📅 Agenda Appuntamenti", "⚙️ Gestione Sistema"])
-if st.sidebar.button("LOGOUT / ESCI"): st.session_state.user_session = None; st.rerun()
+
+if st.sidebar.button("LOGOUT / ESCI"):
+    st.session_state.user_session = None
+    st.rerun()
+
+# Crediti in basso alla sidebar
+st.sidebar.markdown(f"""
+<div class='sidebar-footer'>
+    v12.5.0 ELITE PRO<br>
+    Created by: <b>AntonioWebMaster</b>
+</div>
+""", unsafe_allow_html=True)
 
 # --- 1. MONITORAGGIO ---
 if nav == "📊 Monitoraggio Generale":
@@ -139,7 +173,7 @@ elif nav == "👥 Modulo Equipe":
                 c1,c2,c3 = st.columns(3); m=c1.checkbox("MAT"); p=c2.checkbox("POM"); n=c3.checkbox("NOT")
                 if st.form_submit_button("CONFERMA PRESCRIZIONE"):
                     db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma), True)
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📝 Prescritto: {f} {d}", "Psichiatra", firma), True); st.rerun()
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📝 Prescritta: {f} {d}", "Psichiatra", firma), True); st.rerun()
             mostra_report_settoriale(p_id, "Psichiatra")
 
         elif u['ruolo'] == "Infermiere":
