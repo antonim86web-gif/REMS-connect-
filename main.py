@@ -48,52 +48,34 @@ if not st.session_state.auth:
 # --- 4. NAVIGAZIONE ---
 menu = st.sidebar.radio("NAVIGAZIONE", ["Monitoraggio", "Equipe", "Gestione"])
 
-# --- 5. GESTIONE PAZIENTI (Aggiungi, Modifica, Elimina) ---
+# --- 5. GESTIONE PAZIENTI ---
 if menu == "Gestione":
     st.header("⚙️ Amministrazione Anagrafica")
-    
     t1, t2, t3 = st.tabs(["➕ Aggiungi", "📝 Modifica", "🗑️ Elimina"])
-    
     with t1:
-        st.subheader("Registra Nuovo Paziente")
         with st.form("add_p"):
             nuovo_nome = st.text_input("Nome e Cognome")
             if st.form_submit_button("SALVA NUOVO INGRESSO"):
                 if nuovo_nome:
                     db_run("INSERT INTO pazienti (nome) VALUES (?)", (nuovo_nome,), True)
-                    st.success(f"{nuovo_nome} registrato correttamente!"); st.rerun()
-                else: st.error("Inserisci un nome")
-
+                    st.success(f"{nuovo_nome} registrato!"); st.rerun()
     with t2:
-        st.subheader("Modifica Nome Paziente")
         paz_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
         if paz_list:
-            p_da_mod = st.selectbox("Seleziona chi modificare", [p[1] for p in paz_list], key="sel_mod")
+            p_da_mod = st.selectbox("Seleziona chi modificare", [p[1] for p in paz_list])
             id_mod = [p[0] for p in paz_list if p[1] == p_da_mod][0]
             nuovo_nome_input = st.text_input("Nuovo Nome", value=p_da_mod)
-            if st.button("AGGIORNA ANAGRAFICA"):
-                db_run("UPDATE pazienti SET nome=? WHERE id=?", (nuovo_nome_input, id_mod), True)
-                st.success("Nome aggiornato!"); st.rerun()
-        else: st.info("Nessun paziente in archivio")
-
+            if st.button("AGGIORNA"):
+                db_run("UPDATE pazienti SET nome=? WHERE id=?", (nuovo_nome_input, id_mod), True); st.rerun()
     with t3:
-        st.subheader("Eliminazione Definitiva")
         paz_list_del = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
         if paz_list_del:
-            p_da_del = st.selectbox("Seleziona chi eliminare", [p[1] for p in paz_list_del], key="sel_del")
+            p_da_del = st.selectbox("Seleziona chi eliminare", [p[1] for p in paz_list_del])
             id_del = [p[0] for p in paz_list_del if p[1] == p_da_del][0]
-            st.warning(f"Attenzione: l'eliminazione di {p_da_del} cancellerà anche diari, terapie e contabilità.")
-            conferma = st.checkbox("Confermo di voler eliminare tutti i dati")
             if st.button("ELIMINA DEFINITIVAMENTE"):
-                if conferma:
-                    db_run("DELETE FROM pazienti WHERE id=?", (id_del,), True)
-                    db_run("DELETE FROM eventi WHERE id=?", (id_del,), True)
-                    db_run("DELETE FROM terapie WHERE p_id=?", (id_del,), True)
-                    db_run("DELETE FROM soldi WHERE p_id=?", (id_del,), True)
-                    st.success("Dati rimossi."); st.rerun()
-                else: st.error("Spunta la casella di conferma prima di procedere")
+                db_run("DELETE FROM pazienti WHERE id=?", (id_del,), True); st.rerun()
 
-# --- 6. EQUIPE (Psichiatra, Infermiere, Educatore, OSS) ---
+# --- 6. EQUIPE ---
 elif menu == "Equipe":
     figura = st.sidebar.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS"])
     paz_data = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
@@ -103,17 +85,44 @@ elif menu == "Equipe":
         p_id = [p[0] for p in paz_data if p[1] == sel_p_nome][0]
         st.divider()
 
+        # --- SEZIONE PSICHIATRA (CON RIEPILOGO E SOSPENSIONE) ---
         if figura == "Psichiatra":
-            st.subheader("📋 Prescrizione Terapia")
-            with st.form("presc"):
-                f, d = st.text_input("Farmaco"), st.text_input("Dosaggio")
-                c1,c2,c3 = st.columns(3)
-                tm, tp, tn = c1.checkbox("M"), c2.checkbox("P"), c3.checkbox("N")
-                med = st.text_input("Firma Medico")
-                if st.form_submit_button("SALVA"):
-                    t_list = [s for s, b in zip(["M", "P", "N"], [tm, tp, tn]) if b]
-                    db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", 
-                           (p_id, f, d, ",".join(t_list), med, date.today().strftime("%d/%m/%Y")), True); st.rerun()
+            st.subheader("📋 Gestione Terapia")
+            
+            with st.expander("➕ Prescrivi Nuovo Farmaco"):
+                with st.form("presc"):
+                    f, d = st.text_input("Farmaco"), st.text_input("Dosaggio")
+                    c1,c2,c3 = st.columns(3)
+                    tm, tp, tn = c1.checkbox("M"), c2.checkbox("P"), c3.checkbox("N")
+                    med = st.text_input("Firma Medico")
+                    if st.form_submit_button("REGISTRA PRESCRIZIONE"):
+                        t_list = [s for s, b in zip(["M", "P", "N"], [tm, tp, tn]) if b]
+                        db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", 
+                               (p_id, f, d, ",".join(t_list), med, date.today().strftime("%d/%m/%Y")), True); st.rerun()
+
+            st.write("#### 💊 Terapie in Corso")
+            terapie = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
+            
+            if terapie:
+                # Creazione Tabella Riepilogo
+                h = "<table class='custom-table'><tr><th>DATA</th><th>FARMACO</th><th>DOSAGGIO</th><th>TURNI</th><th>MEDICO</th><th>AZIONE</th></tr>"
+                st.markdown(h, unsafe_allow_html=True)
+                
+                for da, fa, do, tu, me, rid in terapie:
+                    c1, c2, c3, c4, c5, c6 = st.columns([1.5, 2, 1.5, 1, 1.5, 1])
+                    c1.write(da)
+                    c2.markdown(f"**{fa}**")
+                    c3.write(do)
+                    c4.markdown(f"<span class='badge-m'>{tu}</span>", unsafe_allow_html=True)
+                    c5.write(me)
+                    if c6.button("🛑 Sospendi", key=f"sosp_{rid}"):
+                        db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", 
+                               (p_id, datetime.now().strftime("%d/%m/%y %H:%M"), "Stabile", f"❌ SOSPESO: {fa} ({do})", "Psichiatra", me), True)
+                        st.rerun()
+                st.markdown("</table>", unsafe_allow_html=True)
+            else:
+                st.info("Nessuna terapia attiva per questo paziente.")
 
         elif figura == "Infermiere":
             st.subheader("💉 Somministrazione")
