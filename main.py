@@ -2,7 +2,7 @@ import sqlite3
 import streamlit as st
 from datetime import datetime, date
 
-# --- 1. CONFIGURAZIONE PAGINA E DESIGN ---
+# --- 1. CONFIGURAZIONE PAGINA E DESIGN (SIDEBAR BLU + CORPO BIANCO) ---
 st.set_page_config(
     page_title="REMS Connect PRO", 
     layout="wide", 
@@ -119,6 +119,16 @@ elif menu == "👥 Equipe":
                         if f_inf and (acc or rif):
                             nota = f"💊 [{turno[0]}] Assunti: {', '.join(acc)} | Rifiutati: {', '.join(rif)}"
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", nota, "Infermiere", f_inf), True); st.rerun()
+                    
+                    # --- TABELLA REGISTRAZIONE TERAPIE SOMMINISTRATE ---
+                    st.write("---")
+                    st.write("**Registro Somministrazioni Recenti:**")
+                    inf_log = db_run("SELECT data, nota, op FROM eventi WHERE id=? AND ruolo='Infermiere' AND nota LIKE '💊%' ORDER BY row_id DESC", (p_id,))
+                    if inf_log:
+                        html_inf = "<table class='custom-table'><tr><th>Data/Ora</th><th>Dettaglio Somministrazione</th><th>Infermiere</th></tr>"
+                        for d, n, o in inf_log: html_inf += f"<tr><td>{d}</td><td>{n}</td><td>{o}</td></tr>"
+                        st.markdown(html_inf + "</table>", unsafe_allow_html=True)
+
                 with t2:
                     with st.form("pv"):
                         c1,c2,c3,c4 = st.columns(4); pa,fc,sa,tc = c1.text_input("PA"), c2.number_input("FC"), c3.number_input("SpO2"), c4.number_input("TC", 34.0, 42.0, 36.5)
