@@ -33,7 +33,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 2. DATABASE ---
-DB_NAME = "rems_pro_2026.db"
+DB_NAME = "rems_pro_final_2026.db"
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
@@ -83,36 +83,47 @@ elif menu == "👥 Equipe":
             p_nome = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
             p_id = [p[0] for p in p_lista if p[1] == p_nome][0]
             umore_list = ["Stabile", "Agitato", "Collaborante", "Provocatorio", "Depresso"]
-            st.divider()
-
+            
             if ruolo == "Psichiatra":
                 f_m = st.text_input("Firma Medico")
+                st.subheader("💊 Nuova Prescrizione")
                 with st.form("prescr"):
                     c1,c2 = st.columns(2); fa, do = c1.text_input("Farmaco"), c2.text_input("Dose")
                     m,p,n = st.columns(3); m1, p1, n1 = m.checkbox("M"), p.checkbox("P"), n.checkbox("N")
-                    if st.form_submit_button("AGGIUNGI TERAPIA"):
+                    if st.form_submit_button("CONFERMA"):
                         tu = ",".join([s for s, b in zip(["M","P","N"], [m1,p1,n1]) if b])
                         db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, fa, do, tu, f_m, date.today().strftime("%d/%m/%Y")), True); st.rerun()
-                st.write("**Terapie in corso:**")
+                
+                st.write("**Piano Terapeutico Attuale:**")
                 piano = db_run("SELECT farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=?", (p_id,))
-                for f, d, t, m, rid in piano:
-                    c1, c2 = st.columns([5,1])
-                    c1.info(f"**{f}** - {d} ({t}) [Prescr. da: {m}]")
-                    if c2.button("🗑️", key=f"del_f_{rid}"):
-                        db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
+                if piano:
+                    h = "<table class='custom-table'><tr><th>Farmaco</th><th>Dose</th><th>Turni</th><th>Medico</th><th>Azioni</th></tr>"
+                    for f, d, t, m, rid in piano:
+                        h += f"<tr><td>{f}</td><td>{d}</td><td>{t}</td><td>{m}</td><td>ID:{rid}</td></tr>"
+                    st.markdown(h + "</table>", unsafe_allow_html=True)
+                    for _, _, _, _, rid in piano:
+                        if st.button(f"Elimina {rid}", key=f"del_{rid}"):
+                            db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
             elif ruolo == "Infermiere":
                 f_i = st.text_input("Firma Infermiere")
-                t1, t2 = st.tabs(["📊 Parametri", "📝 Consegne"])
-                with t1:
+                t_f, t_p, t_c = st.tabs(["💊 Farmaci", "📊 Parametri", "📝 Consegne"])
+                with t_f:
+                    turno = st.selectbox("Turno Somministrazione", ["Mattina", "Pomeriggio", "Notte"])
+                    ter = db_run("SELECT farmaco, dosaggio, turni FROM terapie WHERE p_id=?", (p_id,))
+                    for fa, do, tu in ter:
+                        if turno[0] in tu: st.checkbox(f"{fa} - {do}", key=f"check_{fa}")
+                    if st.button("Registra Somministrazione"):
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"Somministrata terapia {turno}", "Infermiere", f_i), True); st.rerun()
+                with t_p:
                     with st.form("pv"):
                         c1,c2,c3,c4 = st.columns(4); pa, fc, sp, tc = c1.text_input("PA"), c2.text_input("FC"), c3.text_input("SpO2"), c4.text_input("TC")
-                        if st.form_submit_button("SALVA PARAMETRI"):
+                        if st.form_submit_button("Salva Parametri"):
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"📊 PA:{pa} FC:{fc} SpO2:{sp} TC:{tc}", "Infermiere", f_i), True); st.rerun()
-                with t2:
-                    u_i = st.selectbox("Umore", umore_list, key="u_i")
-                    txt_i = st.text_area("Consegna Infermieristica")
-                    if st.button("SALVA CONSEGNA"):
+                with t_c:
+                    u_i = st.selectbox("Umore", umore_list)
+                    txt_i = st.text_area("Consegna")
+                    if st.button("Salva Consegna"):
                         db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), u_i, f"📝 {txt_i}", "Infermiere", f_i), True); st.rerun()
 
             elif ruolo == "OSS":
@@ -121,12 +132,12 @@ elif menu == "👥 Equipe":
                 with t_m:
                     with st.form("oss_m"):
                         m1, m2, m3, m4 = st.checkbox("Camera"), st.checkbox("Refettorio"), st.checkbox("Sale Fumo"), st.checkbox("Lavatrice")
-                        if st.form_submit_button("REGISTRA MANSIONI"):
+                        if st.form_submit_button("Registra Mansioni"):
                             sel = [t for b,t in zip([m1,m2,m3,m4], ["Camera","Refettorio","Sale Fumo","Lavatrice"]) if b]
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Collaborante", f"🧹 Svolto: {', '.join(sel)}", "OSS", f_o), True); st.rerun()
                 with t_n:
                     txt_o = st.text_area("Nota OSS")
-                    if st.button("SALVA NOTA"):
+                    if st.button("Salva Nota"):
                         db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Collaborante", f"📝 {txt_o}", "OSS", f_o), True); st.rerun()
 
             elif ruolo == "Educatore":
@@ -135,8 +146,8 @@ elif menu == "👥 Equipe":
                 saldo = sum([m[2] if m[3] == 'Entrata' else -m[2] for m in mov])
                 st.metric("SALDO CASSA", f"€ {saldo:.2f}")
                 with st.form("cassa"):
-                    tp, im, ds = st.radio("Tipo", ["Entrata", "Uscita"]), st.number_input("Importo €", min_value=0.0), st.text_input("Causale")
-                    if st.form_submit_button("REGISTRA"):
+                    tp, im, ds = st.radio("Tipo", ["Entrata", "Uscita"]), st.number_input("€", min_value=0.0), st.text_input("Causale")
+                    if st.form_submit_button("Esegui"):
                         db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tp, f_e), True); st.rerun()
                 if mov:
                     h = "<table class='custom-table'><tr><th>Data</th><th>Causale</th><th>Importo</th><th>Tipo</th><th>Firma</th></tr>"
@@ -147,15 +158,16 @@ elif menu == "📅 Appuntamenti":
     st.markdown("<h2 class='main-title'>Agenda REMS</h2>", unsafe_allow_html=True)
     p_lista = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
     if p_lista:
-        p_nome = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
+        p_nome = st.selectbox("Paziente", [p[1] for p in p_lista])
         p_id = [p[0] for p in p_lista if p[1] == p_nome][0]
         with st.form("app"):
             c1,c2 = st.columns(2); d, h = c1.date_input("Data"), c2.time_input("Ora")
             ti = st.selectbox("Tipo", ["Udienza", "Visita", "Permesso"])
             acc = st.text_input("Accompagnatore")
-            if st.form_submit_button("FISSA"):
+            if st.form_submit_button("Salva Appuntamento"):
                 db_run("INSERT INTO appuntamenti (p_id, data, ora, tipo, accompagnatore) VALUES (?,?,?,?,?)", (p_id, d.strftime("%d/%m/%Y"), h.strftime("%H:%M"), ti, acc), True)
                 db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"📅 {ti} - Accompagnatore: {acc}", "Sistema", "Agenda"), True); st.rerun()
+        
         apps = db_run("SELECT data, ora, tipo, accompagnatore FROM appuntamenti WHERE p_id=? ORDER BY row_id DESC", (p_id,))
         if apps:
             h = "<table class='custom-table'><tr><th>Data</th><th>Ora</th><th>Tipo</th><th>Accompagnatore</th></tr>"
@@ -164,12 +176,12 @@ elif menu == "📅 Appuntamenti":
 
 elif menu == "⚙️ Gestione":
     st.header("Anagrafica")
-    nuovo = st.text_input("Nuovo Paziente")
+    nuovo = st.text_input("Nome Paziente")
     if st.button("AGGIUNGI"):
         if nuovo: db_run("INSERT INTO pazienti (nome) VALUES (?)", (nuovo.strip().upper(),), True); st.rerun()
     st.divider()
     for pid, nome in db_run("SELECT id, nome FROM pazienti"):
         c1, c2 = st.columns([5,1])
         c1.write(nome)
-        if c2.button("🗑️", key=f"del_p_{pid}"):
+        if c2.button("Elimina", key=f"del_p_{pid}"):
             db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); st.rerun()
