@@ -16,6 +16,10 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         font-weight: 800; font-size: 2.5rem; margin-bottom: 25px;
     }
+    .section-header {
+        background-color: #1e293b; color: #ffffff; padding: 10px;
+        border-radius: 5px; text-align: center; font-weight: 700; margin-bottom: 20px;
+    }
     [data-testid="stSidebar"] { background-color: #1e40af !important; border-right: 1px solid #1e3a8a; }
     [data-testid="stSidebar"] * { color: #ffffff !important; font-weight: 600 !important; }
     .custom-table { 
@@ -84,6 +88,7 @@ elif menu == "👥 Equipe":
             umore_list = ["Stabile", "Agitato", "Collaborante", "Provocatorio", "Depresso"]
 
             if ruolo == "Psichiatra":
+                st.markdown("<div class='section-header'>GESTIONE TERAPEUTICA</div>", unsafe_allow_html=True)
                 f_m = st.text_input("Firma Medico")
                 with st.form("prescr"):
                     c1,c2 = st.columns(2); fa, do = c1.text_input("Farmaco"), c2.text_input("Dose")
@@ -97,6 +102,7 @@ elif menu == "👥 Equipe":
                     if c_d.button("🗑️", key=f"t_{rid}"): db_run("DELETE FROM terapie WHERE id_u=?", (rid,), True); st.rerun()
 
             elif ruolo == "Infermiere":
+                st.markdown("<div class='section-header'>GESTIONE INFERMIERISTICA</div>", unsafe_allow_html=True)
                 f_i = st.text_input("Firma Infermiere")
                 t1, t2, t3 = st.tabs(["💊 Farmaci", "📊 Parametri", "📝 Consegne"])
                 with t1:
@@ -120,6 +126,7 @@ elif menu == "👥 Equipe":
                     for d, um, nt, op in db_run("SELECT data, umore, nota, op FROM eventi WHERE id=? AND ruolo='Infermiere' AND nota LIKE '📝 %' ORDER BY id_u DESC LIMIT 5", (p_id,)): st.info(f"{d} - [{um}] {nt} ({op})")
 
             elif ruolo == "OSS":
+                st.markdown("<div class='section-header'>GESTIONE E MANSIONI</div>", unsafe_allow_html=True)
                 f_o = st.text_input("Firma OSS")
                 t_oss1, t_oss2 = st.tabs(["🧹 Mansioni", "📝 Note OSS"])
                 with t_oss1:
@@ -136,6 +143,7 @@ elif menu == "👥 Equipe":
                     for d, nt, op in db_run("SELECT data, nota, op FROM eventi WHERE id=? AND ruolo='OSS' AND nota LIKE '📝 %' ORDER BY id_u DESC", (p_id,)): st.warning(f"{d} - {nt} ({op})")
 
             elif ruolo == "Educatore":
+                st.markdown("<div class='section-header'>GESTIONE EDUCATIVA</div>", unsafe_allow_html=True)
                 f_e = st.text_input("Firma Educatore")
                 mov = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY id_u DESC", (p_id,))
                 st.metric("SALDO", f"€ {sum([m[2] if m[3] == 'Entrata' else -m[2] for m in mov]):.2f}")
