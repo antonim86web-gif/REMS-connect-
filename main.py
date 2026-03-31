@@ -12,7 +12,6 @@ st.markdown("""
     /* SIDEBAR BLU */
     [data-testid="stSidebar"] { background-color: #1e3a8a !important; }
     
-    /* TITOLO PERSONALIZZATO SIDEBAR */
     .sidebar-title {
         color: #ffffff !important;
         font-size: 1.8rem !important;
@@ -23,56 +22,37 @@ st.markdown("""
         border-bottom: 2px solid #ffffff33;
     }
 
-    /* CREDITI SIDEBAR */
     .sidebar-footer {
-        position: fixed;
-        bottom: 10px;
-        left: 10px;
-        color: #ffffff99 !important;
-        font-size: 0.75rem !important;
-        line-height: 1.2;
-        z-index: 100;
+        position: fixed; bottom: 10px; left: 10px;
+        color: #ffffff99 !important; font-size: 0.75rem !important;
+        line-height: 1.2; z-index: 100;
     }
     
-    /* BANNER SEZIONE (BLU CON SCRITTA BIANCA) */
     .section-banner {
-        background-color: #1e3a8a;
-        color: white !important;
-        padding: 25px;
-        border-radius: 12px;
-        margin-bottom: 30px;
-        text-align: center;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        background-color: #1e3a8a; color: white !important;
+        padding: 25px; border-radius: 12px; margin-bottom: 30px;
+        text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
-    .section-banner h2 { color: white !important; margin: 0; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+    .section-banner h2 { color: white !important; margin: 0; font-weight: 800; text-transform: uppercase; }
     .section-banner p { margin: 8px 0 0 0; opacity: 0.9; font-size: 1.1rem; font-style: italic; }
 
-    /* FORZA BIANCO NELLA SIDEBAR */
-    [data-testid="stSidebar"] *, 
-    [data-testid="stSidebar"] .stRadio label,
-    [data-testid="stSidebar"] .stMarkdown p {
-        color: #ffffff !important;
-        font-weight: 700 !important;
+    [data-testid="stSidebar"] *, [data-testid="stSidebar"] .stRadio label {
+        color: #ffffff !important; font-weight: 700 !important;
     }
 
-    /* TASTO LOGOUT */
     [data-testid="stSidebar"] button {
-        background-color: #dc2626 !important;
-        color: white !important;
-        font-weight: 800 !important;
-        border: 2px solid #ffffff !important;
-        border-radius: 10px !important;
-        width: 100% !important;
-        margin-top: 20px;
+        background-color: #dc2626 !important; color: white !important;
+        font-weight: 800 !important; border: 2px solid #ffffff !important;
+        border-radius: 10px !important; width: 100% !important; margin-top: 20px;
     }
     
-    /* TABELLE */
     .report-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #cbd5e1; }
     .report-table th { background-color: #1e293b; color: white !important; padding: 12px; text-align: left; }
     .report-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 0.9rem; }
     
-    /* BADGE */
-    .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; color: white; font-weight: bold; }
+    /* STILE TABELLA SOMMINISTRAZIONE COMPATTA */
+    .therapy-row { background: #f8fafc; border-radius: 8px; padding: 10px; margin-bottom: 5px; border-left: 5px solid #3b82f6; }
+    
     .cat-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; color: white; }
     .cat-udienza { background-color: #dc2626; } 
     .cat-medica { background-color: #2563eb; }  
@@ -148,7 +128,7 @@ nav = st.sidebar.radio("NAVIGAZIONE PRINCIPALE", ["📊 Monitoraggio Generale", 
 if st.sidebar.button("LOGOUT / ESCI"): st.session_state.user_session = None; st.rerun()
 st.sidebar.markdown(f"<div class='sidebar-footer'>REMS v12.5.0 ELITE PRO<br>Created by: <b>AntonioWebMaster</b></div>", unsafe_allow_html=True)
 
-# --- 1. MONITORAGGIO / DIARIO CLINICO ---
+# --- 1. MONITORAGGIO ---
 if nav == "📊 Monitoraggio Generale":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO INTEGRATO</h2><p>Monitoraggio centralizzato di tutti gli eventi clinici, educativi e assistenziali</p></div>", unsafe_allow_html=True)
     pax = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
@@ -186,17 +166,25 @@ elif nav == "👥 Modulo Equipe":
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📝 Prescritta terapia: {f} {d}", "Psichiatra", firma), True); st.rerun()
             mostra_report_settoriale(p_id, "Psichiatra")
 
-        # --- INFERMIERE ---
+        # --- INFERMIERE (SOMMINISTRAZIONE COMPATTA) ---
         elif u['ruolo'] == "Infermiere":
-            t1, t2, t3 = st.tabs(["💊 Terapie", "📝 Consegne", "📊 Parametri"])
+            t1, t2, t3 = st.tabs(["💊 PIANO TERAPEUTICO", "📝 Consegne", "📊 Parametri"])
             with t1:
-                ter = db_run("SELECT id_u, farmaco, dose FROM terapie WHERE p_id=?", (p_id,))
-                for tid, fa, do in ter:
-                    with st.expander(f"📌 {fa} - {do}", expanded=True):
-                        c_dt, c_btn = st.columns([3, 1])
-                        d_s = c_dt.text_input("Ora Somministrazione", value=datetime.now().strftime("%d/%m/%Y %H:%M"), key=f"t_{tid}")
-                        if c_btn.button("REGISTRA", key=f"b_{tid}"):
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, d_s, f"✔️ Somministrato: {fa} {do}", "Infermiere", firma), True); st.rerun()
+                st.info("Piano di somministrazione giornaliero. Registrare ogni assunzione cliccando sui tasti rapidi.")
+                terapie = db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,))
+                if terapie:
+                    # Intestazione tabella di somministrazione
+                    h_ter = "<table class='report-table'><thead><tr><th>Farmaco e Dosaggio</th><th>Orari Previsti</th><th>Azione Rapida</th></tr></thead><tbody>"
+                    st.markdown(h_ter, unsafe_allow_html=True)
+                    for tid, fa, do, m, p, n in terapie:
+                        c1, c2, c3 = st.columns([2, 1, 1])
+                        orari = " ".join([f"☀️" if m else "", f"🌤️" if p else "", f"🌙" if n else ""])
+                        c1.markdown(f"**{fa}**<br><small>{do}</small>", unsafe_allow_html=True)
+                        c2.write(orari)
+                        if c3.button("✅ FIRMA SOMM.", key=f"som_{tid}"):
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"✔️ SOMMINISTRATO: {fa} {do}", "Infermiere", firma), True); st.success(f"{fa} registrato!"); st.rerun()
+                    st.markdown("</tbody></table>", unsafe_allow_html=True)
+                else: st.warning("Nessuna terapia attiva per questo paziente.")
             with t2:
                 nota = st.text_area("Inserisci consegna di fine turno")
                 if st.button("SALVA CONSEGNA"):
