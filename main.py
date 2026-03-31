@@ -9,19 +9,14 @@ st.set_page_config(page_title="REMS Connect PRO", layout="wide")
 st.markdown("""
 <style>
     .main-title {text-align: center; color: #1e3a8a; font-weight: bold; margin-bottom:20px;}
-    
     .custom-table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; border: 1px solid #e2e8f0; }
     .custom-table th { background-color: #f1f5f9; color: #475569; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; text-transform: uppercase; }
     .custom-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.85rem; }
-    .custom-table tr:hover { background-color: #f8fafc; }
-
     .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: white; display: inline-block; }
     .bg-psichiatra { background-color: #ef4444; }
     .bg-infermiere { background-color: #3b82f6; }
     .bg-educatore  { background-color: #10b981; }
     .bg-oss        { background-color: #f59e0b; }
-    
-    .saldo-header { padding: 15px; border-radius: 8px; background-color: #eff6ff; text-align: center; border: 1px solid #3b82f6; font-weight: bold; margin-bottom:15px; }
     .card-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 </style>
 """, unsafe_allow_html=True)
@@ -97,10 +92,8 @@ elif menu == "Equipe":
                     if st.form_submit_button("SALVA"):
                         if med_f:
                             ts = ",".join([s for s, b in zip(["M","P","N"], [m,p,n]) if b])
-                            data_p = date.today().strftime("%d/%m/%Y")
-                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, data_p), True); st.rerun()
+                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, date.today().strftime("%d/%m/%Y")), True); st.rerun()
             
-            st.write("#### Terapie in corso")
             ta = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
             if ta:
                 html = "<table class='custom-table'><tr><th>DATA</th><th>FARMACO</th><th>DOSE</th><th>TURNI</th><th>MEDICO</th><th>AZIONE</th></tr>"
@@ -111,7 +104,7 @@ elif menu == "Equipe":
                         if med_f:
                             db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"❌ SOSPESO: {fa}", "Psichiatra", med_f), True); st.rerun()
-                    html = "" 
+                    html = ""
                 st.markdown("</table>", unsafe_allow_html=True)
 
         elif ruolo == "Infermiere":
@@ -121,7 +114,8 @@ elif menu == "Equipe":
             
             with t1:
                 c_d, c_t = st.columns(2)
-                d_s = c_d.date_input("Data Somministrazione", date.today())
+                # FORZATURA FORMATO DATA EUROPEO
+                d_s = c_d.date_input("Data Somministrazione", date.today(), format="DD/MM/YYYY")
                 t_s = c_t.selectbox("Turno Somministrazione", ["Mattina", "Pomeriggio", "Notte"])
                 ter = db_run("SELECT farmaco, dosaggio, turni, row_id FROM terapie WHERE p_id=?", (p_id,))
                 for f, d, tu_p, rid in ter:
@@ -141,20 +135,17 @@ elif menu == "Equipe":
             with t2:
                 with st.form("pv"):
                     c1,c2,c3,c4 = st.columns(4)
-                    pa = c1.text_input("PA")
-                    fc = c2.number_input("FC", 0, 200)
-                    sat = c3.number_input("SpO2", 0, 100)
-                    tc = c4.number_input("TC", 34.0, 42.0, 36.5)
+                    pa, fc = c1.text_input("PA"), c2.number_input("FC", 0, 200)
+                    sat, tc = c3.number_input("SpO2", 0, 100), c4.number_input("TC", 34.0, 42.0, 36.5)
                     if st.form_submit_button("REGISTRA PARAMETRI"):
                         if inf_f:
-                            data_f = datetime.now().strftime("%d/%m/%Y %H:%M")
-                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", f"📊 PA:{pa} FC:{fc} SpO2:{sat}% TC:{tc}°", "Infermiere", inf_f), True); st.rerun()
+                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"📊 PA:{pa} FC:{fc} SpO2:{sat}% TC:{tc}°", "Infermiere", inf_f), True); st.rerun()
 
             with t3:
-                # AGGIORNAMENTO CONSEGNE CON DATA E TURNO
                 c_d_c, c_t_c = st.columns(2)
-                data_cons = c_d_c.date_input("Data Consegna", date.today(), key="d_cons")
-                turno_cons = c_t_c.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons")
+                # FORZATURA FORMATO DATA EUROPEO
+                data_cons = c_d_c.date_input("Data Consegna", date.today(), format="DD/MM/YYYY", key="d_cons_eur")
+                turno_cons = c_t_c.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons_eur")
                 txt = st.text_area("Testo della Consegna")
                 if st.button("SALVA CONSEGNA"):
                     if inf_f and txt:
@@ -167,23 +158,17 @@ elif menu == "Equipe":
             ed_f = st.text_input("Firma Educatore")
             mov = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY row_id DESC", (p_id,))
             saldo = sum([m[2] if m[3] == "Entrata" else -m[2] for m in mov])
-            st.markdown(f'<div class="saldo-header">SALDO DISPONIBILE: € {saldo:.2f}</div>', unsafe_allow_html=True)
-            with st.expander("Aggiungi Movimento"):
-                with st.form("cash"):
-                    tp = st.radio("Tipo", ["Entrata", "Uscita"], horizontal=True)
-                    im = st.number_input("Importo €", 0.0)
-                    ds = st.text_input("Causale")
-                    if st.form_submit_button("REGISTRA"):
-                        if ed_f: 
-                            data_m = date.today().strftime("%d/%m/%Y")
-                            db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, data_m, ds, im, tp, ed_f), True); st.rerun()
+            st.markdown(f'<div class="card-box" style="text-align:center; background:#eff6ff"><b>SALDO: € {saldo:.2f}</b></div>', unsafe_allow_html=True)
+            with st.form("cash"):
+                tp, im = st.radio("Tipo", ["Entrata", "Uscita"], horizontal=True), st.number_input("Importo €", 0.0)
+                ds = st.text_input("Causale")
+                if st.form_submit_button("REGISTRA"):
+                    if ed_f: db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tp, ed_f), True); st.rerun()
             
             if mov:
-                st.write("#### Storico Movimenti")
                 html = "<table class='custom-table'><tr><th>DATA</th><th>CAUSALE</th><th>ENTRATA</th><th>USCITA</th><th>OP</th></tr>"
                 for d, ds, im, tp, op in mov:
-                    e = f"€ {im:.2f}" if tp == "Entrata" else ""
-                    u = f"€ {im:.2f}" if tp == "Uscita" else ""
+                    e, u = (f"€ {im:.2f}", "") if tp == "Entrata" else ("", f"€ {im:.2f}")
                     html += f"<tr><td>{d}</td><td>{ds}</td><td style='color:green'>{e}</td><td style='color:red'>{u}</td><td>{op}</td></tr>"
                 st.markdown(html + "</table>", unsafe_allow_html=True)
 
@@ -191,13 +176,11 @@ elif menu == "Equipe":
             st.subheader("🧹 Mansioni OSS")
             with st.form("oss"):
                 c1,c2 = st.columns(2); o1,o2,o3 = c1.checkbox("Camera"), c1.checkbox("Refettorio"), c1.checkbox("Sala Fumo")
-                o4,o5 = c2.checkbox("Cortile"), c2.checkbox("Lavatrice")
-                oss_f = st.text_input("Firma")
+                o4,o5, oss_f = c2.checkbox("Cortile"), c2.checkbox("Lavatrice"), st.text_input("Firma")
                 if st.form_submit_button("SALVA"):
                     if oss_f:
                         ms = [t for b,t in zip([o1,o2,o3,o4,o5], ["Camera","Refettorio","Sala Fumo","Cortile","Lavatrice"]) if b]
-                        data_f = datetime.now().strftime("%d/%m/%Y %H:%M")
-                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
 
 # --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
@@ -207,7 +190,7 @@ elif menu == "Monitoraggio":
         with st.expander(f"👤 {nome.upper()}", expanded=True):
             log = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY row_id DESC", (pid,))
             if log:
-                html = "<table class='custom-table'><thead><tr><th width='15%'>DATA</th><th width='10%'>RUOLO</th><th width='15%'>OPERATORE</th><th width='60%'>NOTA</th></tr></thead><tbody>"
+                html = "<table class='custom-table'><thead><tr><th>DATA</th><th>RUOLO</th><th>OPERATORE</th><th>NOTA</th></tr></thead><tbody>"
                 for d, r, o, n in log:
                     cls = f"bg-{r.lower()}"
                     html += f"<tr><td><b>{d}</b></td><td><span class='badge {cls}'>{r.upper()}</span></td><td><i>{o}</i></td><td>{n}</td></tr>"
