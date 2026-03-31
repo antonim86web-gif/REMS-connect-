@@ -1,4 +1,4 @@
-Import sqlite3
+import sqlite3
 import streamlit as st
 from datetime import datetime, date
 import hashlib
@@ -223,7 +223,7 @@ elif nav == "👥 Modulo Equipe":
 
 # --- 3. MODULO AGENDA ---
 elif nav == "📅 Agenda Appuntamenti":
-    st.markdown("<div class='section-banner'><h2>AGENDA REMS</h2><p>PianificazioneUdienze e Visite Specialistiche</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-banner'><h2>AGENDA REMS</h2><p>Pianificazione Udienze e Visite Specialistiche</p></div>", unsafe_allow_html=True)
     with st.form("f_ag"):
         p_sel = st.selectbox("Paziente", [p[1] for p in db_run("SELECT id, nome FROM pazienti")])
         pid = [p[0] for p in db_run("SELECT id, nome FROM pazienti") if p[1] == p_sel][0]
