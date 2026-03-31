@@ -32,8 +32,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE ---
-DB_NAME = "rems_pro_2026.db"
+# --- 2. DATABASE (VERSIONE 2 - RISOLUZIONE ERRORI) ---
+DB_NAME = "rems_database_v2.db"
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
@@ -168,7 +168,7 @@ elif menu == "📅 Appuntamenti":
         p_id = [p[0] for p in p_lista if p[1] == p_n][0]
         with st.form("app_f"):
             c1, c2 = st.columns(2); d, h = c1.date_input("Data"), c2.time_input("Ora")
-            ti, det = st.selectbox("Tipo", ["Udienza", "Visita", "Permesso", "VTL"]), st.text_input("Dettagli")
+            ti, det = st.selectbox("Tipo", ["Udienza", "Visita Specialistica", "Permesso", "VTL"]), st.text_input("Dettagli")
             if st.form_submit_button("AGGIUNGI"):
                 db_run("INSERT INTO appuntamenti (p_id, data, ora, tipo, accompagnatore) VALUES (?,?,?,?,?)", (p_id, d.strftime("%d/%m/%Y"), h.strftime("%H:%M"), ti, det), True); st.rerun()
         apps = db_run("SELECT data, ora, tipo, accompagnatore, id_u FROM appuntamenti WHERE p_id=?", (p_id,))
