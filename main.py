@@ -17,6 +17,7 @@ st.markdown("""
     .bg-infermiere { background-color: #3b82f6; }
     .bg-educatore  { background-color: #10b981; }
     .bg-oss        { background-color: #f59e0b; }
+    .bg-appuntamento { background-color: #8b5cf6; }
     .card-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 </style>
 """, unsafe_allow_html=True)
@@ -31,12 +32,8 @@ def db_run(query, params=(), commit=False):
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dosaggio TEXT, turni TEXT, medico TEXT, data_prescr TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS soldi (p_id INTEGER, data TEXT, desc TEXT, importo REAL, tipo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS appuntamenti (p_id INTEGER, data TEXT, ora TEXT, tipo TEXT, dettagli TEXT, scorta TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         
-        if "INSERT INTO eventi" in query:
-            check = cur.execute("SELECT 1 FROM eventi WHERE id=? AND data=? AND nota=? AND op=?", 
-                                (params[0], params[1], params[3], params[5])).fetchone()
-            if check: return None
-            
         if query: cur.execute(query, params)
         if commit: conn.commit()
         return cur.fetchall()
@@ -54,25 +51,57 @@ if not st.session_state.auth:
     st.stop()
 
 # --- 4. NAVIGAZIONE ---
-menu = st.sidebar.radio("NAVIGAZIONE", ["Monitoraggio", "Equipe", "Gestione"])
+menu = st.sidebar.radio("NAVIGAZIONE", ["Monitoraggio", "Equipe", "Appuntamenti", "Gestione"])
 
 # --- 5. LOGICA SEZIONI ---
 
-if menu == "Gestione":
-    st.header("⚙️ Gestione Anagrafica")
-    t1, t2 = st.tabs(["➕ Aggiungi", "🗑️ Elimina"])
-    with t1:
-        with st.form("add"):
-            n = st.text_input("Nome e Cognome")
-            if st.form_submit_button("REGISTRA"):
-                if n: db_run("INSERT INTO pazienti (nome) VALUES (?)", (n,), True); st.rerun()
-    with t2:
-        p_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
-        if p_list:
-            sel = st.selectbox("Seleziona", [p[1] for p in p_list])
-            id_d = [p[0] for p in p_list if p[1] == sel][0]
-            if st.button("ELIMINA DEFINITIVAMENTE"):
-                db_run("DELETE FROM pazienti WHERE id=?", (id_d,), True); st.rerun()
+if menu == "Appuntamenti":
+    st.header("📅 Agenda Appuntamenti ed Uscite")
+    pazienti = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    if pazienti:
+        p_nome = st.selectbox("Seleziona Paziente", [p[1] for p in pazienti])
+        p_id = [p[0] for p in pazienti if p[1] == p_nome][0]
+        
+        with st.expander("➕ Inserisci Nuovo Appuntamento / Udienza", expanded=True):
+            with st.form("form_app"):
+                c1, c2 = st.columns(2)
+                d_app = c1.date_input("Data", date.today(), format="DD/MM/YYYY")
+                o_app = c2.time_input("Ora", datetime.now().time())
+                tipo = st.selectbox("Tipologia", ["Visita Specialistica", "Udienza Tribunale", "Permesso Premio", "Colloquio Familiari", "Altro"])
+                # AGGIORNAMENTO: Operatore specifico per l'accompagnamento
+                op_accompagnatore = st.text_input("Nome Operatore Accompagnatore")
+                dettagli = st.text_area("Note / Luogo")
+                
+                if st.form_submit_button("PROGRAMMA USCITA"):
+                    if op_accompagnatore:
+                        data_str = d_app.strftime("%d/%m/%Y")
+                        ora_str = o_app.strftime("%H:%M")
+                        db_run("INSERT INTO appuntamenti (p_id, data, ora, tipo, dettagli, scorta) VALUES (?,?,?,?,?,?)", 
+                               (p_id, data_str, ora_str, tipo, dettagli, op_accompagnatore), True)
+                        
+                        # Nota automatica nel diario clinico
+                        nota_diario = f"📅 PROGRAMMATA USCITA: {tipo} presso {dettagli} - Accompagna: {op_accompagnatore} (Data: {data_str} ore {ora_str})"
+                        db_run("INSERT INTO eventi (id, data, umore, nota, ruolo, op) VALUES (?,?,?,?,?,?)",
+                               (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", nota_diario, "Sistema", "Agenda"), True)
+                        st.success(f"Uscita registrata correttamente per {p_nome}")
+                        st.rerun()
+                    else:
+                        st.error("È necessario indicare il nome dell'operatore accompagnatore.")
+
+        st.divider()
+        st.subheader(f"Prossimi impegni per: {p_nome}")
+        apps = db_run("SELECT data, ora, tipo, dettagli, scorta, row_id FROM appuntamenti WHERE p_id=? ORDER BY row_id DESC", (p_id,))
+        if apps:
+            html = "<table class='custom-table'><tr><th>DATA</th><th>ORA</th><th>TIPO</th><th>DETTAGLI / LUOGO</th><th>ACCOMPAGNATORE</th><th>AZIONE</th></tr>"
+            for da, ora, ti, de, sc, rid in apps:
+                html += f"<tr><td>{da}</td><td>{ora}</td><td><b>{ti}</b></td><td>{de}</td><td>{sc}</td><td>"
+                st.markdown(html, unsafe_allow_html=True)
+                if st.button("ELIMINA", key=f"del_app_{rid}"):
+                    db_run("DELETE FROM appuntamenti WHERE row_id=?", (rid,), True)
+                    st.rerun()
+                html = ""
+            st.markdown("</table>", unsafe_allow_html=True)
+        else: st.info("Nessun appuntamento in programma.")
 
 elif menu == "Equipe":
     ruolo = st.sidebar.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS"])
@@ -100,7 +129,6 @@ elif menu == "Equipe":
                 for da, fa, ds, tu, me, rid in ta:
                     html += f"<tr><td>{da}</td><td><b>{fa}</b></td><td>{ds}</td><td>{tu}</td><td>{me}</td><td>"
                     st.markdown(html, unsafe_allow_html=True)
-                    # CORREZIONE: SOSPENDI
                     if st.button("SOSPENDI", key=f"s_{rid}"):
                         if med_f:
                             db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
@@ -206,6 +234,22 @@ elif menu == "Equipe":
                         nota_cons = f"📝 [CONSEGNA OSS {turno_cons_oss.upper()}] {txt_oss}"
                         db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", nota_cons, "OSS", oss_f), True); st.rerun()
 
+elif menu == "Gestione":
+    st.header("⚙️ Gestione Anagrafica")
+    t1, t2 = st.tabs(["➕ Aggiungi", "🗑️ Elimina"])
+    with t1:
+        with st.form("add"):
+            n = st.text_input("Nome e Cognome")
+            if st.form_submit_button("REGISTRA"):
+                if n: db_run("INSERT INTO pazienti (nome) VALUES (?)", (n,), True); st.rerun()
+    with t2:
+        p_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        if p_list:
+            sel = st.selectbox("Seleziona", [p[1] for p in p_list])
+            id_d = [p[0] for p in p_list if p[1] == sel][0]
+            if st.button("ELIMINA DEFINITIVAMENTE"):
+                db_run("DELETE FROM pazienti WHERE id=?", (id_d,), True); st.rerun()
+
 # --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
     st.header("📊 Diario Clinico")
@@ -216,7 +260,7 @@ elif menu == "Monitoraggio":
             if log:
                 html = "<table class='custom-table'><thead><tr><th>DATA</th><th>RUOLO</th><th>OPERATORE</th><th>NOTA</th></tr></thead><tbody>"
                 for d, r, o, n in log:
-                    cls = f"bg-{r.lower()}"
+                    cls = f"bg-appuntamento" if "📅" in n else f"bg-{r.lower()}"
                     html += f"<tr><td><b>{d}</b></td><td><span class='badge {cls}'>{r.upper()}</span></td><td><i>{o}</i></td><td>{n}</td></tr>"
                 st.markdown(html + "</tbody></table>", unsafe_allow_html=True)
             else: st.info("Nessuna attività.")
