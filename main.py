@@ -14,25 +14,30 @@ st.markdown("""
         background-color: #1e3a8a !important;
         border-right: 2px solid #1e293b;
     }
-    [data-testid="stSidebar"] * {
-        color: white !important;
-        font-weight: 500;
+    
+    /* TESTO MENU LATERALE */
+    [data-testid="stSidebar"] .stRadio label {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        font-size: 1.1rem !important;
     }
-    /* CORREZIONE BOTTONI SIDEBAR (LOGOUT) */
+
+    /* TASTO LOGOUT - MASSIMA LEGGIBILITÀ */
     [data-testid="stSidebar"] button {
-        background-color: #ffffff !important;
-        color: #1e3a8a !important;
-        border-radius: 5px;
-        border: none;
-        width: 100%;
+        background-color: #991b1b !important; /* Rosso Scuro */
+        color: #ffffff !important;           /* Testo Bianco */
+        font-weight: 800 !important;
+        border: 2px solid #f87171 !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+        text-transform: uppercase;
+        margin-top: 20px;
     }
     [data-testid="stSidebar"] button:hover {
-        background-color: #f1f5f9 !important;
-        color: #ef4444 !important; /* Rosso al passaggio per il logout */
+        background-color: #7f1d1d !important; /* Rosso ancora più scuro al passaggio */
+        border-color: #ffffff !important;
     }
-    
-    .stRadio > div { color: white !important; }
-    
+
     .main-title { text-align: center; color: #1e3a8a; font-weight: 800; font-size: 2.5rem; margin-bottom: 20px; }
     .report-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #cbd5e1; margin-top: 10px; }
     .report-table th { background-color: #1e293b; color: white !important; padding: 10px; text-align: left; font-size: 0.8rem; }
@@ -108,9 +113,9 @@ u = st.session_state.user_session
 firma = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 
 # Sidebar
-st.sidebar.markdown(f"### Utente: {u['nome']}")
+st.sidebar.markdown(f"### 🧑‍⚕️ {u['nome']} {u['cognome']}")
 nav = st.sidebar.radio("NAVIGAZIONE", ["📊 Monitoraggio Generale", "👥 Modulo Equipe", "📅 Agenda Appuntamenti", "⚙️ Gestione Sistema"])
-if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"): st.session_state.user_session = None; st.rerun()
+if st.sidebar.button("LOGOUT / ESCI"): st.session_state.user_session = None; st.rerun()
 
 # --- 1. MONITORAGGIO ---
 if nav == "📊 Monitoraggio Generale":
