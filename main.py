@@ -21,7 +21,7 @@ st.markdown("""
     .custom-table { 
         width: 100%; border-collapse: collapse; background-color: #ffffff;
         border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-        margin-bottom: 20px; border: 1px solid #e2e8f0;
+        margin-bottom: 5px; border: 1px solid #e2e8f0;
     }
     .custom-table th { background-color: #1e293b; color: #ffffff !important; padding: 10px; font-size: 0.75rem; text-transform: uppercase; text-align: left; }
     .custom-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; color: #1e293b !important; }
@@ -96,18 +96,17 @@ elif menu == "👥 Equipe":
                 st.write("**Piano Terapeutico Attivo:**")
                 piano = db_run("SELECT farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=?", (p_id,))
                 if piano:
-                    # Tabella con colonna Azioni per eliminazione (Simbolo Cestino)
-                    h = "<table class='custom-table'><tr><th>Farmaco</th><th>Dose</th><th>Turni</th><th>Medico</th><th>Azioni</th></tr>"
                     for f, d, t, m, rid in piano:
-                        h += f"<tr><td>{f}</td><td>{d}</td><td>{t}</td><td>{m}</td><td></td></tr>"
-                    st.markdown(h + "</table>", unsafe_allow_html=True)
-                    
-                    # Posizionamento bottoni elimina con icona cestino
-                    for f, d, t, m, rid in piano:
-                        c1, c2 = st.columns([5,1])
-                        c1.write(f"📌 {f} ({d})")
-                        if c2.button("🗑️", key=f"del_{rid}"):
-                            db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
+                        # Creazione di una riga "finta tabella" con il cestino allineato
+                        c_info, c_del = st.columns([10, 1])
+                        with c_info:
+                            h = f"""<table class='custom-table' style='margin-bottom:0px;'>
+                                    <tr><td style='width:25%'>{f}</td><td style='width:15%'>{d}</td><td style='width:15%'>{t}</td><td style='width:45%'>{m}</td></tr>
+                                    </table>"""
+                            st.markdown(h, unsafe_allow_html=True)
+                        with c_del:
+                            if st.button("🗑️", key=f"del_{rid}"):
+                                db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
             elif ruolo == "Infermiere":
                 f_i = st.text_input("Firma Infermiere")
