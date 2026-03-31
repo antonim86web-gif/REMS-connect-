@@ -10,28 +10,27 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     .stApp { background-color: #ffffff; }
     .main-title {
-        text-align: center; 
-        background: linear-gradient(90deg, #1e40af, #3b82f6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        text-align: center; background: linear-gradient(90deg, #1e40af, #3b82f6);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         font-weight: 800; font-size: 2.5rem; margin-bottom: 25px;
     }
     .section-header {
-        background-color: #1e40af; color: #ffffff; padding: 12px;
-        border-radius: 8px; text-align: center; font-weight: 700; 
-        margin-bottom: 20px; font-size: 1.2rem; letter-spacing: 1px;
+        background-color: #1e40af; color: #ffffff; padding: 12px; border-radius: 8px; 
+        text-align: center; font-weight: 700; margin-bottom: 20px; font-size: 1.2rem;
     }
     .report-box { padding: 10px; border-radius: 6px; margin-bottom: 5px; border: 1px solid #e2e8f0; font-size: 0.85rem; }
     .report-psichiatra { background-color: #e0f2fe; border-left: 5px solid #3b82f6; }
     .report-infermiere { background-color: #f0fdf4; border-left: 5px solid #22c55e; }
     .report-oss { background-color: #fffbeb; border-left: 5px solid #f59e0b; }
     .report-appuntamenti { background-color: #f8fafc; border-left: 5px solid #64748b; }
-    .report-educatore { background-color: #fef2f2; border-left: 5px solid #ef4444; }
-    [data-testid="stSidebar"] { background-color: #1e40af !important; border-right: 1px solid #1e3a8a; }
-    [data-testid="stSidebar"] * { color: #ffffff !important; font-weight: 600 !important; }
-    .custom-table { width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; overflow: hidden; margin-bottom: 5px; border: 1px solid #e2e8f0; }
+    .badge { padding: 4px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; color: white !important; display: inline-block; }
+    .bg-psichiatra { background: #dc2626; } .bg-infermiere { background: #2563eb; }
+    .bg-educatore { background: #059669; } .bg-oss { background: #d97706; }
+    [data-testid="stSidebar"] { background-color: #1e40af !important; }
+    [data-testid="stSidebar"] * { color: #ffffff !important; }
+    .custom-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; border: 1px solid #e2e8f0; }
     .custom-table th { background-color: #1e293b; color: #ffffff !important; padding: 10px; font-size: 0.75rem; text-align: left; }
-    .custom-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; color: #1e293b !important; }
+    .custom-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -72,7 +71,9 @@ if menu == "📊 Monitoraggio":
             log = db_run("SELECT data, ruolo, op, nota, umore FROM eventi WHERE id=? ORDER BY id_u DESC", (pid,))
             if log:
                 h = "<table class='custom-table'><tr><th>Data</th><th>Ruolo</th><th>Operatore</th><th>Umore</th><th>Evento</th></tr>"
-                for d, r, o, nt, u in log: h += f"<tr><td>{d}</td><td>{r}</td><td>{o}</td><td>{u}</td><td>{nt}</td></tr>"
+                for d, r, o, nt, u in log:
+                    cls = f"bg-{r.lower()}" if r.lower() in ["infermiere", "oss", "psichiatra", "educatore"] else "bg-sistema"
+                    h += f"<tr><td>{d}</td><td><span class='badge {cls}'>{r}</span></td><td>{o}</td><td>{u}</td><td>{nt}</td></tr>"
                 st.markdown(h + "</table>", unsafe_allow_html=True)
 
 elif menu == "👥 Equipe":
@@ -105,12 +106,12 @@ elif menu == "👥 Equipe":
                             c1,c2,c3 = st.columns([3,1,1]); c1.write(f"**{fa}** ({do})")
                             if c2.button("✔️", key=f"a_{rid}"): db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"💊 Assunto: {fa}", "Infermiere", f_i), True); st.success("OK")
                             if c3.button("❌", key=f"r_{rid}"): db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"💊 Rifiutato: {fa}", "Infermiere", f_i), True); st.warning("Rifiutato")
-                    for d, nt in db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💊 %' ORDER BY id_u DESC LIMIT 10", (p_id,)): st.markdown(f"<div class='report-box report-infermiere'>{d} - {nt}</div>", unsafe_allow_html=True)
+                    for d, nt in db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💊 %' ORDER BY id_u DESC LIMIT 5", (p_id,)): st.markdown(f"<div class='report-box report-infermiere'>{d} - {nt}</div>", unsafe_allow_html=True)
                 with t2:
                     with st.form("pv"):
                         c1,c2,c3,c4 = st.columns(4); pa, fc, sp, tc = c1.text_input("PA"), c2.text_input("FC"), c3.text_input("SpO2"), c4.text_input("TC")
                         if st.form_submit_button("SALVA"): db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"📊 PA:{pa} FC:{fc} SpO:{sp} TC:{tc}", "Infermiere", f_i), True); st.rerun()
-                    for d, nt in db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '📊 %' ORDER BY id_u DESC LIMIT 10", (p_id,)): st.markdown(f"<div class='report-box report-infermiere'>{d} - {nt}</div>", unsafe_allow_html=True)
+                    for d, nt in db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '📊 %' ORDER BY id_u DESC LIMIT 5", (p_id,)): st.markdown(f"<div class='report-box report-infermiere'>{d} - {nt}</div>", unsafe_allow_html=True)
                 with t3:
                     txt_i = st.text_area("Consegna")
                     if st.button("INVIA"): 
