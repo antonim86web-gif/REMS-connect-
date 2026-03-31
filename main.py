@@ -10,8 +10,6 @@ st.markdown("""
 <style>
     .main-title {text-align: center; color: #1e3a8a; font-weight: bold; margin-bottom:20px;}
     .patient-header { background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 8px solid #1e3a8a; margin-bottom: 25px; border: 1px solid #e2e8f0; }
-    .allergy-alert { background: #fee2e2; color: #991b1b; padding: 8px 15px; border-radius: 6px; font-weight: bold; border: 1px solid #f87171; display: inline-block; }
-    .diet-box { background: #fef9c3; color: #854d0e; padding: 8px 15px; border-radius: 6px; border: 1px solid #facc15; display: inline-block; }
     .custom-table {width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white;}
     .custom-table th {background-color: #1e3a8a; color: white; padding: 10px; text-align: left; border: 1px solid #dee2e6;}
     .custom-table td {padding: 10px; border: 1px solid #dee2e6; vertical-align: middle;}
@@ -29,12 +27,12 @@ def db_run(query, params=(), commit=False):
         cur = conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
         
-        # FIX AUTOMATICO COLONNE (Per smartphone)
+        # FIX AUTOMATICO COLONNE
         cur.execute("PRAGMA table_info(pazienti)")
         esistenti = [col[1] for col in cur.fetchall()]
         nuove = {
             "data_nascita": "TEXT", "data_ingresso": "TEXT", "diagnosi": "TEXT",
-            "allergie": "TEXT", "dieta": "TEXT", "giorno_lavatrice": "TEXT"
+            "allergie": "TEXT", "dieta": "TEXT"
         }
         for col, tipo in nuove.items():
             if col not in esistenti:
@@ -47,8 +45,6 @@ def db_run(query, params=(), commit=False):
         if query: cur.execute(query, params)
         if commit: conn.commit()
         return cur.fetchall()
-
-GIORNI = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]
 
 # --- 3. LOGIN ---
 if 'auth' not in st.session_state: st.session_state.auth = False
@@ -76,52 +72,47 @@ if menu == "Gestione":
             n = c1.text_input("Nome e Cognome")
             dn = c2.date_input("Data di Nascita", value=date(1980,1,1))
             di = c1.date_input("Data Ingresso", value=date.today())
-            gl = c2.selectbox("Giorno Lavatrice", GIORNI)
             dia = st.text_area("Diagnosi")
             all = st.text_area("Allergie")
             diet = st.text_input("Dieta")
             if st.form_submit_button("REGISTRA PAZIENTE"):
-                db_run("INSERT INTO pazienti (nome, data_nascita, data_ingresso, diagnosi, allergie, dieta, giorno_lavatrice) VALUES (?,?,?,?,?,?,?)",
-                       (n, dn.strftime("%d/%m/%Y"), di.strftime("%d/%m/%Y"), dia, all, diet, gl), True)
+                db_run("INSERT INTO pazienti (nome, data_nascita, data_ingresso, diagnosi, allergie, dieta) VALUES (?,?,?,?,?,?)",
+                       (n, dn.strftime("%d/%m/%Y"), di.strftime("%d/%m/%Y"), dia, all, diet), True)
                 st.success("Registrato!"); st.rerun()
     
     with t2:
-        paz_list = db_run("SELECT id, nome, diagnosi, allergie, dieta, giorno_lavatrice FROM pazienti ORDER BY nome")
+        paz_list = db_run("SELECT id, nome, diagnosi, allergie, dieta FROM pazienti ORDER BY nome")
         if paz_list:
             scelta = st.selectbox("Paziente da modificare", [p[1] for p in paz_list])
             p_sel = [p for p in paz_list if p[1] == scelta][0]
             with st.form(f"mod_{p_sel[0]}"):
                 m_nome = st.text_input("Nome", p_sel[1])
-                m_diag = st.text_area("Diagnosi", p_sel[2] if p_sel[2] else "")
+                m_dia = st.text_area("Diagnosi", p_sel[2] if p_sel[2] else "")
                 m_all = st.text_area("Allergie", p_sel[3] if p_sel[3] else "")
                 m_diet = st.text_input("Dieta", p_sel[4] if p_sel[4] else "")
-                m_gl = st.selectbox("Giorno Lavatrice", GIORNI, index=GIORNI.index(p_sel[5]) if p_sel[5] in GIORNI else 0)
                 col1, col2 = st.columns(2)
                 if col1.form_submit_button("✅ AGGIORNA"):
-                    db_run("UPDATE pazienti SET nome=?, diagnosi=?, allergie=?, dieta=?, giorno_lavatrice=? WHERE id=?", (m_nome, m_diag, m_all, m_diet, m_gl, p_sel[0]), True); st.rerun()
+                    db_run("UPDATE pazienti SET nome=?, diagnosi=?, allergie=?, dieta=? WHERE id=?", (m_nome, m_dia, m_all, m_diet, p_sel[0]), True); st.rerun()
                 if col2.form_submit_button("🗑️ ELIMINA"):
                     db_run("DELETE FROM pazienti WHERE id=?", (p_sel[0],), True); st.rerun()
 
 # --- 6. EQUIPE ---
 elif menu == "Equipe":
     figura = st.sidebar.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS"])
-    paz_data = db_run("SELECT id, nome, data_nascita, data_ingresso, diagnosi, allergie, dieta, giorno_lavatrice FROM pazienti ORDER BY nome")
+    paz_data = db_run("SELECT id, nome, data_nascita, data_ingresso, diagnosi, allergie, dieta FROM pazienti ORDER BY nome")
     
     if paz_data:
         sel_p_nome = st.selectbox("Seleziona Paziente", [p[1] for p in paz_data])
         p_sel = [x for x in paz_data if x[1] == sel_p_nome][0]
         p_id = p_sel[0]
 
-        # INTESTAZIONE CLINICA
+        # INTESTAZIONE CLINICA PULITA (Senza box colorati)
         st.markdown(f"""
         <div class="patient-header">
             <h3>{p_sel[1].upper()}</h3>
-            <p>Nato il: <b>{p_sel[2]}</b> | Ingresso: <b>{p_sel[3]}</b> | Lavatrice: <b>{p_sel[7]}</b></p>
-            <p><i>Diagnosi: {p_sel[4]}</i></p>
-            <div style="margin-top:10px;">
-                <span class="allergy-alert">⚠️ Allergie: {p_sel[5]}</span> &nbsp;
-                <span class="diet-box">🍽️ Dieta: {p_sel[6]}</span>
-            </div>
+            <p>Nato il: <b>{p_sel[2]}</b> | Ingresso: <b>{p_sel[3]}</b></p>
+            <p><b>Diagnosi:</b> {p_sel[4]}</p>
+            <p><b>Allergie:</b> {p_sel[5]} | <b>Dieta:</b> {p_sel[6]}</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -150,7 +141,7 @@ elif menu == "Equipe":
 
         elif figura == "Infermiere" or figura == "OSS":
             with st.form("diario_n"):
-                n_t = st.text_area("Nota Diario / Diario OSS")
+                n_t = st.text_area("Nota Diario / Nota OSS")
                 f_t = st.text_input("Firma")
                 if st.form_submit_button("REGISTRA"):
                     db_run("INSERT INTO eventi (id, data, umore, nota, ruolo, op) VALUES (?,?,?,?,?,?)", 
