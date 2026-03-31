@@ -116,7 +116,6 @@ elif menu == "👥 Equipe":
                 t_p, t_c = st.tabs(["🧹 Mansioni", "📝 Note"])
                 with t_p:
                     with st.form("oss_m"):
-                        # Mansioni complete come richiesto
                         st.write("Seleziona mansioni effettuate:")
                         c1,c2,c3 = st.columns(3)
                         m1 = c1.checkbox("Pulizia Camera"); m2 = c2.checkbox("Bagno"); m3 = c3.checkbox("Refettorio")
@@ -151,13 +150,10 @@ elif menu == "📅 Appuntamenti":
         p_id = [p[0] for p in p_lista if p[1] == p_nome][0]
         with st.form("app"):
             c1,c2 = st.columns(2); d, h = c1.date_input("Data"), c2.time_input("Ora")
-            # Tipo aggiornato con Visita con Parenti
             ti = st.selectbox("Tipo Uscita", ["Udienza", "Visita Medica", "Visita con Parenti", "Permesso"])
-            # Sostituito Scorta con Accompagnatore
             acc = st.text_input("Accompagnatore")
             if st.form_submit_button("PROGRAMMA USCITA"):
-                db_query_str = "INSERT INTO appuntamenti (p_id, data, ora, tipo, accompagnatore) VALUES (?,?,?,?,?)"
-                db_run(db_query_str, (p_id, d.strftime("%d/%m/%Y"), h.strftime("%H:%M"), ti, acc), True)
+                db_run("INSERT INTO appuntamenti (p_id, data, ora, tipo, accompagnatore) VALUES (?,?,?,?,?)", (p_id, d.strftime("%d/%m/%Y"), h.strftime("%H:%M"), ti, acc), True)
                 db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"📅 {ti} con {acc}", "Sistema", "Agenda"), True); st.rerun()
         
         apps = db_run("SELECT data, ora, tipo, accompagnatore FROM appuntamenti WHERE p_id=? ORDER BY row_id DESC", (p_id,))
