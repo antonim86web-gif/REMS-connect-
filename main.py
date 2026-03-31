@@ -96,16 +96,17 @@ elif menu == "👥 Equipe":
                 st.write("**Piano Terapeutico Attivo:**")
                 piano = db_run("SELECT farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=?", (p_id,))
                 if piano:
-                    # Tabella con colonna Azioni per eliminazione
+                    # Tabella con colonna Azioni per eliminazione (Simbolo Cestino)
                     h = "<table class='custom-table'><tr><th>Farmaco</th><th>Dose</th><th>Turni</th><th>Medico</th><th>Azioni</th></tr>"
                     for f, d, t, m, rid in piano:
                         h += f"<tr><td>{f}</td><td>{d}</td><td>{t}</td><td>{m}</td><td></td></tr>"
                     st.markdown(h + "</table>", unsafe_allow_html=True)
                     
-                    # Generazione dinamica dei bottoni di eliminazione allineati
-                    cols = st.columns(len(piano) if len(piano) > 0 else 1)
-                    for idx, (f, d, t, m, rid) in enumerate(piano):
-                        if cols[idx % len(cols)].button(f"Elimina {f}", key=f"del_{rid}"):
+                    # Posizionamento bottoni elimina con icona cestino
+                    for f, d, t, m, rid in piano:
+                        c1, c2 = st.columns([5,1])
+                        c1.write(f"📌 {f} ({d})")
+                        if c2.button("🗑️", key=f"del_{rid}"):
                             db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
             elif ruolo == "Infermiere":
