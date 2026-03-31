@@ -5,7 +5,8 @@ import hashlib
 import pandas as pd
 
 # --- 1. CONFIGURAZIONE E STILE ---
-st.set_page_config(page_title="REMS Connect PERIZIA v14", layout="wide", page_icon="🏥")
+# Modificato il titolo per rimuovere 'PERIZIA'
+st.set_page_config(page_title="REMS Connect PRO v14", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -19,7 +20,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 2. DATABASE (v14 - Struttura Pulita) ---
-DB_NAME = "rems_perizia_v14.db"
+DB_NAME = "rems_pro_v14.db"
 
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
@@ -39,7 +40,8 @@ def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
 if 'user_data' not in st.session_state: st.session_state.user_data = None
 
 if not st.session_state.user_data:
-    st.title("🏥 REMS CONNECT - ACCESSO PERITI")
+    # Modificato il titolo per rimuovere 'ACCESSO PERITI'
+    st.title("🏥 REMS CONNECT - ACCESSO")
     t1, t2 = st.tabs(["🔐 Login", "📝 Registrazione"])
     with t1:
         with st.form("l"):
