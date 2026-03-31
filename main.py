@@ -15,17 +15,19 @@ st.markdown("""
         border-right: 2px solid #1e293b;
     }
     
-    /* TESTO MENU LATERALE */
-    [data-testid="stSidebar"] .stRadio label {
+    /* FORZA TUTTE LE SCRITTE DELLA SIDEBAR A BIANCO */
+    [data-testid="stSidebar"] section[data-testid="stSidebarNav"] span,
+    [data-testid="stSidebar"] .stRadio label,
+    [data-testid="stSidebar"] .stMarkdown p,
+    [data-testid="stSidebar"] h3 {
         color: #ffffff !important;
         font-weight: 600 !important;
-        font-size: 1.1rem !important;
     }
 
-    /* TASTO LOGOUT - MASSIMA LEGGIBILITÀ */
+    /* TASTO LOGOUT - ROSSO E LEGGIBILE */
     [data-testid="stSidebar"] button {
-        background-color: #991b1b !important; /* Rosso Scuro */
-        color: #ffffff !important;           /* Testo Bianco */
+        background-color: #991b1b !important;
+        color: #ffffff !important;
         font-weight: 800 !important;
         border: 2px solid #f87171 !important;
         border-radius: 8px !important;
@@ -34,17 +36,15 @@ st.markdown("""
         margin-top: 20px;
     }
     [data-testid="stSidebar"] button:hover {
-        background-color: #7f1d1d !important; /* Rosso ancora più scuro al passaggio */
-        border-color: #ffffff !important;
+        background-color: #7f1d1d !important;
     }
 
+    /* STILE GENERALE CORPO */
     .main-title { text-align: center; color: #1e3a8a; font-weight: 800; font-size: 2.5rem; margin-bottom: 20px; }
     .report-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #cbd5e1; margin-top: 10px; }
     .report-table th { background-color: #1e293b; color: white !important; padding: 10px; text-align: left; font-size: 0.8rem; }
     .report-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
     .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; color: white; font-weight: bold; }
-    .bg-psichiatra { background: #dc2626; } .bg-infermiere { background: #2563eb; }
-    .bg-educatore { background: #059669; } .bg-oss { background: #d97706; }
     
     /* BADGE CATEGORIE AGENDA */
     .cat-badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; color: white; }
@@ -126,7 +126,7 @@ if nav == "📊 Monitoraggio Generale":
             if evs:
                 h = "<table class='report-table'><thead><tr><th>Data</th><th>Ruolo</th><th>Operatore</th><th>Evento</th></tr></thead><tbody>"
                 for d, r, o, nt in evs:
-                    h += f"<tr><td>{d}</td><td><span class='badge bg-{r.lower()}'>{r}</span></td><td>{o}</td><td>{nt}</td></tr>"
+                    h += f"<tr><td>{d}</td><td>{r}</td><td>{o}</td><td>{nt}</td></tr>"
                 st.markdown(h + "</tbody></table>", unsafe_allow_html=True)
 
 # --- 2. MODULO EQUIPE ---
