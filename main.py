@@ -100,7 +100,8 @@ elif menu == "Equipe":
                 for da, fa, ds, tu, me, rid in ta:
                     html += f"<tr><td>{da}</td><td><b>{fa}</b></td><td>{ds}</td><td>{tu}</td><td>{me}</td><td>"
                     st.markdown(html, unsafe_allow_html=True)
-                    if st.button("SOSPONDI", key=f"s_{rid}"):
+                    # CORREZIONE: SOSPENDI
+                    if st.button("SOSPENDI", key=f"s_{rid}"):
                         if med_f:
                             db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"❌ SOSPESO: {fa}", "Psichiatra", med_f), True); st.rerun()
