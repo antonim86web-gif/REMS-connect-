@@ -17,8 +17,9 @@ st.markdown("""
         font-weight: 800; font-size: 2.5rem; margin-bottom: 25px;
     }
     .section-header {
-        background-color: #1e293b; color: #ffffff; padding: 10px;
-        border-radius: 5px; text-align: center; font-weight: 700; margin-bottom: 20px;
+        background-color: #1e40af; color: #ffffff; padding: 12px;
+        border-radius: 8px; text-align: center; font-weight: 700; 
+        margin-bottom: 20px; font-size: 1.2rem; letter-spacing: 1px;
     }
     [data-testid="stSidebar"] { background-color: #1e40af !important; border-right: 1px solid #1e3a8a; }
     [data-testid="stSidebar"] * { color: #ffffff !important; font-weight: 600 !important; }
@@ -82,13 +83,14 @@ if menu == "📊 Monitoraggio":
 elif menu == "👥 Equipe":
     ruolo = st.sidebar.selectbox("PROFILO OPERATIVO", ["Scegli...", "Psichiatra", "Infermiere", "Educatore", "OSS"])
     if ruolo != "Scegli...":
+        headers = {"Psichiatra": "GESTIONE TERAPEUTICA", "Infermiere": "GESTIONE INFERMIERISTICA", "OSS": "GESTIONE E MANSIONI", "Educatore": "GESTIONE EDUCATIVA"}
+        st.markdown(f"<div class='section-header'>{headers[ruolo]}</div>", unsafe_allow_html=True)
         p_lista = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
         if p_lista:
             p_nome = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista]); p_id = [p[0] for p in p_lista if p[1] == p_nome][0]
             umore_list = ["Stabile", "Agitato", "Collaborante", "Provocatorio", "Depresso"]
 
             if ruolo == "Psichiatra":
-                st.markdown("<div class='section-header'>GESTIONE TERAPEUTICA</div>", unsafe_allow_html=True)
                 f_m = st.text_input("Firma Medico")
                 with st.form("prescr"):
                     c1,c2 = st.columns(2); fa, do = c1.text_input("Farmaco"), c2.text_input("Dose")
@@ -102,15 +104,14 @@ elif menu == "👥 Equipe":
                     if c_d.button("🗑️", key=f"t_{rid}"): db_run("DELETE FROM terapie WHERE id_u=?", (rid,), True); st.rerun()
 
             elif ruolo == "Infermiere":
-                st.markdown("<div class='section-header'>GESTIONE INFERMIERISTICA</div>", unsafe_allow_html=True)
                 f_i = st.text_input("Firma Infermiere")
                 t1, t2, t3 = st.tabs(["💊 Farmaci", "📊 Parametri", "📝 Consegne"])
                 with t1:
                     turno = st.selectbox("Turno", ["Mattina", "Pomeriggio", "Notte"])
                     for fa, do, tu, rid in db_run("SELECT farmaco, dosaggio, turni, id_u FROM terapie WHERE p_id=?", (p_id,)):
                         if turno[0] in tu:
-                            c1,c2,c3 = st.columns([3,1,1]); c1.write(f"**{fa}** ({do})")
-                            if c2.button("✔️", key=f"a_{rid}"): db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"💊 Assunto: {fa}", "Infermiere", f_i), True); st.success("OK")
+                            c1,c2,c3 = st.columns([3,1,1]); c1.write(f"**{fa}** ({do})"); btn = c2.button("✔️", key=f"a_{rid}")
+                            if btn: db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"💊 Assunto: {fa}", "Infermiere", f_i), True); st.success("OK")
                             if c3.button("❌", key=f"r_{rid}"): db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"💊 Rifiutato: {fa}", "Infermiere", f_i), True); st.warning("Rifiutato")
                     st.write("**Storico Somministrazioni:**")
                     for d, nt in db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💊 %' ORDER BY id_u DESC LIMIT 10", (p_id,)): st.markdown(f"<small>{d} - {nt}</small>", unsafe_allow_html=True)
@@ -126,7 +127,6 @@ elif menu == "👥 Equipe":
                     for d, um, nt, op in db_run("SELECT data, umore, nota, op FROM eventi WHERE id=? AND ruolo='Infermiere' AND nota LIKE '📝 %' ORDER BY id_u DESC LIMIT 5", (p_id,)): st.info(f"{d} - [{um}] {nt} ({op})")
 
             elif ruolo == "OSS":
-                st.markdown("<div class='section-header'>GESTIONE E MANSIONI</div>", unsafe_allow_html=True)
                 f_o = st.text_input("Firma OSS")
                 t_oss1, t_oss2 = st.tabs(["🧹 Mansioni", "📝 Note OSS"])
                 with t_oss1:
@@ -143,7 +143,6 @@ elif menu == "👥 Equipe":
                     for d, nt, op in db_run("SELECT data, nota, op FROM eventi WHERE id=? AND ruolo='OSS' AND nota LIKE '📝 %' ORDER BY id_u DESC", (p_id,)): st.warning(f"{d} - {nt} ({op})")
 
             elif ruolo == "Educatore":
-                st.markdown("<div class='section-header'>GESTIONE EDUCATIVA</div>", unsafe_allow_html=True)
                 f_e = st.text_input("Firma Educatore")
                 mov = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY id_u DESC", (p_id,))
                 st.metric("SALDO", f"€ {sum([m[2] if m[3] == 'Entrata' else -m[2] for m in mov]):.2f}")
