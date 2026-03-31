@@ -37,36 +37,35 @@ st.markdown("""
         margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
     }
 
-    /* --- STILE POST-IT DIARIO CLINICO --- */
+    /* --- STILE POST-IT --- */
     .postit {
         padding: 15px;
         border-radius: 8px;
-        margin-bottom: 15px;
+        margin-bottom: 12px;
         border-left: 10px solid;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
         color: #1e293b;
+        background-color: #ffffff;
     }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
-    .postit-body { font-size: 1rem; line-height: 1.4; }
+    .postit-body { font-size: 1rem; line-height: 1.4; font-weight: 500; }
     
     /* COLORI PER RUOLO */
-    .role-psichiatra { background-color: #fef2f2; border-color: #dc2626; } /* Rosso */
-    .role-infermiere { background-color: #eff6ff; border-color: #2563eb; } /* Blu */
-    .role-educatore { background-color: #ecfdf5; border-color: #059669; }  /* Verde */
-    .role-oss { background-color: #f8fafc; border-color: #64748b; }        /* Grigio */
-    .role-default { background-color: #fffbeb; border-color: #d97706; }    /* Arancio */
+    .role-psichiatra { background-color: #fef2f2; border-color: #dc2626; } 
+    .role-infermiere { background-color: #eff6ff; border-color: #2563eb; } 
+    .role-educatore { background-color: #ecfdf5; border-color: #059669; }  
+    .role-oss { background-color: #f8fafc; border-color: #64748b; }        
+    .role-default { background-color: #fffbeb; border-color: #d97706; }    
 
-    /* TABELLE PROFESSIONALI (Per altre sezioni) */
-    .report-table { width: 100%; border-collapse: collapse; background: white; border: 1px solid #cbd5e1; margin-top: 20px; }
-    .report-table th { background-color: #1e293b; color: white !important; padding: 12px; text-align: left; border: 1px solid #cbd5e1; font-weight: 700; }
-    .report-table td { padding: 10px; border: 1px solid #cbd5e1; color: #1e293b; font-size: 0.9rem; }
-    
-    /* CARD TERAPIA */
+    /* CARD TERAPIA SOMMINISTRAZIONE */
     .therapy-container {
         background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
         padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
+    .turn-header { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px; color: #1e3a8a; }
+    .farmaco-title { font-size: 1.2rem; font-weight: 900; color: #1e293b; margin: 0; }
+    .dose-subtitle { font-size: 1rem; color: #64748b; font-weight: 600; margin-bottom: 10px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -91,6 +90,34 @@ def db_run(query, params=(), commit=False):
             return []
 
 def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
+
+# Funzione universale per mostrare i Post-it
+def render_postits(p_id, filtro_ruolo=None, filtro_nota=None):
+    query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
+    params = [p_id]
+    if filtro_ruolo:
+        query += " AND ruolo=?"
+        params.append(filtro_ruolo)
+    if filtro_nota:
+        query += " AND nota LIKE ?"
+        params.append(f"%{filtro_nota}%")
+    query += " ORDER BY id_u DESC LIMIT 10"
+    
+    res = db_run(query, tuple(params))
+    for d, r, o, nt in res:
+        r_low = r.lower()
+        if 'psichiatra' in r_low: cls = "role-psichiatra"
+        elif 'infermiere' in r_low: cls = "role-infermiere"
+        elif 'educatore' in r_low: cls = "role-educatore"
+        elif 'oss' in r_low: cls = "role-oss"
+        else: cls = "role-default"
+        
+        st.markdown(f"""
+        <div class="postit {cls}">
+            <div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div>
+            <div class="postit-body">{nt}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # --- SESSIONE ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
@@ -126,28 +153,7 @@ if nav == "📊 Monitoraggio":
     p_lista = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
     for pid, nome in p_lista:
         with st.expander(f"📁 CARTELLA CLINICA: {nome}"):
-            evs = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (pid,))
-            if evs:
-                for d, r, o, nt in evs:
-                    # Assegnazione classe colore in base al ruolo
-                    r_low = r.lower()
-                    if 'psichiatra' in r_low: cls = "role-psichiatra"
-                    elif 'infermiere' in r_low: cls = "role-infermiere"
-                    elif 'educatore' in r_low: cls = "role-educatore"
-                    elif 'oss' in r_low: cls = "role-oss"
-                    else: cls = "role-default"
-                    
-                    st.markdown(f"""
-                    <div class="postit {cls}">
-                        <div class="postit-header">
-                            <span>👤 {o} ({r})</span>
-                            <span>📅 {d}</span>
-                        </div>
-                        <div class="postit-body">{nt}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("Nessun evento registrato per questo paziente.")
+            render_postits(pid)
 
 elif nav == "👥 Modulo Equipe":
     st.markdown(f"<div class='section-banner'><h2>AREA {u['ruolo'].upper()}</h2></div>", unsafe_allow_html=True)
@@ -156,47 +162,60 @@ elif nav == "👥 Modulo Equipe":
         p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
 
-        if u['ruolo'] == "Infermiere":
+        if u['ruolo'] in ["Infermiere", "OSS"]:
             t_somm, t_cons, t_pv = st.tabs(["💊 SOMMINISTRAZIONE", "📝 CONSEGNE", "📊 PARAMETRI"])
+            
             with t_somm:
                 st.write("### 🏥 Dashboard Somministrazione")
                 oggi = datetime.now().strftime("%d/%m/%Y")
                 ter = db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,))
                 
-                def render_card(tid, farm, dos, turn, css_color, icon):
+                def render_card(tid, farm, dos, turn, icon):
                     check = db_run("SELECT id_u FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%✔️ SOMM ({turn}): {farm}%", f"{oggi}%"))
                     if not check:
                         st.markdown(f"<div class='therapy-container'><div class='turn-header'>{icon} {turn}</div><div class='farmaco-title'>{farm}</div><div class='dose-subtitle'>{dos}</div></div>", unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
                         if c1.button("✅ ASSUNTO", key=f"ok_{tid}_{turn}"):
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"✔️ SOMM ({turn}): {farm}", "Infermiere", firma), True); st.rerun()
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"✔️ SOMM ({turn}): {farm}", u['ruolo'], firma), True); st.rerun()
                         if c2.button("❌ RIFIUTATO", key=f"no_{tid}_{turn}"):
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"⚠️ RIFIUTO ({turn}): {farm}", "Infermiere", firma), True); st.rerun()
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"⚠️ RIFIUTO ({turn}): {farm}", u['ruolo'], firma), True); st.rerun()
 
                 col1, col2, col3 = st.columns(3)
                 with col1: 
                     st.write("☀️ **MAT**")
                     for t in ter: 
-                        if t[3]: render_card(t[0], t[1], t[2], "MAT", "mat-style", "☀️")
+                        if t[3]: render_card(t[0], t[1], t[2], "MAT", "☀️")
                 with col2: 
                     st.write("🌤️ **POM**")
                     for t in ter: 
-                        if t[4]: render_card(t[0], t[1], t[2], "POM", "pom-style", "🌤️")
+                        if t[4]: render_card(t[0], t[1], t[2], "POM", "🌤️")
                 with col3: 
                     st.write("🌙 **NOT**")
                     for t in ter: 
-                        if t[5]: render_card(t[0], t[1], t[2], "NOT", "not-style", "🌙")
+                        if t[5]: render_card(t[0], t[1], t[2], "NOT", "🌙")
+                
+                st.write("---")
+                st.write("#### 📜 Storico Somministrazioni")
+                render_postits(p_id, filtro_nota="SOMM")
 
             with t_cons:
-                nota_c = st.text_area("Nota Consegna")
-                if st.button("SALVA CONSEGNA"):
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), nota_c, "Infermiere", firma), True); st.rerun()
+                with st.form("cons_f"):
+                    nota_c = st.text_area("Inserisci Consegna")
+                    if st.form_submit_button("SALVA CONSEGNA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), nota_c, u['ruolo'], firma), True); st.rerun()
+                st.write("#### 📜 Storico Consegne")
+                render_postits(p_id, u['ruolo'])
 
             with t_pv:
                 with st.form("pv_form"):
-                    pa = st.text_input("Pressione Arteriosa (es. 120/80)"); fc = st.text_input("Frequenza Cardiaca")
-                    if st.form_submit_button("REGISTRA PV"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"Parametri Vitali - PA: {pa}, FC: {fc}", "Infermiere", firma), True); st.rerun()
+                    c1, c2, c3 = st.columns(3)
+                    pa = c1.text_input("PA (es. 120/80)")
+                    fc = c2.text_input("FC (BPM)")
+                    sat = c3.text_input("Saturazione SpO2 (%)") # AGGIUNTA SATURAZIONE
+                    if st.form_submit_button("REGISTRA PARAMETRI"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📊 PV - PA: {pa}, FC: {fc}, SpO2: {sat}%", u['ruolo'], firma), True); st.rerun()
+                st.write("#### 📜 Storico Parametri")
+                render_postits(p_id, filtro_nota="PV")
 
         elif u['ruolo'] == "Psichiatra":
             with st.form("presc"):
@@ -204,6 +223,7 @@ elif nav == "👥 Modulo Equipe":
                 m,p,n = c1.checkbox("MAT"), c2.checkbox("POM"), c3.checkbox("NOT")
                 if st.form_submit_button("REGISTRA TERAPIA"):
                     db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma), True); st.rerun()
+            render_postits(p_id, "Psichiatra")
 
 elif nav == "⚙️ Sistema":
     st.markdown("<div class='section-banner'><h2>SISTEMA</h2></div>", unsafe_allow_html=True)
