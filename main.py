@@ -10,13 +10,11 @@ st.markdown("""
 <style>
     .main-title {text-align: center; color: #1e3a8a; font-weight: bold; margin-bottom:20px;}
     
-    /* STILE TABELLE UNIVERSALE */
     .custom-table { width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; border: 1px solid #e2e8f0; }
     .custom-table th { background-color: #f1f5f9; color: #475569; padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 0.8rem; text-transform: uppercase; }
     .custom-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.85rem; }
     .custom-table tr:hover { background-color: #f8fafc; }
 
-    /* BADGES RUOLI */
     .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; color: white; display: inline-block; }
     .bg-psichiatra { background-color: #ef4444; }
     .bg-infermiere { background-color: #3b82f6; }
@@ -24,6 +22,7 @@ st.markdown("""
     .bg-oss        { background-color: #f59e0b; }
     
     .saldo-header { padding: 15px; border-radius: 8px; background-color: #eff6ff; text-align: center; border: 1px solid #3b82f6; font-weight: bold; margin-bottom:15px; }
+    .card-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,7 +97,8 @@ elif menu == "Equipe":
                     if st.form_submit_button("SALVA"):
                         if med_f:
                             ts = ",".join([s for s, b in zip(["M","P","N"], [m,p,n]) if b])
-                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, date.today().strftime("%d/%m/%Y")), True); st.rerun()
+                            data_p = date.today().strftime("%d/%m/%Y")
+                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, data_p), True); st.rerun()
             
             st.write("#### Terapie in corso")
             ta = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
@@ -111,7 +111,7 @@ elif menu == "Equipe":
                         if med_f:
                             db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
                             db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"❌ SOSPESO: {fa}", "Psichiatra", med_f), True); st.rerun()
-                    html = "" # Reset per il ciclo
+                    html = "" 
                 st.markdown("</table>", unsafe_allow_html=True)
 
         elif ruolo == "Infermiere":
@@ -121,20 +121,22 @@ elif menu == "Equipe":
             
             with t1:
                 c_d, c_t = st.columns(2)
-                d_s = c_d.date_input("Data", date.today())
-                t_s = c_t.selectbox("Turno", ["Mattina", "Pomeriggio", "Notte"])
+                d_s = c_d.date_input("Data Somministrazione", date.today())
+                t_s = c_t.selectbox("Turno Somministrazione", ["Mattina", "Pomeriggio", "Notte"])
                 ter = db_run("SELECT farmaco, dosaggio, turni, row_id FROM terapie WHERE p_id=?", (p_id,))
                 for f, d, tu_p, rid in ter:
                     if tu_p and t_s[0] in tu_p:
-                        with st.container():
-                            st.markdown(f"**{f}** ({d})")
-                            ce, cn, cb = st.columns([2,2,1])
-                            es = ce.radio("Esito", ["Assunta", "Rifiutata", "Parziale"], key=f"e_{rid}", horizontal=True)
-                            nt = cn.text_input("Note", key=f"n_{rid}")
-                            if cb.button("SALVA", key=f"b_{rid}"):
-                                if inf_f:
-                                    nota_f = f"[{t_s[0]}] {f} -> {es}" + (f" ({nt})" if nt else "")
-                                    db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, f"{d_s.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}", "Stabile", nota_f, "Infermiere", inf_f), True); st.rerun()
+                        st.markdown(f"<div class='card-box'>", unsafe_allow_html=True)
+                        st.write(f"**{f}** ({d})")
+                        ce, cn, cb = st.columns([2,2,1])
+                        es = ce.radio("Esito", ["Assunta", "Rifiutata", "Parziale"], key=f"e_{rid}", horizontal=True)
+                        nt = cn.text_input("Note", key=f"n_{rid}")
+                        if cb.button("SALVA", key=f"b_{rid}"):
+                            if inf_f:
+                                nota_f = f"[{t_s[0]}] {f} -> {es}" + (f" ({nt})" if nt else "")
+                                data_f = f"{d_s.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}"
+                                db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", nota_f, "Infermiere", inf_f), True); st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
 
             with t2:
                 with st.form("pv"):
@@ -145,13 +147,20 @@ elif menu == "Equipe":
                     tc = c4.number_input("TC", 34.0, 42.0, 36.5)
                     if st.form_submit_button("REGISTRA PARAMETRI"):
                         if inf_f:
-                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"📊 PA:{pa} FC:{fc} SpO2:{sat}% TC:{tc}°", "Infermiere", inf_f), True); st.rerun()
+                            data_f = datetime.now().strftime("%d/%m/%Y %H:%M")
+                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", f"📊 PA:{pa} FC:{fc} SpO2:{sat}% TC:{tc}°", "Infermiere", inf_f), True); st.rerun()
 
             with t3:
-                txt = st.text_area("Consegna")
+                # AGGIORNAMENTO CONSEGNE CON DATA E TURNO
+                c_d_c, c_t_c = st.columns(2)
+                data_cons = c_d_c.date_input("Data Consegna", date.today(), key="d_cons")
+                turno_cons = c_t_c.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons")
+                txt = st.text_area("Testo della Consegna")
                 if st.button("SALVA CONSEGNA"):
                     if inf_f and txt:
-                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"📝 {txt}", "Infermiere", inf_f), True); st.rerun()
+                        data_f = f"{data_cons.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}"
+                        nota_cons = f"📝 [CONSEGNA {turno_cons.upper()}] {txt}"
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", nota_cons, "Infermiere", inf_f), True); st.rerun()
 
         elif ruolo == "Educatore":
             st.subheader("💰 Gestione Cassa")
@@ -165,7 +174,9 @@ elif menu == "Equipe":
                     im = st.number_input("Importo €", 0.0)
                     ds = st.text_input("Causale")
                     if st.form_submit_button("REGISTRA"):
-                        if ed_f: db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tp, ed_f), True); st.rerun()
+                        if ed_f: 
+                            data_m = date.today().strftime("%d/%m/%Y")
+                            db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, data_m, ds, im, tp, ed_f), True); st.rerun()
             
             if mov:
                 st.write("#### Storico Movimenti")
@@ -185,7 +196,8 @@ elif menu == "Equipe":
                 if st.form_submit_button("SALVA"):
                     if oss_f:
                         ms = [t for b,t in zip([o1,o2,o3,o4,o5], ["Camera","Refettorio","Sala Fumo","Cortile","Lavatrice"]) if b]
-                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
+                        data_f = datetime.now().strftime("%d/%m/%Y %H:%M")
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
 
 # --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
