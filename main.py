@@ -114,7 +114,6 @@ elif menu == "Equipe":
             
             with t1:
                 c_d, c_t = st.columns(2)
-                # FORZATURA FORMATO DATA EUROPEO
                 d_s = c_d.date_input("Data Somministrazione", date.today(), format="DD/MM/YYYY")
                 t_s = c_t.selectbox("Turno Somministrazione", ["Mattina", "Pomeriggio", "Notte"])
                 ter = db_run("SELECT farmaco, dosaggio, turni, row_id FROM terapie WHERE p_id=?", (p_id,))
@@ -143,9 +142,8 @@ elif menu == "Equipe":
 
             with t3:
                 c_d_c, c_t_c = st.columns(2)
-                # FORZATURA FORMATO DATA EUROPEO
-                data_cons = c_d_c.date_input("Data Consegna", date.today(), format="DD/MM/YYYY", key="d_cons_eur")
-                turno_cons = c_t_c.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons_eur")
+                data_cons = c_d_c.date_input("Data Consegna", date.today(), format="DD/MM/YYYY", key="d_cons_inf")
+                turno_cons = c_t_c.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons_inf")
                 txt = st.text_area("Testo della Consegna")
                 if st.button("SALVA CONSEGNA"):
                     if inf_f and txt:
@@ -173,14 +171,39 @@ elif menu == "Equipe":
                 st.markdown(html + "</table>", unsafe_allow_html=True)
 
         elif ruolo == "OSS":
-            st.subheader("🧹 Mansioni OSS")
-            with st.form("oss"):
-                c1,c2 = st.columns(2); o1,o2,o3 = c1.checkbox("Camera"), c1.checkbox("Refettorio"), c1.checkbox("Sala Fumo")
-                o4,o5, oss_f = c2.checkbox("Cortile"), c2.checkbox("Lavatrice"), st.text_input("Firma")
-                if st.form_submit_button("SALVA"):
-                    if oss_f:
-                        ms = [t for b,t in zip([o1,o2,o3,o4,o5], ["Camera","Refettorio","Sala Fumo","Cortile","Lavatrice"]) if b]
-                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
+            st.subheader("🧹 Sezione Operatore Socio-Sanitario")
+            oss_f = st.text_input("Firma OSS")
+            t_oss1, t_oss2 = st.tabs(["🧼 Mansioni", "📝 Consegne"])
+            
+            with t_oss1:
+                col_d, col_t = st.columns(2)
+                d_oss = col_d.date_input("Data Attività", date.today(), format="DD/MM/YYYY", key="d_oss")
+                t_oss = col_t.selectbox("Turno Attività", ["Mattina", "Pomeriggio", "Notte"], key="t_oss")
+                
+                with st.form("oss_form"):
+                    c1,c2 = st.columns(2)
+                    o1, o2, o3 = c1.checkbox("Camera"), c1.checkbox("Refettorio"), c1.checkbox("Sala Fumo")
+                    o4, o5 = c2.checkbox("Cortile"), c2.checkbox("Lavatrice")
+                    if st.form_submit_button("REGISTRA ATTIVITÀ"):
+                        if oss_f:
+                            ms = [t for b,t in zip([o1,o2,o3,o4,o5], ["Camera","Refettorio","Sala Fumo","Cortile","Lavatrice"]) if b]
+                            if ms:
+                                data_f = f"{d_oss.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}"
+                                nota_oss = f"[{t_oss[0]}] 🧹 Pulizie: {', '.join(ms)}"
+                                db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", nota_oss, "OSS", oss_f), True); st.rerun()
+                            else: st.warning("Seleziona almeno una mansione.")
+                        else: st.error("Inserire la firma.")
+
+            with t_oss2:
+                c_d_oss, c_t_oss = st.columns(2)
+                data_cons_oss = c_d_oss.date_input("Data Consegna", date.today(), format="DD/MM/YYYY", key="d_cons_oss")
+                turno_cons_oss = c_t_oss.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons_oss")
+                txt_oss = st.text_area("Testo della Consegna OSS")
+                if st.button("SALVA CONSEGNA OSS"):
+                    if oss_f and txt_oss:
+                        data_f = f"{data_cons_oss.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}"
+                        nota_cons = f"📝 [CONSEGNA OSS {turno_cons_oss.upper()}] {txt_oss}"
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_f, "Stabile", nota_cons, "OSS", oss_f), True); st.rerun()
 
 # --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
