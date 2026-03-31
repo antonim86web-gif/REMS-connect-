@@ -92,12 +92,21 @@ elif menu == "👥 Equipe":
                     if st.form_submit_button("CONFERMA PRESCRIZIONE"):
                         tu = ",".join([s for s, b in zip(["M","P","N"], [m1,p1,n1]) if b])
                         db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, fa, do, tu, f_m, date.today().strftime("%d/%m/%Y")), True); st.rerun()
+                
                 st.write("**Piano Terapeutico Attivo:**")
                 piano = db_run("SELECT farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=?", (p_id,))
                 if piano:
-                    h = "<table class='custom-table'><tr><th>Farmaco</th><th>Dose</th><th>Turni</th><th>Medico</th></tr>"
-                    for f, d, t, m, rid in piano: h += f"<tr><td>{f}</td><td>{d}</td><td>{t}</td><td>{m}</td></tr>"
+                    # Tabella con colonna Azioni per eliminazione
+                    h = "<table class='custom-table'><tr><th>Farmaco</th><th>Dose</th><th>Turni</th><th>Medico</th><th>Azioni</th></tr>"
+                    for f, d, t, m, rid in piano:
+                        h += f"<tr><td>{f}</td><td>{d}</td><td>{t}</td><td>{m}</td><td></td></tr>"
                     st.markdown(h + "</table>", unsafe_allow_html=True)
+                    
+                    # Generazione dinamica dei bottoni di eliminazione allineati
+                    cols = st.columns(len(piano) if len(piano) > 0 else 1)
+                    for idx, (f, d, t, m, rid) in enumerate(piano):
+                        if cols[idx % len(cols)].button(f"Elimina {f}", key=f"del_{rid}"):
+                            db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
 
             elif ruolo == "Infermiere":
                 f_i = st.text_input("Firma Infermiere")
