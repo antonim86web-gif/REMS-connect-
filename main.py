@@ -22,6 +22,8 @@ st.markdown("""
     .custom-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; border: 1px solid #e2e8f0; }
     .custom-table th { background-color: #1e293b; color: #ffffff !important; padding: 10px; font-size: 0.75rem; text-align: left; }
     .custom-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; }
+    .text-red { color: #dc2626; font-weight: bold; }
+    .text-green { color: #16a34a; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -151,15 +153,24 @@ elif menu == "👥 Equipe":
 
         elif ruolo == "Educatore":
             mov = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY id_u DESC", (p_id,))
-            st.metric("SALDO", f"€ {sum([m[2] if m[3] == 'Entrata' else -m[2] for m in mov]):.2f}")
+            saldo = sum([m[2] if m[3] == 'Entrata' else -m[2] for m in mov])
+            st.metric("SALDO PAZIENTE", f"€ {saldo:.2f}")
+            
             with st.form("cas"):
-                tp, im, ds = st.radio("Tipo", ["Entrata", "Uscita"]), st.number_input("€", min_value=0.0), st.text_input("Causale")
-                if st.form_submit_button("REGISTRA"):
-                    db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tp, firma), True); st.rerun()
-            st.subheader("Ultimi Movimenti")
+                tp, im, ds = st.radio("Tipo Operazione", ["Entrata", "Uscita"]), st.number_input("Importo €", min_value=0.0), st.text_input("Causale")
+                if st.form_submit_button("REGISTRA MOVIMENTO"):
+                    if ds and im > 0:
+                        db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tp, firma), True)
+                        st.rerun()
+            
+            st.subheader("Estratto Conto Dettagliato")
             if mov:
-                h = "<table class='custom-table'><tr><th>Data</th><th>Causale</th><th>Importo</th><th>Operatore</th></tr>"
-                for d, ds, im, tp, op in mov[:5]: h += f"<tr><td>{d}</td><td>{ds}</td><td>{im:.2f}€</td><td>{op}</td></tr>"
+                # Tabella con Entrate e Uscite separate
+                h = "<table class='custom-table'><tr><th>Data</th><th>Causale</th><th>Entrata (+)</th><th>Uscita (-)</th><th>Operatore</th></tr>"
+                for d, ds, im, tp, op in mov:
+                    ent = f"<span class='text-green'>+{im:.2f}€</span>" if tp == 'Entrata' else ""
+                    usc = f"<span class='text-red'>-{im:.2f}€</span>" if tp == 'Uscita' else ""
+                    h += f"<tr><td>{d}</td><td>{ds}</td><td>{ent}</td><td>{usc}</td><td>{op}</td></tr>"
                 st.markdown(h + "</table>", unsafe_allow_html=True)
 
 elif menu == "📅 Appuntamenti":
