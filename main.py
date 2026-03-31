@@ -153,13 +153,30 @@ elif nav == "👥 Modulo Equipe":
 
         # --- SEZIONE PSICHIATRA ---
         if u['ruolo'] == "Psichiatra":
-            with st.form("f_ps"):
-                st.subheader("📝 Nuova Prescrizione Medica")
-                f, d = st.text_input("Farmaco"), st.text_input("Dosaggio/Posologia")
-                c1,c2,c3 = st.columns(3); m=c1.checkbox("MAT"); p=c2.checkbox("POM"); n=c3.checkbox("NOT")
-                if st.form_submit_button("CONFERMA PRESCRIZIONE"):
-                    db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma), True)
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📝 Prescritto: {f} {d}", "Psichiatra", firma), True); st.rerun()
+            t_presc, t_sosp = st.tabs(["📝 NUOVA PRESCRIZIONE", "❌ SOSPENSIONE FARMACI"])
+            
+            with t_presc:
+                with st.form("f_ps"):
+                    st.subheader("📝 Nuova Prescrizione Medica")
+                    f, d = st.text_input("Farmaco"), st.text_input("Dosaggio/Posologia")
+                    c1,c2,c3 = st.columns(3); m=c1.checkbox("MAT"); p=c2.checkbox("POM"); n=c3.checkbox("NOT")
+                    if st.form_submit_button("CONFERMA PRESCRIZIONE"):
+                        db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📝 Prescritto: {f} {d}", "Psichiatra", firma), True); st.rerun()
+            
+            with t_sosp:
+                st.subheader("❌ Farmaci in corso (Seleziona per sospendere)")
+                farmaci_attivi = db_run("SELECT id_u, farmaco, dose FROM terapie WHERE p_id=?", (p_id,))
+                if farmaci_attivi:
+                    for fid, f_nome, f_dose in farmaci_attivi:
+                        col1, col2 = st.columns([4, 1])
+                        col1.write(f"**{f_nome}** - {f_dose}")
+                        if col2.button("SOSPENDI", key=f"sosp_{fid}"):
+                            db_run("DELETE FROM terapie WHERE id_u=?", (fid,), True)
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"🚫 SOSPESO: {f_nome}", "Psichiatra", firma), True)
+                            st.success(f"Farmaco {f_nome} sospeso."); st.rerun()
+                else: st.info("Nessuna terapia attiva per questo paziente.")
+            
             st.write("---")
             mostra_report_settoriale(p_id, "Psichiatra")
 
