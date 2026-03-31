@@ -1,4 +1,5 @@
 import sqlite3
+import pandas as pd
 import streamlit as st
 from datetime import datetime, date
 
@@ -21,7 +22,7 @@ st.markdown("""
     .custom-table { 
         width: 100%; border-collapse: collapse; background-color: #ffffff;
         border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-        margin-bottom: 5px; border: 1px solid #e2e8f0;
+        margin-bottom: 20px; border: 1px solid #e2e8f0;
     }
     .custom-table th { background-color: #1e293b; color: #ffffff !important; padding: 10px; font-size: 0.75rem; text-transform: uppercase; text-align: left; }
     .custom-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.85rem; color: #1e293b !important; }
@@ -96,17 +97,20 @@ elif menu == "👥 Equipe":
                 st.write("**Piano Terapeutico Attivo:**")
                 piano = db_run("SELECT farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=?", (p_id,))
                 if piano:
-                    for f, d, t, m, rid in piano:
-                        # Creazione di una riga "finta tabella" con il cestino allineato
-                        c_info, c_del = st.columns([10, 1])
-                        with c_info:
-                            h = f"""<table class='custom-table' style='margin-bottom:0px;'>
-                                    <tr><td style='width:25%'>{f}</td><td style='width:15%'>{d}</td><td style='width:15%'>{t}</td><td style='width:45%'>{m}</td></tr>
-                                    </table>"""
-                            st.markdown(h, unsafe_allow_html=True)
-                        with c_del:
-                            if st.button("🗑️", key=f"del_{rid}"):
-                                db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True); st.rerun()
+                    df = pd.DataFrame(piano, columns=['Farmaco', 'Dose', 'Turni', 'Medico', 'ID'])
+                    df['Cancella'] = False
+                    # Tabella editor interattiva perfettamente integrata
+                    edited_df = st.data_editor(
+                        df, 
+                        column_config={"Cancella": st.column_config.CheckboxColumn("🗑️", help="Seleziona per eliminare")},
+                        disabled=['Farmaco', 'Dose', 'Turni', 'Medico', 'ID'],
+                        hide_index=True,
+                        use_container_width=True
+                    )
+                    # Verifica se è stata richiesta un'eliminazione
+                    for i in range(len(edited_df)):
+                        if edited_df.iloc[i]['Cancella']:
+                            db_run("DELETE FROM terapie WHERE row_id=?", (int(edited_df.iloc[i]['ID']),), True); st.rerun()
 
             elif ruolo == "Infermiere":
                 f_i = st.text_input("Firma Infermiere")
