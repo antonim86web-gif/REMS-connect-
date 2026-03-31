@@ -92,7 +92,6 @@ elif menu == "👥 Equipe":
                     if st.form_submit_button("CONFERMA PRESCRIZIONE"):
                         tu = ",".join([s for s, b in zip(["M","P","N"], [m1,p1,n1]) if b])
                         db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, fa, do, tu, f_m, date.today().strftime("%d/%m/%Y")), True); st.rerun()
-                
                 st.write("**Piano Terapeutico Attivo:**")
                 piano = db_run("SELECT farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=?", (p_id,))
                 if piano:
@@ -123,14 +122,20 @@ elif menu == "👥 Equipe":
                     st.write("**Storico Farmaci:**")
                     st_f = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💊%' ORDER BY row_id DESC", (p_id,))
                     if st_f:
-                        h = "<table class='custom-table'><tr><th>Data</th><th>Somministrazione</th></tr>"
+                        h = "<table class='custom-table'><tr><th>Data</th><th>Dettagli</th></tr>"
                         for d, n in st_f: h += f"<tr><td>{d}</td><td>{n}</td></tr>"
                         st.markdown(h + "</table>", unsafe_allow_html=True)
                 with t2:
                     with st.form("pv"):
                         c1,c2,c3,c4 = st.columns(4); pa, fc, sp, tc = c1.text_input("PA"), c2.text_input("FC"), c3.text_input("SpO2"), c4.text_input("TC")
                         if st.form_submit_button("SALVA PARAMETRI"):
-                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"📊 PA:{pa} FC:{fc} SpO2:{sp} TC:{tc}", "Infermiere", f_i), True); st.rerun()
+                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m %H:%M"), "Stabile", f"📊 Parametri - PA:{pa} FC:{fc} SpO2:{sp} TC:{tc}", "Infermiere", f_i), True); st.rerun()
+                    st.write("**Storico Parametri:**")
+                    st_pv = db_run("SELECT data, nota, op FROM eventi WHERE id=? AND nota LIKE '📊 Parametri%' ORDER BY row_id DESC", (p_id,))
+                    if st_pv:
+                        h = "<table class='custom-table'><tr><th>Data</th><th>Rilevazione</th><th>Firma</th></tr>"
+                        for d, n, o in st_pv: h += f"<tr><td>{d}</td><td>{n}</td><td>{o}</td></tr>"
+                        st.markdown(h + "</table>", unsafe_allow_html=True)
                 with t3:
                     u_i = st.selectbox("Umore", umore_list)
                     txt_i = st.text_area("Consegna Infermieristica")
@@ -195,6 +200,7 @@ elif menu == "📅 Appuntamenti":
                 db_run("INSERT INTO appuntamenti (p_id, data, ora, tipo, accompagnatore) VALUES (?,?,?,?,?)", (p_id, d.strftime("%d/%m/%Y"), h.strftime("%H:%M"), ti, acc), True)
                 st.rerun()
         st.divider()
+        # Query corretta per evitare OperationalError
         apps = db_run("SELECT data, ora, tipo, accompagnatore, row_id FROM appuntamenti WHERE p_id=?", (p_id,))
         if apps:
             st.markdown("<table class='custom-table'><tr><th>Data</th><th>Ora</th><th>Tipo</th><th>Dettagli</th><th>Azioni</th></tr></table>", unsafe_allow_html=True)
