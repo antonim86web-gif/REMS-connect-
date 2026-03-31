@@ -92,15 +92,18 @@ elif menu == "Equipe":
                     if st.form_submit_button("SALVA"):
                         if med_f:
                             ts = ",".join([s for s, b in zip(["M","P","N"], [m,p,n]) if b])
-                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, date.today().strftime("%d/%m/%Y")), True); st.rerun()
+                            # FORMATO DATA EUROPEO GG/MM/AAAA
+                            data_p = date.today().strftime("%d/%m/%Y")
+                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, data_p), True); st.rerun()
             
             ta = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
             for da, fa, ds, tu, me, rid in ta:
-                st.markdown(f"<div class='card-box'><b>{fa} {ds}</b> ({tu}) - <i>{me}</i></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='card-box'><b>{fa} {ds}</b> ({tu}) - <i>{me}</i> <br><small>Prescritto il: {da}</small></div>", unsafe_allow_html=True)
                 if st.button("Sospendi", key=f"s_{rid}"):
                     if med_f:
                         db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
-                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"❌ SOSPESO: {fa}", "Psichiatra", med_f), True); st.rerun()
+                        data_evento = datetime.now().strftime("%d/%m/%Y %H:%M")
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, data_evento, "Stabile", f"❌ SOSPESO: {fa}", "Psichiatra", med_f), True); st.rerun()
 
         elif ruolo == "Infermiere":
             st.subheader("💉 Sezione Infermieristica")
@@ -119,7 +122,7 @@ elif menu == "Equipe":
                         st.write(f"**{f}** ({d})")
                         c_esito, c_nota = st.columns([2, 2])
                         esito = c_esito.radio("Stato", ["Assunta", "Rifiutata", "Parziale"], key=f"es_{rid}", horizontal=True)
-                        nota_terapia = c_nota.text_input("Note specifiche (es. vomito, rifiuto motivato)", key=f"nt_{rid}")
+                        nota_terapia = c_nota.text_input("Note specifiche", key=f"nt_{rid}")
                         
                         if st.button("REGISTRA SOMMINISTRAZIONE", key=f"btn_{rid}"):
                             if not inf_f:
@@ -127,11 +130,10 @@ elif menu == "Equipe":
                             else:
                                 testo_nota = f"[{turno_sel[0]}] {f} -> {esito}"
                                 if nota_terapia: testo_nota += f" (Nota: {nota_terapia})"
-                                
+                                # FORMATO DATA EUROPEO GG/MM/AAAA HH:MM
                                 data_ora_evento = f"{data_somm.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}"
                                 db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", 
                                        (p_id, data_ora_evento, "Stabile", testo_nota, "Infermiere", inf_f), True)
-                                st.success(f"Registrato: {f}")
                                 st.rerun()
                         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -168,7 +170,9 @@ elif menu == "Equipe":
                 ds = st.text_input("Causale")
                 if st.form_submit_button("REGISTRA MOVIMENTO"):
                     if ed_f:
-                        db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tp, ed_f), True); st.rerun()
+                        # DATA GG/MM/AAAA
+                        data_m = date.today().strftime("%d/%m/%Y")
+                        db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, data_m, ds, im, tp, ed_f), True); st.rerun()
 
         elif ruolo == "OSS":
             st.subheader("🧹 Mansioni OSS")
@@ -179,8 +183,9 @@ elif menu == "Equipe":
                 if st.form_submit_button("CONFERMA ATTIVITÀ"):
                     if oss_f:
                         ms = [t for b,t in zip([o1,o2,o3,o4,o5], ["Camera","Refettorio","Sala Fumo","Cortile","Lavatrice"]) if b]
+                        data_evento = datetime.now().strftime("%d/%m/%Y %H:%M")
                         db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", 
-                               (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
+                               (p_id, data_evento, "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
 
 # --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
