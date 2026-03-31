@@ -16,29 +16,25 @@ st.markdown("""
     .saldo-box { padding: 15px; border-radius: 10px; background-color: #f8fafc; text-align: center; border: 2px solid #1e3a8a; font-weight: bold; font-size: 1.2rem; margin-bottom: 15px; }
     .txt-uscita { color: #ef4444; font-weight: bold; }
     .txt-entrata { color: #10b981; font-weight: bold; }
-    .badge-turno { background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.75rem; }
+    .consegna-box { background-color: #fff7ed; border-left: 5px solid #f97316; padding: 10px; margin-bottom: 10px; border-radius: 4px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. GESTIONE DATABASE (SQLITE) ---
+# --- 2. GESTIONE DATABASE ---
 DB_NAME = "rems_connect_data.db"
 
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        # Inizializzazione tabelle se non esistenti
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, umore TEXT, nota TEXT, ruolo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dosaggio TEXT, turni TEXT, medico TEXT, data_prescr TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS soldi (p_id INTEGER, data TEXT, desc TEXT, importo REAL, tipo TEXT, op TEXT, row_id INTEGER PRIMARY KEY AUTOINCREMENT)")
-        
-        if query:
-            cur.execute(query, params)
-        if commit:
-            conn.commit()
+        if query: cur.execute(query, params)
+        if commit: conn.commit()
         return cur.fetchall()
 
-# --- 3. SISTEMA DI AUTENTICAZIONE ---
+# --- 3. LOGIN ---
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 
@@ -48,61 +44,48 @@ if not st.session_state.auth:
         col_l1, col_l2, col_l3 = st.columns([1,1,1])
         with col_l2:
             with st.form("login_form"):
-                pwd = st.text_input("Inserire Codice Operatore", type="password")
-                if st.form_submit_button("ACCEDI"):
+                pwd = st.text_input("Codice Accesso", type="password")
+                if st.form_submit_button("ENTRA"):
                     if pwd in ["rems2026", "admin2026"]:
                         st.session_state.auth = True
                         st.rerun()
-                    else:
-                        st.error("Codice errato")
+                    else: st.error("Codice errato")
     st.stop()
 
-# --- 4. BARRA LATERALE E NAVIGAZIONE ---
-st.sidebar.title("MENU PRINCIPALE")
+# --- 4. NAVIGAZIONE ---
+st.sidebar.title("MENU")
 menu = st.sidebar.radio("VAI A:", ["Monitoraggio", "Equipe", "Gestione"])
 
-# --- 5. LOGICA DELLE SEZIONI ---
+# --- 5. LOGICA SEZIONI ---
 
-# --- SEZIONE GESTIONE (ANAGRAFICA) ---
+# --- GESTIONE PAZIENTI ---
 if menu == "Gestione":
     st.header("⚙️ Gestione Pazienti")
-    tab_agg, tab_mod, tab_elim = st.tabs(["➕ Nuovo Paziente", "📝 Modifica Nome", "🗑️ Dimissione/Elimina"])
-    
-    with tab_agg:
-        with st.form("form_aggiunta"):
-            nome_nuovo = st.text_input("Nome e Cognome Paziente")
-            if st.form_submit_button("REGISTRA INGRESSO"):
-                if nome_nuovo:
-                    db_run("INSERT INTO pazienti (nome) VALUES (?)", (nome_nuovo,), True)
-                    st.success(f"{nome_nuovo} aggiunto al sistema.")
-                    st.rerun()
-    
-    with tab_mod:
-        paz_mod = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
-        if paz_mod:
-            sel_m = st.selectbox("Seleziona paziente da modificare", [p[1] for p in paz_mod], key="sel_mod")
-            id_m = [p[0] for p in paz_mod if p[1] == sel_m][0]
-            nuovo_n = st.text_input("Nuovo Nome", value=sel_m)
-            if st.button("SALVA MODIFICA"):
-                db_run("UPDATE pazienti SET nome=? WHERE id=?", (nuovo_n, id_m), True)
-                st.rerun()
-
-    with tab_elim:
-        paz_del = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
-        if paz_del:
-            sel_d = st.selectbox("Seleziona paziente da eliminare", [p[1] for p in paz_del], key="sel_del")
-            id_d = [p[0] for p in paz_del if p[1] == sel_d][0]
-            st.warning("L'operazione cancellerà definitivamente ogni dato (terapia, soldi, diari).")
+    t1, t2, t3 = st.tabs(["➕ Aggiungi", "📝 Modifica", "🗑️ Elimina"])
+    with t1:
+        with st.form("add"):
+            n = st.text_input("Nome e Cognome")
+            if st.form_submit_button("REGISTRA"):
+                if n: db_run("INSERT INTO pazienti (nome) VALUES (?)", (n,), True); st.rerun()
+    with t2:
+        p_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        if p_list:
+            sel = st.selectbox("Seleziona", [p[1] for p in p_list], key="m")
+            id_m = [p[0] for p in p_list if p[1] == sel][0]
+            nuovo = st.text_input("Nuovo Nome", value=sel)
+            if st.button("AGGIORNA"):
+                db_run("UPDATE pazienti SET nome=? WHERE id=?", (nuovo, id_m), True); st.rerun()
+    with t3:
+        p_list_d = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        if p_list_d:
+            sel_d = st.selectbox("Seleziona", [p[1] for p in p_list_d], key="d")
+            id_d = [p[0] for p in p_list_d if p[1] == sel_d][0]
             if st.button("ELIMINA DEFINITIVAMENTE"):
-                db_run("DELETE FROM pazienti WHERE id=?", (id_d,), True)
-                db_run("DELETE FROM eventi WHERE id=?", (id_d,), True)
-                db_run("DELETE FROM terapie WHERE p_id=?", (id_d,), True)
-                db_run("DELETE FROM soldi WHERE p_id=?", (id_d,), True)
-                st.rerun()
+                db_run("DELETE FROM pazienti WHERE id=?", (id_d,), True); st.rerun()
 
-# --- SEZIONE EQUIPE (OPERATIVITÀ) ---
+# --- EQUIPE ---
 elif menu == "Equipe":
-    ruolo = st.sidebar.selectbox("Seleziona Ruolo Operativo", ["Psichiatra", "Infermiere", "Educatore", "OSS"])
+    ruolo = st.sidebar.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS"])
     pazienti = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
     
     if pazienti:
@@ -110,144 +93,112 @@ elif menu == "Equipe":
         p_id = [p[0] for p in pazienti if p[1] == p_nome][0]
         st.divider()
 
-        # 1. PSICHIATRA
+        # --- PSICHIATRA ---
         if ruolo == "Psichiatra":
-            st.subheader("📋 Gestione Terapia Farmacologica")
-            firma_medico = st.text_input("Firma Medico (OBBLIGATORIA)")
-            
+            st.subheader("📋 Gestione Terapia")
+            med_f = st.text_input("Firma Medico (OBBLIGATORIA)")
             with st.expander("➕ Nuova Prescrizione"):
-                with st.form("presc_form"):
-                    farmaco = st.text_input("Nome Farmaco")
-                    dose = st.text_input("Dosaggio")
-                    st.write("Orari Somministrazione:")
-                    c1, c2, c3 = st.columns(3)
-                    m = c1.checkbox("Mattina (M)")
-                    p = c2.checkbox("Pomeriggio (P)")
-                    n = c3.checkbox("Notte (N)")
-                    if st.form_submit_button("REGISTRA IN DATABASE"):
-                        if not firma_medico: 
-                            st.error("ERRORE: Inserire la firma prima di prescrivere.")
-                        else:
-                            turni = [s for s, b in zip(["M", "P", "N"], [m, p, n]) if b]
-                            db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", 
-                                   (p_id, farmaco, dose, ",".join(turni), firma_medico, date.today().strftime("%d/%m/%Y")), True)
-                            st.rerun()
+                with st.form("p_form"):
+                    f, d = st.text_input("Farmaco"), st.text_input("Dose")
+                    c1,c2,c3 = st.columns(3)
+                    m, p, n = c1.checkbox("M"), c2.checkbox("P"), c3.checkbox("N")
+                    if st.form_submit_button("SALVA"):
+                        if not med_f: st.error("Firma obbligatoria!"); st.stop()
+                        ts = ",".join([s for s, b in zip(["M","P","N"], [m,p,n]) if b])
+                        db_run("INSERT INTO terapie (p_id, farmaco, dosaggio, turni, medico, data_prescr) VALUES (?,?,?,?,?,?)", (p_id, f, d, ts, med_f, date.today().strftime("%d/%m/%Y")), True); st.rerun()
 
-            st.write("#### 💊 Terapie Attualmente in Vigore")
-            t_attive = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
-            if t_attive:
-                tab_h = "<table class='custom-table'><tr><th>DATA</th><th>FARMACO</th><th>DOSE</th><th>TURNI</th><th>MEDICO</th><th>AZIONE</th></tr>"
-                st.markdown(tab_h, unsafe_allow_html=True)
-                for d_p, f_p, d_s, t_u, m_e, r_id in t_attive:
-                    c1, c2, c3, c4, c5, c6 = st.columns([1.5, 2, 1.5, 1, 1.5, 1.2])
-                    c1.write(d_p); c2.markdown(f"**{f_p}**"); c3.write(d_s); c4.write(t_u); c5.write(m_e)
-                    if c6.button("🛑 Sospendi", key=f"sosp_{r_id}"):
-                        if not firma_medico:
-                            st.error("Firma obbligatoria per sospendere.")
-                        else:
-                            db_run("DELETE FROM terapie WHERE row_id=?", (r_id,), True)
-                            db_run("INSERT INTO eventi (id, data, umore, nota, ruolo, op) VALUES (?,?,?,?,?,?)",
-                                   (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"❌ SOSPESO: {f_p}", "Psichiatra", firma_medico), True)
-                            st.rerun()
-                st.markdown("</table>", unsafe_allow_html=True)
+            st.write("#### 💊 Terapie Attive")
+            ta = db_run("SELECT data_prescr, farmaco, dosaggio, turni, medico, row_id FROM terapie WHERE p_id=? ORDER BY row_id DESC", (p_id,))
+            if ta:
+                st.markdown("<table class='custom-table'><tr><th>DATA</th><th>FARMACO</th><th>DOSE</th><th>TURNI</th><th>MEDICO</th><th>AZIONE</th></tr>", unsafe_allow_html=True)
+                for da, fa, ds, tu, me, rid in ta:
+                    c1,c2,c3,c4,c5,c6 = st.columns([1.5, 2, 1, 1, 1.5, 1])
+                    c1.write(da); c2.write(f"**{fa}**"); c3.write(ds); c4.write(tu); c5.write(me)
+                    if c6.button("🗑️ Sospendi", key=rid):
+                        if not med_f: st.error("Firma obbligatoria!"); st.stop()
+                        db_run("DELETE FROM terapie WHERE row_id=?", (rid,), True)
+                        db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"❌ SOSPESO: {fa}", "Psichiatra", med_f), True); st.rerun()
 
-        # 2. INFERMIERE
+        # --- INFERMIERE (CON CONSEGNE DI TURNO) ---
         elif ruolo == "Infermiere":
-            st.subheader("💉 Somministrazione Terapie")
-            inf_firma = st.text_input("Firma Infermiere Somministratore (OBBLIGATORIA)")
-            col_d, col_t = st.columns(2)
-            data_s = col_d.date_input("Data Somministrazione", date.today())
-            turno_s = col_t.selectbox("Turno Somministrazione", ["Mattina", "Pomeriggio", "Notte"])
-            sigla_t = turno_s[0] # M, P o N
+            st.subheader("💉 Area Infermieristica")
+            inf_f = st.text_input("Firma Infermiere (OBBLIGATORIA)")
             
-            t_da_somm = db_run("SELECT farmaco, dosaggio, turni, row_id FROM terapie WHERE p_id=?", (p_id,))
-            for f, d, turni_p, rid in t_da_somm:
-                if turni_p and sigla_t in turni_p:
-                    tag_controllo = f"[{sigla_t}] {f}"
-                    data_str = data_s.strftime("%d/%m/%Y")
-                    # Verifica se già registrato per oggi/turno
-                    gia_fatto = db_run("SELECT op, nota FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%{tag_controllo}%", f"{data_str}%"))
-                    
-                    st.markdown("<div class='card-box'>", unsafe_allow_html=True)
-                    ca, cb, cc = st.columns([2, 2, 1])
-                    ca.write(f"**{f}**<br><small>{d}</small>", unsafe_allow_html=True)
-                    if gia_fatto:
-                        cb.write(f"✅ {gia_fatto[0][1].split('->')[-1]} ({gia_fatto[0][0]})")
-                    else:
-                        esito = cb.radio("Esito", ["Assunta", "Rifiutata"], key=f"es_{rid}_{sigla_t}", horizontal=True)
-                        if cc.button("CONVALIDA", key=f"btn_{rid}_{sigla_t}"):
-                            if not inf_firma:
-                                st.error("Firma obbligatoria!")
-                            else:
-                                db_run("INSERT INTO eventi (id, data, umore, nota, ruolo, op) VALUES (?,?,?,?,?,?)",
-                                       (p_id, f"{data_str} {datetime.now().strftime('%H:%M')}", "Stabile", f"{tag_controllo} -> {esito}", "Infermiere", inf_firma), True)
-                                st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
+            tab_somm, tab_cons = st.tabs(["💊 Somministrazione", "📝 Consegne di Turno"])
+            
+            with tab_somm:
+                col_d, col_t = st.columns(2)
+                d_s = col_d.date_input("Data", date.today())
+                t_s = col_t.selectbox("Turno", ["Mattina", "Pomeriggio", "Notte"])
+                ter = db_run("SELECT farmaco, dosaggio, turni, row_id FROM terapie WHERE p_id=?", (p_id,))
+                for f, d, tu_p, rid in ter:
+                    if tu_p and t_s[0] in tu_p:
+                        st.markdown("<div class='card-box'>", unsafe_allow_html=True)
+                        ca, cb, cc = st.columns([2, 2, 1])
+                        ca.write(f"**{f}** ({d})")
+                        es = cb.radio("Esito", ["Assunta", "Rifiutata"], key=f"es_{rid}_{t_s[0]}", horizontal=True)
+                        if cc.button("CONVALIDA", key=f"bt_{rid}_{t_s[0]}"):
+                            if not inf_f: st.error("Firma obbligatoria!"); st.stop()
+                            db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, f"{d_s.strftime('%d/%m/%Y')} {datetime.now().strftime('%H:%M')}", "Stabile", f"[{t_s[0]}] {f} -> {es}", "Infermiere", inf_f), True); st.rerun()
+                        st.markdown("</div>", unsafe_allow_html=True)
 
-        # 3. EDUCATORE
-        elif ruolo == "Educatore":
-            st.subheader("💰 Registro Contabilità Paziente")
-            ed_firma = st.text_input("Firma Educatore (OBBLIGATORIA)")
-            
-            movimenti = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY row_id DESC", (p_id,))
-            saldo = sum([m[2] if m[3] == "Entrata" else -m[2] for m in movimenti])
-            st.markdown(f'<div class="saldo-box">SALDO DISPONIBILE: € {saldo:.2f}</div>', unsafe_allow_html=True)
-            
-            with st.expander("📝 Registra Entrata/Uscita"):
-                tipo_m = st.radio("Tipo Operazione", ["Entrata", "Uscita"], horizontal=True)
-                importo_m = st.number_input("Cifra in €", min_value=0.0, step=0.5)
-                causale_m = st.text_input("Causale/Nota")
-                if st.button("ESEGUI TRANSAZIONE"):
-                    if not ed_firma:
-                        st.error("Firma obbligatoria per la gestione soldi.")
+            with tab_cons:
+                st.write("#### Registra Consegna Clinica")
+                turno_cons = st.selectbox("Turno Consegna", ["Mattina", "Pomeriggio", "Notte"], key="t_cons")
+                testo_cons = st.text_area("Dettaglio consegna (andamento turno, rilievi clinici, parametri)", height=150)
+                if st.button("SALVA CONSEGNA"):
+                    if not inf_f:
+                        st.error("ERRORE: Inserire la firma per salvare la consegna.")
+                    elif not testo_cons:
+                        st.warning("Il testo della consegna è vuoto.")
                     else:
-                        db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", 
-                               (p_id, date.today().strftime("%d/%m/%Y"), causale_m, importo_m, tipo_m, ed_firma), True)
+                        nota_finale = f"📝 CONSEGNA [{turno_cons}]: {testo_cons}"
+                        db_run("INSERT INTO eventi (id, data, umore, nota, ruolo, op) VALUES (?,?,?,?,?,?)",
+                               (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", nota_finale, "Infermiere", inf_f), True)
+                        st.success("Consegna registrata correttamente nel diario.")
                         st.rerun()
-            
-            if movimenti:
-                tab_s = "<table class='custom-table'><tr><th>DATA</th><th>DESCRIZIONE</th><th>ENTRATA</th><th>USCITA</th><th>OPERATORE</th></tr>"
-                for d, ds, im, tp, op in movimenti:
-                    ent = f"<span class='txt-entrata'>€ {im:.2f}</span>" if tp == "Entrata" else ""
-                    usc = f"<span class='txt-uscita'>€ {im:.2f}</span>" if tp == "Uscita" else ""
-                    tab_s += f"<tr><td>{d}</td><td>{ds}</td><td>{ent}</td><td>{usc}</td><td>{op}</td></tr>"
-                st.markdown(tab_s + "</table>", unsafe_allow_html=True)
 
-        # 4. OSS
+        # --- EDUCATORE ---
+        elif ruolo == "Educatore":
+            st.subheader("💰 Contabilità")
+            ed_f = st.text_input("Firma Educatore (OBBLIGATORIA)")
+            mov = db_run("SELECT data, desc, importo, tipo, op FROM soldi WHERE p_id=? ORDER BY row_id DESC", (p_id,))
+            saldo = sum([m[2] if m[3] == "Entrata" else -m[2] for m in mov])
+            st.markdown(f'<div class="saldo-box">Saldo: € {saldo:.2f}</div>', unsafe_allow_html=True)
+            with st.expander("Nuovo Movimento"):
+                tm, im, ds = st.radio("Tipo", ["Entrata", "Uscita"], horizontal=True), st.number_input("€", min_value=0.0), st.text_input("Causale")
+                if st.button("REGISTRA"):
+                    if not ed_f: st.error("Firma obbligatoria!"); st.stop()
+                    db_run("INSERT INTO soldi (p_id, data, desc, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, date.today().strftime("%d/%m/%Y"), ds, im, tm, ed_f), True); st.rerun()
+            if mov:
+                st.markdown("<table class='custom-table'><tr><th>DATA</th><th>CAUSALE</th><th>ENTRATA</th><th>USCITA</th><th>FIRMA</th></tr>", unsafe_allow_html=True)
+                for d, ds, im, tp, op in mov:
+                    e = f"<span class='txt-entrata'>€ {im:.2f}</span>" if tp == "Entrata" else ""
+                    u = f"<span class='txt-uscita'>€ {im:.2f}</span>" if tp == "Uscita" else ""
+                    st.markdown(f"<tr><td>{d}</td><td>{ds}</td><td>{e}</td><td>{u}</td><td>{op}</td></tr>", unsafe_allow_html=True)
+
+        # --- OSS ---
         elif ruolo == "OSS":
-            st.subheader("🧹 Mansioni e Igiene")
-            with st.form("oss_form"):
-                st.write("Mansioni del turno:")
-                o1 = st.checkbox("Pulizia Camera")
-                o2 = st.checkbox("Pulizia Refettorio")
-                o3 = st.checkbox("Pulizia Sala Fumo")
-                o4 = st.checkbox("Pulizia Cortile")
-                o5 = st.checkbox("Lavatrice")
-                firma_oss = st.text_input("Firma OSS (OBBLIGATORIA)")
-                if st.form_submit_button("REGISTRA ATTIVITÀ"):
-                    if not firma_oss:
-                        st.error("Inserire la firma.")
-                    else:
-                        fatte = [t for b, t in zip([o1,o2,o3,o4,o5], ["Camera", "Refettorio", "Sala Fumo", "Cortile", "Lavatrice"]) if b]
-                        if fatte:
-                            db_run("INSERT INTO eventi (id, data, umore, nota, ruolo, op) VALUES (?,?,?,?,?,?)",
-                                   (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"🧹 Pulizie: {', '.join(fatte)}", "OSS", firma_oss), True)
-                            st.success("Registrato.")
-                            st.rerun()
-                        else:
-                            st.warning("Seleziona almeno una mansione.")
+            st.subheader("🧹 Mansioni OSS")
+            with st.form("oss"):
+                c1,c2 = st.columns(2)
+                m1, m2, m3 = c1.checkbox("Pulizia Camera"), c1.checkbox("Pulizia Refettorio"), c1.checkbox("Pulizia Sala Fumo")
+                m4, m5 = c2.checkbox("Pulizia Cortile"), c2.checkbox("Lavatrice")
+                oss_f = st.text_input("Firma OSS (OBBLIGATORIA)")
+                if st.form_submit_button("REGISTRA"):
+                    if not oss_f: st.error("Firma obbligatoria!"); st.stop()
+                    ms = [t for b,t in zip([m1,m2,m3,m4,m5], ["Camera","Refettorio","Sala Fumo","Cortile","Lavatrice"]) if b]
+                    if ms: db_run("INSERT INTO eventi (id,data,umore,nota,ruolo,op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "Stabile", f"🧹 Pulizie: {', '.join(ms)}", "OSS", oss_f), True); st.rerun()
 
-# --- SEZIONE MONITORAGGIO (DIARIO CLINICO) ---
+# --- MONITORAGGIO ---
 elif menu == "Monitoraggio":
-    st.header("📊 Diario Clinico Integrato")
-    paz_mon = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
-    for pid, nome in paz_mon:
-        with st.expander(f"📖 SCHEDA DIARIO: {nome.upper()}"):
+    st.header("📊 Diario Clinico")
+    p_mon = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    for pid, nome in p_mon:
+        with st.expander(f"👤 {nome.upper()}"):
             log = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY row_id DESC", (pid,))
             if log:
-                tab_m = "<table class='custom-table'><tr><th>DATA E ORA</th><th>RUOLO</th><th>OPERATORE</th><th>DETTAGLIO ATTIVITÀ</th></tr>"
+                st.markdown("<table class='custom-table'><tr><th>DATA</th><th>RUOLO</th><th>OPERATORE</th><th>NOTA</th></tr>", unsafe_allow_html=True)
                 for d, r, o, n in log:
-                    tab_m += f"<tr><td>{d}</td><td><b>{r}</b></td><td>{o}</td><td>{n}</td></tr>"
-                st.markdown(tab_m + "</table>", unsafe_allow_html=True)
-            else:
-                st.info("Nessuna attività registrata per questo paziente.")
+                    st.markdown(f"<tr><td>{d}</td><td><b>{r}</b></td><td>{o}</td><td>{n}</td></tr>", unsafe_allow_html=True)
+                st.markdown("</table>", unsafe_allow_html=True)
