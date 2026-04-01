@@ -17,6 +17,7 @@ st.markdown("""
     [data-testid="stSidebar"] * { color: #ffffff !important; }
     .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
     .user-logged { color: #00ff00 !important; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
+    .sidebar-footer { color: #ffffff !important; font-size: 0.8rem; text-align: center; margin-top: 20px; opacity: 0.8; }
     .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
     .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
@@ -122,7 +123,6 @@ if not st.session_state.user_session:
             rp = st.text_input("Scegli Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
-            # --- ADMIN RIMOSSO DALLA LISTA ---
             rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
             if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
@@ -147,6 +147,9 @@ opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Appuntamenti", "🗺️
 if u['ruolo'] == "Admin": opts.append("⚙️ Admin")
 nav = st.sidebar.radio("NAVIGAZIONE", opts)
 if st.sidebar.button("LOGOUT"): st.session_state.user_session = None; st.rerun()
+
+# --- FIRMA E VERSIONE (BIANCO) ---
+st.sidebar.markdown("<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.7 white</div>", unsafe_allow_html=True)
 
 # --- MODULO MAPPA ---
 if nav == "🗺️ Mappa Posti Letto":
@@ -309,7 +312,6 @@ elif nav == "⚙️ Admin":
     with tab1:
         for us, un, uc, uq in db_run("SELECT user, nome, cognome, qualifica FROM utenti"):
             c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
-            # --- PROTEZIONE ADMIN: L'UTENTE 'admin' NON PUO' ESSERE ELIMINATO ---
             if us != "admin":
                 if c2.button("ELIMINA", key=f"d_{us}"): db_run("DELETE FROM utenti WHERE user=?", (us,), True); st.rerun()
             else:
