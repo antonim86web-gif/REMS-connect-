@@ -4,8 +4,8 @@ from datetime import datetime
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v15.5 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v15.5", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v16.0 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v16.0", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -51,7 +51,7 @@ DB_NAME = "rems_final_v12.db"
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT, contratto TEXT, scadenza TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
@@ -101,7 +101,7 @@ if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"):
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v15.5<br>
+    Versione: ELITE PRO v16.0<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
@@ -161,7 +161,7 @@ elif nav == "👥 Modulo Equipe":
                 with st.form("vit"):
                     c1,c2,c3 = st.columns(3); pa=c1.text_input("PA"); fc=c2.text_input("FC"); sat=c3.text_input("SatO2")
                     c4,c5 = st.columns(2); tc=c4.text_input("TC"); gl=c5.text_input("Glicemia")
-                    if st.form_submit_button("REGISTRA PARAMETRI"):
+                    if st.form_submit_button("REGISTRA"):
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True); st.rerun()
             with t3:
                 with st.form("ni"):
@@ -183,13 +183,51 @@ elif nav == "👥 Modulo Equipe":
             st.markdown(f"<div class='cassa-card'>Saldo: <span class='saldo-txt'>{saldo:.2f} €</span></div>", unsafe_allow_html=True)
             with st.form("cs"):
                 tp, im, cau = st.selectbox("Tipo", ["ENTRATA", "USCITA"]), st.number_input("€"), st.text_input("Causale")
-                if st.form_submit_button("REGISTRA MOVIMENTO"):
+                if st.form_submit_button("REGISTRA"):
                     db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore", firma_op), True); st.rerun()
 
         st.divider(); render_postits(p_id, filter_role=ruolo_corr)
 
 elif nav == "⚙️ Admin":
-    st.markdown("<div class='section-banner'><h2>AMMINISTRAZIONE ANAGRAFICA</h2></div>", unsafe_allow_html=True)
-    np = st.text_input("Inserisci Nome Paziente"); 
-    if st.button("AGGIUNGI"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (np.upper(),), True); st.rerun()
+    st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRATIVO ELITE</h2></div>", unsafe_allow_html=True)
+    tab1, tab2, tab3 = st.tabs(["👥 GESTIONE OPERATORI", "👤 GESTIONE PAZIENTI", "🛡️ SICUREZZA LOG"])
+    
+    with tab1:
+        st.subheader("Contratti e Personale")
+        ops = db_run("SELECT user, nome, cognome, qualifica, contratto, scadenza FROM utenti")
+        for o_user, o_nome, o_cogn, o_qual, o_cont, o_scad in ops:
+            with st.expander(f"Operatore: {o_nome} {o_cogn} ({o_qual})"):
+                with st.form(f"form_o_{o_user}"):
+                    c1, c2 = st.columns(2)
+                    new_cont = c1.selectbox("Tipo Contratto", ["Indeterminato", "Determinato", "P.IVA", "Interinale"], index=0 if not o_cont else ["Indeterminato", "Determinato", "P.IVA", "Interinale"].index(o_cont))
+                    new_scad = c2.text_input("Scadenza (GG/MM/AAAA)", value=o_scad if o_scad else "")
+                    if st.form_submit_button("SALVA DATI CONTRATTUALI"):
+                        db_run("UPDATE utenti SET contratto=?, scadenza=? WHERE user=?", (new_cont, new_scad, o_user), True); st.rerun()
+    
+    with tab2:
+        st.subheader("Anagrafica Pazienti")
+        with st.form("new_p"):
+            np = st.text_input("Nuovo Paziente (NOME COGNOME)")
+            if st.form_submit_button("AGGIUNGI PAZIENTE"):
+                db_run("INSERT INTO pazienti (nome) VALUES (?)", (np.upper(),), True); st.rerun()
+        
+        st.divider()
+        pazs = db_run("SELECT id, nome FROM pazienti")
+        for p_id_a, p_nome_a in pazs:
+            col_a, col_b, col_c = st.columns([0.6, 0.2, 0.2])
+            new_n = col_a.text_input("Modifica Nome", value=p_nome_a, key=f"edit_p_{p_id_a}")
+            if col_b.button("💾", key=f"save_p_{p_id_a}"):
+                db_run("UPDATE pazienti SET nome=? WHERE id=?", (new_n.upper(), p_id_a), True); st.rerun()
+            if col_c.button("🗑️", key=f"del_p_{p_id_a}"):
+                db_run("DELETE FROM pazienti WHERE id=?", (p_id_a,), True)
+                db_run("DELETE FROM terapie WHERE p_id=?", (p_id_a,), True)
+                db_run("DELETE FROM eventi WHERE id=?", (p_id_a,), True)
+                st.rerun()
+
+    with tab3:
+        st.subheader("Manutenzione Database")
+        st.warning("Attenzione: La rimozione dei log cancellerà tutto lo storico dei diari clinici!")
+        if st.button("🗑️ RIMUOVI TUTTI I LOG (RESET DIARIO)"):
+            db_run("DELETE FROM eventi", (), True)
+            st.success("Tutti i log sono stati rimossi correttamente."); st.rerun()
