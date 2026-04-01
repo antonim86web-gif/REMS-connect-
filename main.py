@@ -4,8 +4,8 @@ from datetime import datetime
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v25.0 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v25.0", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v26.0 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v26.0", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -79,15 +79,47 @@ def render_postits(p_id=None, limit=50, filter_role=None):
         cls = f"role-{r.lower()}"
         st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div><div>{nt}</div></div>', unsafe_allow_html=True)
 
-# --- LOGIN ---
+# --- GESTIONE ACCESSO E REGISTRAZIONE ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
+
 if not st.session_state.user_session:
     st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
-    with st.form("login_main"):
-        u_i, p_i = st.text_input("Username"), st.text_input("Password", type="password")
-        if st.form_submit_button("ACCEDI AL SISTEMA"):
-            res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
-            if res: st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}; st.rerun()
+    
+    col_l, col_r = st.columns(2)
+    
+    with col_l:
+        st.subheader("Login Operatore")
+        with st.form("login_main"):
+            u_i = st.text_input("Username")
+            p_i = st.text_input("Password", type="password")
+            if st.form_submit_button("ACCEDI AL SISTEMA"):
+                res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
+                if res:
+                    st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}
+                    st.rerun()
+                else:
+                    st.error("Credenziali non corrette.")
+                    
+    with col_r:
+        st.subheader("Registrazione Nuovo Account")
+        with st.form("register_main"):
+            reg_u = st.text_input("Scegli Username")
+            reg_p = st.text_input("Scegli Password", type="password")
+            reg_n = st.text_input("Nome")
+            reg_c = st.text_input("Cognome")
+            reg_q = st.selectbox("Qualifica/Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Admin"])
+            if st.form_submit_button("CREA ACCOUNT"):
+                if reg_u and reg_p and reg_n and reg_c:
+                    # Controllo se l'utente esiste già
+                    exist = db_run("SELECT user FROM utenti WHERE user=?", (reg_u,))
+                    if exist:
+                        st.warning("Questo username è già in uso.")
+                    else:
+                        db_run("INSERT INTO utenti (user, pwd, nome, cognome, qualifica) VALUES (?,?,?,?,?)", 
+                               (reg_u, hash_pw(reg_p), reg_n.capitalize(), reg_c.capitalize(), reg_q), True)
+                        st.success("Account creato con successo! Ora puoi effettuare il login.")
+                else:
+                    st.error("Tutti i campi sono obbligatori.")
     st.stop()
 
 u = st.session_state.user_session
@@ -107,7 +139,7 @@ if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"):
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v25.0<br>
+    Versione: ELITE PRO v26.0<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
@@ -190,7 +222,7 @@ elif nav == "👥 Modulo Equipe":
             with st.form("cs"):
                 tp, im, cau = st.selectbox("Tipo", ["ENTRATA", "USCITA"]), st.number_input("€"), st.text_input("Causale")
                 if st.form_submit_button("REGISTRA"):
-                    db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
+                    db_run("INSERT INTO cassa (p_id, data, cauale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore", firma_op), True); st.rerun()
 
         st.divider(); render_postits(p_id, filter_role=ruolo_corr)
