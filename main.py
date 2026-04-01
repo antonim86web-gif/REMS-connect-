@@ -4,7 +4,7 @@ from datetime import datetime, date
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO (REPRISTINATA) ---
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO ---
 st.set_page_config(page_title="REMS Connect ELITE PRO v12.5", layout="wide", page_icon="🏥")
 
 st.markdown("""
@@ -15,7 +15,6 @@ st.markdown("""
     .stButton > button[kind="secondary"] { background-color: #dc2626 !important; color: white !important; border: none !important; width: 100%; font-weight: bold !important; }
     .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 
-    /* --- STILE POST-IT --- */
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
     .postit-body { font-size: 1rem; line-height: 1.4; font-weight: 500; }
@@ -26,7 +25,6 @@ st.markdown("""
     .role-oss { background-color: #f8fafc; border-color: #64748b; }
     .role-admin { background-color: #f1f5f9; border-color: #0f172a; }
 
-    .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; }
     .cassa-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
     .saldo-txt { font-size: 2rem; font-weight: 900; color: #166534; }
 </style>
@@ -52,7 +50,7 @@ def db_run(query, params=(), commit=False):
 
 def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
 
-# Init Admin
+# Init Admin Default
 if not db_run("SELECT * FROM utenti WHERE user='admin'"):
     db_run("INSERT INTO utenti VALUES (?,?,?,?,?)", ("admin", hash_pw("admin"), "Responsabile", "Centro", "Admin"), True)
 
@@ -64,14 +62,8 @@ def render_postits(p_id=None, limit=20):
     query += " ORDER BY id_u DESC LIMIT ?"
     res = db_run(query, tuple(params + [limit]))
     for d, r, o, nt in res:
-        r_l = r.lower()
-        cls = f"role-{r_l}"
-        st.markdown(f'''
-            <div class="postit {cls}">
-                <div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div>
-                <div class="postit-body">{nt}</div>
-            </div>
-        ''', unsafe_allow_html=True)
+        cls = f"role-{r.lower()}"
+        st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div><div class="postit-body">{nt}</div></div>', unsafe_allow_html=True)
 
 # --- LOGIN ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
@@ -105,18 +97,31 @@ if nav == "📊 Monitoraggio":
 
 elif nav == "⚙️ Pannello Admin":
     st.markdown("<div class='section-banner'><h2>AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
-    t1, t2, t3 = st.tabs(["👤 UTENTI", "🏥 PAZIENTI", "🌍 LOG GLOBALE"])
+    t1, t2, t3 = st.tabs(["👤 GESTIONE UTENTI", "🏥 PAZIENTI", "🌍 LOG GLOBALE"])
+    
     with t1:
+        # Visualizzazione Utenti Registrati
+        st.subheader("👥 Utenti nel Sistema")
+        utenti_db = db_run("SELECT user, nome, cognome, qualifica FROM utenti")
+        df_utenti = pd.DataFrame(utenti_db, columns=["Username", "Nome", "Cognome", "Ruolo"])
+        st.table(df_utenti)
+        
+        st.divider()
+        
+        # Form per Nuovo Utente
+        st.subheader("➕ Registra Nuovo Operatore")
         with st.form("adm_u"):
-            nu, np = st.text_input("User"), st.text_input("Pass", type="password")
+            nu, np = st.text_input("Username"), st.text_input("Password", type="password")
             nn, nc = st.text_input("Nome"), st.text_input("Cognome")
             nq = st.selectbox("Ruolo", ["Admin", "Psichiatra", "Infermiere", "Educatore", "OSS"])
             if st.form_submit_button("CREA UTENTE"):
-                db_run("INSERT INTO utenti VALUES (?,?,?,?,?)", (nu, hash_pw(np), nn, nc, nq), True); st.success("OK")
+                db_run("INSERT INTO utenti VALUES (?,?,?,?,?)", (nu, hash_pw(np), nn, nc, nq), True); st.success("Utente creato correttamente!"); st.rerun()
+    
     with t2:
         with st.form("adm_p"):
             n_p = st.text_input("Nome Paziente")
-            if st.form_submit_button("AGGIUNGI"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (n_p.upper(),), True); st.rerun()
+            if st.form_submit_button("AGGIUNGI PAZIENTE"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (n_p.upper(),), True); st.rerun()
+    
     with t3: render_postits(limit=50)
 
 elif nav == "👥 Modulo Equipe":
@@ -181,12 +186,10 @@ elif nav == "👥 Modulo Equipe":
                         db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), cau, im, tp, firma), True); st.rerun()
 
         elif u['ruolo'] == "OSS":
-            t1, t2 = st.tabs(["🧹 MANSIONI", "📝 NOTE"])
-            with t1:
-                with st.form("o_m"):
-                    m1, m2 = st.checkbox("Pulizia"), st.checkbox("Fumo")
-                    if st.form_submit_button("SALVA"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "🧹 Attività registrate", "OSS", firma), True); st.rerun()
+            with st.form("o_m"):
+                m1 = st.checkbox("Pulizia Camera"); m2 = st.checkbox("Controllo Fumo")
+                if st.form_submit_button("SALVA ATTIVITÀ"):
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, datetime.now().strftime("%d/%m/%Y %H:%M"), "🧹 Attività registrate", "OSS", firma), True); st.rerun()
 
 elif nav == "⚙️ Sistema":
     st.markdown("<div class='section-banner'><h2>GESTIONE SISTEMA</h2></div>", unsafe_allow_html=True)
