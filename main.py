@@ -4,8 +4,8 @@ from datetime import datetime
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v16.0 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v16.0", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v16.5 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v16.5", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -51,11 +51,19 @@ DB_NAME = "rems_final_v12.db"
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT, contratto TEXT, scadenza TEXT)")
+        # Struttura base
+        cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+        
+        # FIX AUTOMATICO: Aggiunta colonne se mancanti (MIGRAZIONE)
+        try: cur.execute("ALTER TABLE utenti ADD COLUMN contratto TEXT")
+        except: pass
+        try: cur.execute("ALTER TABLE utenti ADD COLUMN scadenza TEXT")
+        except: pass
+        
         try:
             if query: cur.execute(query, params)
             if commit: conn.commit()
@@ -101,7 +109,7 @@ if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"):
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v16.0<br>
+    Versione: ELITE PRO v16.5<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
@@ -200,7 +208,9 @@ elif nav == "⚙️ Admin":
             with st.expander(f"Operatore: {o_nome} {o_cogn} ({o_qual})"):
                 with st.form(f"form_o_{o_user}"):
                     c1, c2 = st.columns(2)
-                    new_cont = c1.selectbox("Tipo Contratto", ["Indeterminato", "Determinato", "P.IVA", "Interinale"], index=0 if not o_cont else ["Indeterminato", "Determinato", "P.IVA", "Interinale"].index(o_cont))
+                    c_list = ["Indeterminato", "Determinato", "P.IVA", "Interinale"]
+                    idx_c = c_list.index(o_cont) if o_cont in c_list else 0
+                    new_cont = c1.selectbox("Tipo Contratto", c_list, index=idx_c)
                     new_scad = c2.text_input("Scadenza (GG/MM/AAAA)", value=o_scad if o_scad else "")
                     if st.form_submit_button("SALVA DATI CONTRATTUALI"):
                         db_run("UPDATE utenti SET contratto=?, scadenza=? WHERE user=?", (new_cont, new_scad, o_user), True); st.rerun()
@@ -226,8 +236,17 @@ elif nav == "⚙️ Admin":
                 st.rerun()
 
     with tab3:
-        st.subheader("Manutenzione Database")
-        st.warning("Attenzione: La rimozione dei log cancellerà tutto lo storico dei diari clinici!")
-        if st.button("🗑️ RIMUOVI TUTTI I LOG (RESET DIARIO)"):
+        st.subheader("Pulizia Mirata Diario Clinico")
+        pazs_log = db_run("SELECT id, nome FROM pazienti")
+        for pl_id, pl_nome in pazs_log:
+            col_l1, col_l2 = st.columns([0.8, 0.2])
+            col_l1.write(f"Voci diario per: **{pl_nome}**")
+            if col_l2.button("CANCELLA LOG ❌", key=f"clear_log_{pl_id}"):
+                db_run("DELETE FROM eventi WHERE id=?", (pl_id,), True)
+                st.success(f"Log di {pl_nome} eliminati!"); st.rerun()
+        
+        st.divider()
+        st.subheader("Reset Globale")
+        if st.button("🚨 CANCELLA OGNI SINGOLO LOG DEL SISTEMA"):
             db_run("DELETE FROM eventi", (), True)
-            st.success("Tutti i log sono stati rimossi correttamente."); st.rerun()
+            st.success("Tutti i log di sistema sono stati azzerati."); st.rerun()
