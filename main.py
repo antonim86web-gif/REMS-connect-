@@ -8,8 +8,8 @@ import pandas as pd
 def get_now_it():
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.2 (INTEGRATA) ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v28.2", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.3 (VERSIONE FINALE) ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v28.3", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -97,29 +97,32 @@ if not st.session_state.user_session:
     with c_l:
         st.subheader("Login")
         with st.form("login_main"):
-            u_i = st.text_input("Username").lower()
+            u_i = st.text_input("Username").lower().strip()
             p_i = st.text_input("Password", type="password")
             if st.form_submit_button("ACCEDI"):
                 res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
                 if res: 
                     st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}
                     st.rerun()
-                else: st.error("Credenziali errate")
+                else: st.error("Credenziali errate o utente inesistente.")
     with c_r:
         st.subheader("Registrazione")
         with st.form("reg_main"):
-            ru = st.text_input("User").lower()
+            ru = st.text_input("User").lower().strip()
             rp = st.text_input("PW", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
+            # Lista Ruoli Testata (Psichiatra -> OPSI)
             rq = st.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI", "Admin"])
-            if st.form_submit_button("CREA"):
-                if ru and rp:
+            if st.form_submit_button("CREA NUOVO OPERATORE"):
+                if ru and rp and rn and rc:
                     esistente = db_run("SELECT user FROM utenti WHERE user=?", (ru,))
-                    if esistente: st.error("User esistente")
+                    if esistente: 
+                        st.error("Errore: Username già occupato.")
                     else:
                         db_run("INSERT INTO utenti VALUES (?,?,?,?,?)", (ru, hash_pw(rp), rn.capitalize(), rc.capitalize(), rq), True)
-                        st.success("Creato!")
+                        st.success(f"Operatore {rq} creato! Puoi fare il login.")
+                else: st.warning("Compila tutti i campi.")
     st.stop()
 
 u = st.session_state.user_session
