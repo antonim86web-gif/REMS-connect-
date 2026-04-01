@@ -299,10 +299,24 @@ elif nav == "⚙️ Admin":
             c1.write(pn)
             if c2.button("ELIMINA", key=f"dp_{pid}"): db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True); st.rerun()
     with tab3:
-        st.button("🚨 RESET TOTALE LOG", on_click=lambda: db_run("DELETE FROM eventi", (), True))
+        st.subheader("Cancellazione Selettiva Log")
+        lista_p = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        filtro_p = st.selectbox("Filtra per Paziente (opzionale):", ["TUTTI"] + [p[1] for p in lista_p])
+        
+        query_log = "SELECT e.id_u, e.data, e.ruolo, e.op, e.nota, p.nome FROM eventi e JOIN pazienti p ON e.id = p.id"
+        params_log = []
+        if filtro_p != "TUTTI":
+            query_log += " WHERE p.nome = ?"
+            params_log.append(filtro_p)
+        
+        tutti_log = db_run(query_log + " ORDER BY e.id_u DESC", tuple(params_log))
+        
+        if st.button("🚨 RESET TOTALE LOG"): db_run("DELETE FROM eventi", (), True); st.rerun()
         st.divider()
-        tutti_log = db_run("SELECT id_u, data, ruolo, op, nota FROM eventi ORDER BY id_u DESC")
-        for lid, ldt, lru, lop, lnt in tutti_log:
+        
+        for lid, ldt, lru, lop, lnt, lpnome in tutti_log:
             cl1, cl2 = st.columns([0.85, 0.15])
-            cl1.write(f"[{ldt}] **{lru}** ({lop}): {lnt}")
-            if cl2.button("🗑️", key=f"del_log_{lid}"): db_run("DELETE FROM eventi WHERE id_u=?", (lid,), True); st.rerun()
+            cl1.write(f"[{ldt}] **{lpnome}** - **{lru}** ({lop}): {lnt}")
+            if cl2.button("🗑️", key=f"del_log_{lid}"): 
+                db_run("DELETE FROM eventi WHERE id_u=?", (lid,), True)
+                st.rerun()
