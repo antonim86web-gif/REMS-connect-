@@ -131,18 +131,20 @@ def logica_equipe(p_id, ruolo_op, firma_op):
                 f_turno = [t for t in terapie if t[db_col] == 1]
                 mostrati = 0
                 for f in f_turno:
-                    # CORREZIONE: Ricerca flessibile nel database per far sparire il farmaco
-                    check = db_run("SELECT id_u FROM eventi WHERE id=? AND data >= ? AND nota LIKE ?", (p_id, rif_full, f"%TERAPIA {turno_sigla}: {f[1]}%"))
+                    # CORREZIONE DEFINITIVA: Cerca il farmaco specifico e il turno nella nota dopo le ore 06:00
+                    query_check = "SELECT id_u FROM eventi WHERE id=? AND data >= ? AND nota LIKE ? AND nota LIKE ?"
+                    check = db_run(query_check, (p_id, rif_full, f"%{turno_sigla}%", f"%{f[1]}%"))
+                    
                     if not check:
                         mostrati += 1
                         col_i, col_b = st.columns([0.7, 0.3])
                         col_i.write(f"**{f[1]}** ({f[2]})")
                         c_ok, c_no = col_b.columns(2)
                         if c_ok.button("✅", key=f"ok_{f[0]}_{turno_sigla}"):
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"✅ TERAPIA {turno_sigla}: {f[1]} (ASSUNTA)", "Infermiere", firma_op), True); st.rerun()
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"TERAPIA {turno_sigla}: {f[1]} (ASSUNTA)", "Infermiere", firma_op), True); st.rerun()
                         if c_no.button("⭕", key=f"no_{f[0]}_{turno_sigla}"):
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"⭕ TERAPIA {turno_sigla}: {f[1]} (RIFIUTATA)", "Infermiere", firma_op), True); st.rerun()
-                if mostrati == 0: st.caption("Ciclo completato.")
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"TERAPIA {turno_sigla}: {f[1]} (RIFIUTATA)", "Infermiere", firma_op), True); st.rerun()
+                if mostrati == 0: st.caption("Terapie del turno completate.")
         with t2:
             with st.form("inf_con"):
                 cns = st.text_area("Consegne"); (st.form_submit_button("INVIA") and db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"📝 CONSEGNA: {cns}", "Infermiere", firma_op), True) and st.rerun())
