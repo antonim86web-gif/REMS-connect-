@@ -4,8 +4,8 @@ from datetime import datetime
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v18.0 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v18.0", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v18.1 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v18.1", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -91,7 +91,7 @@ firma_op = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 
 # --- SIDEBAR ---
 st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
-st.sidebar.markdown(f民主黨<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
 nav = st.sidebar.radio("NAVIGAZIONE", ["📊 Monitoraggio", "👥 Modulo Equipe", "⚙️ Admin"])
 if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"): 
     st.session_state.user_session = None; st.rerun()
@@ -99,7 +99,7 @@ if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"):
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v18.0<br>
+    Versione: ELITE PRO v18.1<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
@@ -193,14 +193,12 @@ elif nav == "⚙️ Admin":
     
     with tab1:
         st.subheader("Database Operatori (Username e Password)")
-        # Recupero utenti con password (hash o testo se non cifrato)
         users_full = db_run("SELECT user, pwd, nome, cognome, qualifica FROM utenti")
-        
         for u_id, u_pw, u_n, u_c, u_q in users_full:
             with st.container():
                 c_u1, c_u2, c_u3 = st.columns([0.4, 0.4, 0.2])
                 c_u1.markdown(f"**{u_n} {u_c}** ({u_q})")
-                c_u2.code(f"User: {u_id} | PW: {u_pw[:15]}...") # Mostra parte della password (hash)
+                c_u2.code(f"User: {u_id} | PW: {u_pw}")
                 if c_u3.button("ELIMINA 🗑️", key=f"del_u_{u_id}"):
                     if u_id == u['uid']: st.error("Impossibile auto-eliminarsi")
                     else:
@@ -233,7 +231,6 @@ elif nav == "⚙️ Admin":
         pazs_log = db_run("SELECT id, nome FROM pazienti")
         for pl_id, pl_nome in pazs_log:
             with st.expander(f"Dettaglio Log: {pl_nome}"):
-                # Recupera ogni singola nota per il paziente
                 voci = db_run("SELECT id_u, data, nota, op FROM eventi WHERE id=? ORDER BY id_u DESC", (pl_id,))
                 if not voci:
                     st.write("Nessuna nota presente.")
