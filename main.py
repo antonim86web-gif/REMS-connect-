@@ -4,8 +4,8 @@ from datetime import datetime
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v18.1 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v18.1", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v25.0 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v25.0", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -31,6 +31,9 @@ st.markdown("""
     .role-educatore { background-color: #ecfdf5; border-color: #059669; }  
     .role-oss { background-color: #f8fafc; border-color: #64748b; }
     
+    /* APPUNTAMENTI BOX */
+    .app-card { background-color: #fffbeb; border: 1px solid #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #d97706; color: #1e293b; }
+
     /* TERAPIA */
     .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
     .turn-header { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px; }
@@ -56,6 +59,7 @@ def db_run(query, params=(), commit=False):
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS appuntamenti (id_u INTEGER PRIMARY KEY AUTOINCREMENT, p_id INTEGER, data TEXT, ora TEXT, nota TEXT, stato TEXT, autore TEXT)")
         try:
             if query: cur.execute(query, params)
             if commit: conn.commit()
@@ -92,14 +96,18 @@ firma_op = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 # --- SIDEBAR ---
 st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
-nav = st.sidebar.radio("NAVIGAZIONE", ["📊 Monitoraggio", "👥 Modulo Equipe", "⚙️ Admin"])
+
+menu_options = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Appuntamenti"]
+if u['ruolo'] == "Admin": menu_options.append("⚙️ Admin")
+nav = st.sidebar.radio("NAVIGAZIONE", menu_options)
+
 if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"): 
     st.session_state.user_session = None; st.rerun()
 
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v18.1<br>
+    Versione: ELITE PRO v25.0<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
@@ -187,6 +195,30 @@ elif nav == "👥 Modulo Equipe":
 
         st.divider(); render_postits(p_id, filter_role=ruolo_corr)
 
+elif nav == "📅 Appuntamenti":
+    st.markdown("<div class='section-banner'><h2>GESTIONE APPUNTAMENTI E SCADENZE</h2></div>", unsafe_allow_html=True)
+    t_new, t_agenda = st.tabs(["➕ PROGRAMMA APPUNTAMENTO", "📋 AGENDA EQUIPE"])
+    
+    with t_new:
+        with st.form("f_new_app"):
+            p_lista_app = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+            p_app_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista_app])
+            p_app_id = [p[0] for p in p_lista_app if p[1] == p_app_sel][0]
+            d_app, h_app = st.date_input("Data"), st.time_input("Ora")
+            n_app = st.text_input("Causale (es: Visita Oculistica, Colloquio, Uscita)")
+            if st.form_submit_button("SALVA IN AGENDA"):
+                db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore) VALUES (?,?,?,?,'PROGRAMMATO',?)", (p_app_id, str(d_app), str(h_app)[:5], n_app, firma_op), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_app_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📅 Programmato appuntamento: {n_app} per il {d_app}", u['ruolo'], firma_op), True)
+                st.success("Appuntamento registrato!"); st.rerun()
+
+    with t_agenda:
+        st.subheader("Appuntamenti Programmati")
+        agenda = db_run("SELECT a.id_u, a.data, a.ora, p.nome, a.nota, a.autore FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.stato='PROGRAMMATO' ORDER BY a.data, a.ora")
+        for aid, adt, ahr, apn, ant, aut in agenda:
+            st.markdown(f"<div class='app-card'>📅 <b>{adt} alle {ahr}</b> - Paziente: <b>{apn}</b><br>Dettagli: {ant}<br><small>Inserito da: {aut}</small></div>", unsafe_allow_html=True)
+            if st.button("SEGNA COME COMPLETATO", key=f"app_ok_{aid}"):
+                db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True); st.rerun()
+
 elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRATIVO ELITE</h2></div>", unsafe_allow_html=True)
     tab1, tab2, tab3 = st.tabs(["👥 UTENTI & CREDENZIALI", "👤 GESTIONE PAZIENTI", "🛡️ SICUREZZA LOG"])
@@ -224,6 +256,7 @@ elif nav == "⚙️ Admin":
                 db_run("DELETE FROM pazienti WHERE id=?", (p_id_a,), True)
                 db_run("DELETE FROM terapie WHERE p_id=?", (p_id_a,), True)
                 db_run("DELETE FROM eventi WHERE id=?", (p_id_a,), True)
+                db_run("DELETE FROM appuntamenti WHERE p_id=?", (p_id_a,), True)
                 st.rerun()
 
     with tab3:
