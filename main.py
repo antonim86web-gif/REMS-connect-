@@ -2,247 +2,338 @@ import sqlite3
 import streamlit as st
 from datetime import datetime, timedelta, timezone
 import hashlib
-import calendar
+import pandas as pd
 
-# --- 1. MOTORE DI SICUREZZA E TEMPO (ZONA PERITO) ---
+# --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
-    # Riferimento orario REMS Italia (UTC+2)
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
-def hash_pw(p): 
-    return hashlib.sha256(str.encode(p)).hexdigest()
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.7 (INTEGRALE) ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v28.7", layout="wide", page_icon="🏥")
 
-# --- 2. CONFIGURAZIONE INTERFACCIA ELITE PRO v28.8 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v28.8", layout="wide", page_icon="🏥")
-
-# CSS ARCHITETTURALE - IL TOCCO "GIOIELLINO"
 st.markdown("""
 <style>
-    /* Sidebar Professionale */
-    [data-testid="stSidebar"] { background-color: #1e3a8a !important; min-width: 320px !important; border-right: 4px solid #00ff00; }
+    [data-testid="stSidebar"] { background-color: #1e3a8a !important; }
     [data-testid="stSidebar"] * { color: #ffffff !important; }
-    .sidebar-title { color: #ffffff !important; font-size: 2.2rem !important; font-weight: 900 !important; text-align: center; text-shadow: 2px 2px #000; }
-    .version-tag { text-align: center; font-size: 0.8rem; color: #00ff00 !important; margin-bottom: 20px; font-family: monospace; }
-    .user-logged { background: rgba(0,255,0,0.1); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #00ff00; color: #00ff00 !important; font-weight: 800; }
+    .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
+    .user-logged { color: #00ff00 !important; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
+    .sidebar-footer { color: #ffffff !important; font-size: 0.8rem; text-align: center; margin-top: 20px; opacity: 0.8; }
+    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
+    .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
+    .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
+    .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
     
-    /* Alert Agenda Dinamico */
-    .alert-badge { background: linear-gradient(45deg, #ef4444, #991b1b); color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: 900; margin: 15px 0; border: 2px solid #fff; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.03);} 100% {transform: scale(1);} }
+    .role-psichiatra { background-color: #fef2f2; border-color: #dc2626; } 
+    .role-infermiere { background-color: #eff6ff; border-color: #2563eb; } 
+    .role-educatore { background-color: #ecfdf5; border-color: #059669; }  
+    .role-oss { background-color: #f8fafc; border-color: #64748b; }
+    .role-psicologo { background-color: #faf5ff; border-color: #a855f7; }
+    .role-sociale { background-color: #fff7ed; border-color: #f97316; }
+    .role-opsi { background-color: #f1f5f9; border-color: #0f172a; border-style: dashed; }
 
-    /* Griglia Calendario Elite */
-    .cal-container { background: #ffffff; border-radius: 20px; padding: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-    .cal-header-day { font-weight: 900; color: #1e3a8a; background: #f1f5f9; padding: 10px; border-radius: 8px; text-align: center; }
-    .cal-cell { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; min-height: 140px; padding: 10px; transition: 0.2s; position: relative; }
-    .cal-cell:hover { border-color: #2563eb; transform: translateY(-3px); }
-    .cal-today { border: 3px solid #00ff00 !important; background: #f0fff4 !important; }
-    .day-num { font-size: 1.3rem; font-weight: 900; color: #1e3a8a; }
+    .app-card { background-color: #fffbeb; border: 1px solid #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #d97706; color: #1e293b; }
+    .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+    .turn-header { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px; }
+    .mat-style { color: #d97706; } .pom-style { color: #2563eb; } .not-style { color: #4338ca; }
+    .cassa-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+    .saldo-txt { font-size: 2.2rem; font-weight: 900; color: #166534; }
     
-    /* Eventi in Agenda */
-    .event-item { font-size: 0.7rem; padding: 4px; border-radius: 5px; margin-top: 4px; font-weight: 700; display: block; border-left: 4px solid; }
-    .ev-attivo { background: #dbeafe; color: #1e40af; border-left-color: #2563eb; }
-    .ev-archiviato { background: #f1f5f9; color: #94a3b8; border-left-color: #cbd5e1; text-decoration: line-through; opacity: 0.6; }
-
-    /* Banner Sezioni */
-    .section-banner { background: linear-gradient(90deg, #1e3a8a, #3b82f6); color: white; padding: 20px; border-radius: 15px; margin-bottom: 25px; border-left: 10px solid #00ff00; }
+    .map-reparto { background: #f1f5f9; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    .reparto-title { text-align: center; color: #1e3a8a; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 2px solid #1e3a8a33; }
+    .stanza-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .stanza-tile { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; border-left: 6px solid #94a3b8; }
+    .stanza-header { font-weight: 800; font-size: 0.8rem; color: #475569; margin-bottom: 5px; border-bottom: 1px solid #eee; }
+    .letto-slot { font-size: 0.8rem; color: #1e293b; padding: 2px 0; }
+    .stanza-occupata { border-left-color: #22c55e; background-color: #f0fdf4; }
+    .stanza-piena { border-left-color: #2563eb; background-color: #eff6ff; }
+    .stanza-isolamento { border-left-color: #ef4444; background-color: #fef2f2; border-width: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. DATABASE MULTI-TABELLA (NESSUNA OMISSIONE) ---
-DB_NAME = "rems_final_v28_8.db"
+# --- DATABASE ENGINE ---
+DB_NAME = "rems_final_v12.db"
 
-def init_db():
-    with sqlite3.connect(DB_NAME) as conn:
+def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
+
+def db_run(query, params=(), commit=False):
+    with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        # Sicurezza e Anagrafica
-        cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, reparto TEXT)")
-        # Clinica e Parametri
-        cur.execute("CREATE TABLE IF NOT EXISTS eventi (p_id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS parametri (p_id INTEGER, data TEXT, pa TEXT, fc TEXT, sat TEXT, temp TEXT, op TEXT)")
-        # Cassa e Logistica
-        cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
-        cur.execute("CREATE TABLE IF NOT EXISTS assegnazioni (p_id INTEGER UNIQUE, stanza_id TEXT, letto INTEGER, data_ass TEXT)")
-        # AGENDA DINAMICA ANNUALE
-        cur.execute("""CREATE TABLE IF NOT EXISTS appuntamenti (
-            id_u INTEGER PRIMARY KEY AUTOINCREMENT, 
-            p_id INTEGER, 
-            data TEXT, 
-            ora TEXT, 
-            nota TEXT, 
-            stato TEXT, 
-            autore TEXT
-        )""")
+        try:
+            cur.execute("SELECT user, pwd, nome, cognome, qualifica FROM utenti LIMIT 1")
+        except sqlite3.OperationalError:
+            cur.execute("DROP TABLE IF EXISTS utenti")
         
-        # Admin Account Default
+        cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS appuntamenti (id_u INTEGER PRIMARY KEY AUTOINCREMENT, p_id INTEGER, data TEXT, ora TEXT, nota TEXT, stato TEXT, autore TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS stanze (id TEXT PRIMARY KEY, reparto TEXT, tipo TEXT)")
+        cur.execute("CREATE TABLE IF NOT EXISTS assegnazioni (p_id INTEGER UNIQUE, stanza_id TEXT, letto INTEGER, data_ass TEXT, FOREIGN KEY(p_id) REFERENCES pazienti(id))")
+        
+        # --- ADMIN DEFAULT E STANZE ---
         if cur.execute("SELECT COUNT(*) FROM utenti WHERE user='admin'").fetchone()[0] == 0:
             cur.execute("INSERT INTO utenti VALUES (?,?,?,?,?)", ("admin", hash_pw("perito2026"), "SUPER", "USER", "Admin"))
-        conn.commit()
+            conn.commit()
 
-init_db()
+        if cur.execute("SELECT COUNT(*) FROM stanze").fetchone()[0] == 0:
+            for i in range(1, 7): cur.execute("INSERT INTO stanze VALUES (?,?,?)", (f"A{i}", "A", "ISOLAMENTO" if i==6 else "STANDARD"))
+            for i in range(1, 11): cur.execute("INSERT INTO stanze VALUES (?,?,?)", (f"B{i}", "B", "ISOLAMENTO" if i==10 else "STANDARD"))
+            conn.commit()
+        try:
+            cur.execute(query, params)
+            if commit: conn.commit()
+            return cur.fetchall()
+        except Exception as e:
+            return []
 
-def db_query(q, p=(), commit=False):
-    with sqlite3.connect(DB_NAME) as conn:
-        cur = conn.cursor()
-        cur.execute(q, p)
-        if commit: conn.commit()
-        return cur.fetchall()
+def render_postits(p_id=None, limit=50, filter_role=None):
+    query = "SELECT data, ruolo, op, nota FROM eventi WHERE 1=1"
+    params = []
+    if p_id: query += " AND id=?"; params.append(p_id)
+    if filter_role: query += " AND ruolo=?"; params.append(filter_role)
+    res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
+    for d, r, o, nt in res:
+        role_map = {"Psichiatra":"psichiatra", "Infermiere":"infermiere", "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", "Assistente Sociale":"sociale", "OPSI":"opsi"}
+        cls = f"role-{role_map.get(r, 'oss')}"
+        st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div><div>{nt}</div></div>', unsafe_allow_html=True)
 
-# --- 4. GESTIONE SESSIONE ---
+# --- SESSIONE E LOGIN ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
-if 'cal_month' not in st.session_state: st.session_state.cal_month = get_now_it().month
-if 'cal_year' not in st.session_state: st.session_state.cal_year = get_now_it().year
 
 if not st.session_state.user_session:
-    _, col_login, _ = st.columns([1,2,1])
-    with col_login:
-        st.markdown("<h1 style='text-align:center;'>🏥 REMS CONNECT LOGIN</h1>", unsafe_allow_html=True)
-        with st.form("login_gate"):
-            u_in = st.text_input("Username")
-            p_in = st.text_input("Password", type="password")
-            if st.form_submit_button("SBLOCCA SISTEMA"):
-                res = db_query("SELECT * FROM utenti WHERE user=? AND pwd=?", (u_in, hash_pw(p_in)))
-                if res:
-                    st.session_state.user_session = {"user": res[0][0], "nome": res[0][2], "cognome": res[0][3], "ruolo": res[0][4]}
+    st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
+    c_l, c_r = st.columns(2)
+    with c_l:
+        st.subheader("Login")
+        with st.form("login_main"):
+            u_i = st.text_input("Username").lower().strip()
+            p_i = st.text_input("Password", type="password")
+            if st.form_submit_button("ACCEDI"):
+                res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
+                if res: 
+                    st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}
                     st.rerun()
-                else: st.error("Accesso Negato.")
+                else: st.error("Errore login: Credenziali errate o utente non creato.")
+    with c_r:
+        st.subheader("Registrazione")
+        with st.form("reg_main"):
+            ru = st.text_input("Scegli Username").lower().strip()
+            rp = st.text_input("Scegli Password", type="password")
+            rn = st.text_input("Nome")
+            rc = st.text_input("Cognome")
+            rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
+            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+                if ru and rp and rn and rc:
+                    if ru == "admin": 
+                        st.error("Username 'admin' riservato.")
+                    else:
+                        esistente = db_run("SELECT user FROM utenti WHERE user=?", (ru,))
+                        if esistente: st.error("Username già in uso.")
+                        else:
+                            db_run("INSERT INTO utenti (user, pwd, nome, cognome, qualifica) VALUES (?,?,?,?,?)", (ru, hash_pw(rp), rn.capitalize(), rc.capitalize(), rq), True)
+                            st.success(f"Profilo {rq} creato correttamente! Ora puoi accedere.")
+                else: st.warning("Compila tutti i campi.")
     st.stop()
 
 u = st.session_state.user_session
 firma_op = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 
-# --- 5. SIDEBAR DINAMICA (ANTONY WEBMASTER STYLE) ---
+# --- SIDEBAR ---
 st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
-st.sidebar.markdown("<div class='version-tag'>ELITE PRO v28.8 | WHITE EDITION</div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
+opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Appuntamenti", "🗺️ Mappa Posti Letto"]
+if u['ruolo'] == "Admin": opts.append("⚙️ Admin")
+nav = st.sidebar.radio("NAVIGAZIONE", opts)
+if st.sidebar.button("LOGOUT"): st.session_state.user_session = None; st.rerun()
 
-# Alert Notifiche Agenda
-oggi_str = get_now_it().strftime("%Y-%m-%d")
-count_oggi = db_query("SELECT COUNT(*) FROM appuntamenti WHERE data=? AND stato='ATTIVO'", (oggi_str,))[0][0]
-if count_oggi > 0:
-    st.sidebar.markdown(f"<div class='alert-badge'>⚠️ {count_oggi} IMPEGNI OGGI</div>", unsafe_allow_html=True)
+# --- FIRMA E VERSIONE (BIANCO) ---
+st.sidebar.markdown("<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.7 white</div>", unsafe_allow_html=True)
 
-menu = ["📊 Dashboard", "📅 Agenda Pro Dinamica", "💊 Gestione Terapie", "💰 Cassa Pazienti", "🗺️ Mappa Letti"]
-if u['ruolo'] == "Admin": menu.append("⚙️ Pannello Admin")
-choice = st.sidebar.radio("MODULI ATTIVI", menu)
-
-if st.sidebar.button("LOGOUT"):
-    st.session_state.user_session = None
-    st.rerun()
-st.sidebar.markdown(f"<br><br><div style='text-align:center; font-size:0.8rem;'>System by:<br><b>Antony Webmaster</b></div>", unsafe_allow_html=True)
-
-# --- 6. MODULO AGENDA DINAMICA (LOGICA INTEGRALE) ---
-if choice == "📅 Agenda Pro Dinamica":
-    st.markdown("<div class='section-banner'><h1>📅 AGENDA DINAMICA ANNUALE</h1><p>Pianificazione e Archiviazione Storica</p></div>", unsafe_allow_html=True)
-    
-    # Navigazione Mese/Anno
-    nav1, nav2, nav3 = st.columns([1,2,1])
-    with nav1:
-        if st.button("⬅️ Mese Prec."):
-            st.session_state.cal_month -= 1
-            if st.session_state.cal_month < 1: st.session_state.cal_month = 12; st.session_state.cal_year -= 1
-            st.rerun()
-    with nav2:
-        mesi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
-        st.markdown(f"<h2 style='text-align:center;'>{mesi[st.session_state.cal_month-1]} {st.session_state.cal_year}</h2>", unsafe_allow_html=True)
-    with nav3:
-        if st.button("Mese Succ. ➡️"):
-            st.session_state.cal_month += 1
-            if st.session_state.cal_month > 12: st.session_state.cal_month = 1; st.session_state.cal_year += 1
-            st.rerun()
-
-    c_cal, c_form = st.columns([3, 1])
-    
-    with c_cal:
-        st.markdown("<div class='cal-container'><div class='cal-grid'>", unsafe_allow_html=True)
-        for d in ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]:
-            st.markdown(f"<div class='cal-header-day'>{d}</div>", unsafe_allow_html=True)
-        
-        cal_engine = calendar.Calendar(firstweekday=0)
-        weeks = cal_engine.monthdayscalendar(st.session_state.cal_year, st.session_state.cal_month)
-        
-        for week in weeks:
-            for day in week:
-                if day == 0: st.markdown("<div></div>", unsafe_allow_html=True)
-                else:
-                    d_iso = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
-                    cls_today = "cal-today" if d_iso == oggi_str else ""
-                    # Query appuntamenti del giorno
-                    evs = db_query("SELECT a.ora, p.nome, a.stato FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.data=?", (d_iso,))
-                    st.markdown(f"<div class='cal-cell {cls_today}'><span class='day-num'>{day}</span>", unsafe_allow_html=True)
-                    for e_ora, e_paz, e_sta in evs:
-                        e_cls = "ev-attivo" if e_sta == "ATTIVO" else "ev-archiviato"
-                        st.markdown(f"<span class='event-item {e_cls}'>{e_ora} - {e_paz}</span>", unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div></div>", unsafe_allow_html=True)
-
-    with c_form:
-        st.subheader("➕ Nuovo Impegno")
-        p_list = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-        with st.form("new_app_form"):
-            p_sel = st.selectbox("Paziente", [p[1] for p in p_list]) if p_list else st.info("Inserire pazienti in Admin")
-            d_sel = st.date_input("Data")
-            o_sel = st.time_input("Orario")
-            n_sel = st.text_input("Nota/Causale")
-            if st.form_submit_button("REGISTRA"):
-                p_id = [p[0] for p in p_list if p[1] == p_sel][0]
-                db_query("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore) VALUES (?,?,?,?,'ATTIVO',?)", 
-                         (p_id, str(d_sel), str(o_sel)[:5], n_sel, firma_op), commit=True)
+# --- MODULO MAPPA ---
+if nav == "🗺️ Mappa Posti Letto":
+    st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
+    stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
+    paz_db = db_run("SELECT p.id, p.nome, a.stanza_id, a.letto FROM pazienti p LEFT JOIN assegnazioni a ON p.id = a.p_id")
+    mappa = {s[0]: {'rep': s[1], 'tipo': s[2], 'letti': {1: None, 2: None}} for s in stanze_db}
+    for pid, pnome, sid, letto in paz_db:
+        if sid in mappa: mappa[sid]['letti'][letto] = {'id': pid, 'nome': pnome}
+    c_a, c_b = st.columns(2)
+    for r_code, col_obj in [("A", c_a), ("B", c_b)]:
+        with col_obj:
+            st.markdown(f"<div class='map-reparto'><div class='reparto-title'>Reparto {r_code}</div><div class='stanza-grid'>", unsafe_allow_html=True)
+            for s_id, s_info in {k:v for k,v in mappa.items() if v['rep']==r_code}.items():
+                p_count = len([v for v in s_info['letti'].values() if v])
+                cls = "stanza-isolamento" if s_info['tipo']=="ISOLAMENTO" and p_count>0 else ("stanza-piena" if p_count==2 else ("stanza-occupata" if p_count==1 else ""))
+                st.markdown(f"<div class='stanza-tile {cls}'><div class='stanza-header'>{s_id} <small>{s_info['tipo']}</small></div>", unsafe_allow_html=True)
+                for l in [1, 2]:
+                    p = s_info['letti'][l]
+                    st.markdown(f"<div class='letto-slot'>L{l}: <b>{p['nome'] if p else 'Libero'}</b></div>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div></div>", unsafe_allow_html=True)
+    with st.expander("Sposta Paziente"):
+        p_list = db_run("SELECT id, nome FROM pazienti")
+        sel_p = st.selectbox("Paziente", [p[1] for p in p_list], index=None)
+        if sel_p:
+            pid = [p[0] for p in p_list if p[1]==sel_p][0]
+            posti_liberi = [f"{sid}-L{l}" for sid, si in mappa.items() for l, po in si['letti'].items() if not po]
+            dest = st.selectbox("Destinazione", posti_liberi)
+            mot = st.text_input("Motivo")
+            if st.button("ESEGUI") and mot:
+                dsid, dl = dest.split("-L")
+                db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True)
+                db_run("INSERT INTO assegnazioni VALUES (?,?,?,?)", (pid, dsid, int(dl), get_now_it().strftime("%Y-%m-%d")), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 Trasferimento in {dsid} L{dl}. Motivo: {mot}", u['ruolo'], firma_op), True)
                 st.rerun()
-        
+
+elif nav == "📊 Monitoraggio":
+    st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
+    for pid, nome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
+        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): render_postits(pid)
+
+elif nav == "👥 Modulo Equipe":
+    st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
+    ruolo_corr = u['ruolo']
+    if u['ruolo'] == "Admin": ruolo_corr = st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
+    p_lista = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    if p_lista:
+        p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
+        p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
+        now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
+
+        if ruolo_corr == "Psicologo":
+            t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST/VALUTAZIONE"])
+            with t1:
+                with st.form("f_psi"):
+                    txt = st.text_area("Sintesi Colloquio Clinico")
+                    if st.form_submit_button("SALVA NOTA"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧠 {txt}", "Psicologo", firma_op), True); st.rerun()
+            with t2:
+                with st.form("f_test"):
+                    test_n = st.text_input("Nome Test / Scala"); test_r = st.text_area("Risultato/Osservazioni")
+                    if st.form_submit_button("REGISTRA VALUTAZIONE"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True); st.rerun()
+        elif ruolo_corr == "Assistente Sociale":
+            t1, t2 = st.tabs(["🤝 RETE TERRITORIALE", "🏠 PROGETTO POST-DIMISSIONE"])
+            with t1:
+                with st.form("f_soc"):
+                    cont = st.text_input("Ente/Contatto"); txt = st.text_area("Esito colloquio")
+                    if st.form_submit_button("SALVA ATTIVITÀ"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🤝 CONTATTO {cont}: {txt}", "Assistente Sociale", firma_op), True); st.rerun()
+            with t2:
+                with st.form("f_prog"):
+                    prog = st.text_area("Aggiornamento Progetto di Reinserimento")
+                    if st.form_submit_button("AGGIORNA PROGETTO"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🏠 PROGETTO: {prog}", "Assistente Sociale", firma_op), True); st.rerun()
+        elif ruolo_corr == "OPSI":
+            t1, t2 = st.tabs(["🛡️ VIGILANZA", "🚨 SEGNALAZIONE CRITICITÀ"])
+            with t1:
+                with st.form("f_opsi"):
+                    cond = st.multiselect("Stato ambiente:", ["Tranquillo", "Agitato", "Ispezione camera"]); nota = st.text_input("Note")
+                    if st.form_submit_button("REGISTRA TURNO"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🛡️ VIGILANZA: {', '.join(cond)} | {nota}", "OPSI", firma_op), True); st.rerun()
+            with t2:
+                with st.form("f_crit"):
+                    tipo = st.selectbox("Livello Criticità", ["BASSO", "MEDIO", "ALTO"]); dett = st.text_area("Dettaglio")
+                    if st.form_submit_button("INVIA SEGNALAZIONE"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🚨 CRITICITÀ {tipo}: {dett}", "OPSI", firma_op), True); st.rerun()
+        elif ruolo_corr == "Psichiatra":
+            t1, t2 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie"])
+            with t1:
+                with st.form("f_ps"):
+                    f, d = st.text_input("Farmaco"), st.text_input("Dose")
+                    c1,c2,c3 = st.columns(3); m,p,n = c1.checkbox("MAT"), c2.checkbox("POM"), c3.checkbox("NOT")
+                    if st.form_submit_button("REGISTRA"):
+                        db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma_op), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"➕ Prescritto: {f} {d}", "Psichiatra", firma_op), True); st.rerun()
+            with t2:
+                for tid, fn, ds, m_v, p_v, n_v in db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,)):
+                    with st.expander(f"Modifica: {fn}"):
+                        with st.form(key=f"m_{tid}"):
+                            nf, nd = st.text_input("Farmaco", fn), st.text_input("Dose", ds); cc1,cc2,cc3 = st.columns(3); nm,np,nn = cc1.checkbox("MAT",bool(m_v)),cc2.checkbox("POM",bool(p_v)),cc3.checkbox("NOT",bool(n_v))
+                            if st.form_submit_button("AGGIORNA"): db_run("UPDATE terapie SET farmaco=?, dose=?, mat=?, pom=?, nott=? WHERE id_u=?", (nf, nd, int(nm), int(np), int(nn), tid), True); st.rerun()
+                            if st.form_submit_button("SOSPENDE"): db_run("DELETE FROM terapie WHERE id_u=?", (tid,), True); st.rerun()
+        elif ruolo_corr == "Infermiere":
+            t1, t2, t3 = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
+            with t1:
+                terapie = db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,))
+                cols = st.columns(3); turni = [("MAT", 3, "mat-style", "☀️"), ("POM", 4, "pom-style", "🌤️"), ("NOT", 5, "not-style", "🌙")]
+                for i, (t_n, t_idx, t_css, t_ico) in enumerate(turni):
+                    with cols[i]:
+                        for f in [x for x in terapie if x[t_idx]]:
+                            check = db_run("SELECT id_u FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%SOMM ({t_n}): {f[1]}%", f"{oggi}%"))
+                            if not check:
+                                st.markdown(f"<div class='therapy-container'><div class='turn-header {t_css}'>{t_ico} {t_n}</div><b>{f[1]}</b><br>{f[2]}</div>", unsafe_allow_html=True)
+                                if st.button(f"CONFERMA", key=f"ok_{f[0]}_{t_n}"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"✔️ SOMM ({t_n}): {f[1]}", "Infermiere", firma_op), True); st.rerun()
+            with t2:
+                with st.form("vit"):
+                    pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
+                    if st.form_submit_button("REGISTRA"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True); st.rerun()
+            with t3:
+                with st.form("ni"):
+                    txt = st.text_area("Consegna Clinica"); 
+                    if st.form_submit_button("SALVA"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True); st.rerun()
+        elif ruolo_corr == "OSS":
+            with st.form("oss_f"):
+                mans = st.multiselect("Mansioni:", ["Igiene", "Cambio", "Pulizia", "Letto"]); txt = st.text_area("Note")
+                if st.form_submit_button("REGISTRA"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧹 {', '.join(mans)} | {txt}", "OSS", firma_op), True); st.rerun()
+        elif ruolo_corr == "Educatore":
+            t1, t2 = st.tabs(["💰 CASSA", "📝 CONSEGNA EDUCATIVA"])
+            with t1:
+                mov = db_run("SELECT importo, tipo FROM cassa WHERE p_id=?", (p_id,)); saldo = sum(m[0] if m[1]=="ENTRATA" else -m[0] for m in mov)
+                st.markdown(f"<div class='cassa-card'>Saldo: <span class='saldo-txt'>{saldo:.2f} €</span></div>", unsafe_allow_html=True)
+                with st.form("cs"):
+                    tp, im, cau = st.selectbox("Tipo", ["ENTRATA", "USCITA"]), st.number_input("€"), st.text_input("Causale")
+                    if st.form_submit_button("REGISTRA MOVIMENTO"):
+                        db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore", firma_op), True); st.rerun()
+            with t2:
+                with st.form("edu_cons"):
+                    txt_edu = st.text_area("Osservazioni Educative")
+                    if st.form_submit_button("SALVA CONSEGNA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📝 {txt_edu}", "Educatore", firma_op), True); st.rerun()
+        st.divider(); render_postits(p_id)
+
+elif nav == "📅 Appuntamenti":
+    st.markdown("<div class='section-banner'><h2>GESTIONE APPUNTAMENTI</h2></div>", unsafe_allow_html=True)
+    t_new, t_agenda = st.tabs(["➕ PROGRAMMA", "📋 AGENDA"])
+    with t_new:
+        with st.form("f_new_app"):
+            p_l = db_run("SELECT id, nome FROM pazienti")
+            if p_l:
+                ps = st.selectbox("Paziente", [p[1] for p in p_l]); pid = [p[0] for p in p_l if p[1]==ps][0]; d, h = st.date_input("Data"), st.time_input("Ora"); n = st.text_input("Causale")
+                if st.form_submit_button("SALVA"):
+                    db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore) VALUES (?,?,?,?,'PROGRAMMATO',?)", (pid, str(d), str(h)[:5], n, firma_op), True)
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 Appuntamento: {n} il {d}", u['ruolo'], firma_op), True); st.rerun()
+    with t_agenda:
+        agenda = db_run("SELECT a.id_u, a.data, a.ora, p.nome, a.nota FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.stato='PROGRAMMATO'")
+        for aid, adt, ahr, apn, ant in agenda:
+            st.markdown(f"<div class='app-card'>📅 {adt} {ahr} - <b>{apn}</b>: {ant}</div>", unsafe_allow_html=True)
+            if st.button("FATTO", key=f"app_{aid}"): db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True); st.rerun()
+
+elif nav == "⚙️ Admin":
+    st.markdown("<div class='section-banner'><h2>PANNELLO ADMIN</h2></div>", unsafe_allow_html=True)
+    tab1, tab2, tab3 = st.tabs(["UTENTI", "PAZIENTI", "LOG EVENTI"])
+    with tab1:
+        for us, un, uc, uq in db_run("SELECT user, nome, cognome, qualifica FROM utenti"):
+            c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
+            if us != "admin":
+                if c2.button("ELIMINA", key=f"d_{us}"): db_run("DELETE FROM utenti WHERE user=?", (us,), True); st.rerun()
+            else:
+                c2.markdown("🔒 *Protetto*")
+    with tab2:
+        with st.form("np"):
+            np_val = st.text_input("Nuovo Paziente")
+            if st.form_submit_button("AGGIUNGI"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (np_val.upper(),), True); st.rerun()
+        for pid, pn in db_run("SELECT id, nome FROM pazienti"):
+            c1, c2 = st.columns([0.8, 0.2]); c1.write(pn)
+            if c2.button("ELIMINA", key=f"dp_{pid}"): db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True); st.rerun()
+    with tab3:
+        st.subheader("Cancellazione Selettiva Log")
+        lista_p = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        filtro_p = st.selectbox("Filtra per Paziente:", ["TUTTI"] + [p[1] for p in lista_p])
+        query_log = "SELECT e.id_u, e.data, e.ruolo, e.op, e.nota, p.nome FROM eventi e JOIN pazienti p ON e.id = p.id"
+        params_log = []
+        if filtro_p != "TUTTI": query_log += " WHERE p.nome = ?"; params_log.append(filtro_p)
+        tutti_log = db_run(query_log + " ORDER BY e.id_u DESC", tuple(params_log))
+        if st.button("🚨 RESET TOTALE LOG"): db_run("DELETE FROM eventi", (), True); st.rerun()
         st.divider()
-        st.subheader("📂 Gestione")
-        active_apps = db_query("SELECT a.id_u, a.data, p.nome FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.stato='ATTIVO' ORDER BY a.data ASC")
-        if active_apps:
-            to_arch = st.selectbox("Seleziona da Archiviare:", [f"{x[1]} - {x[2]}" for x in active_apps])
-            t_id = [x[0] for x in active_apps if f"{x[1]} - {x[2]}" == to_arch][0]
-            if st.button("✅ ARCHIVIA"):
-                db_query("UPDATE appuntamenti SET stato='ARCHIVIATO' WHERE id_u=?", (t_id,), commit=True)
-                st.rerun()
-
-# --- 7. MODULO CASSA (LOGICA INTEGRALE) ---
-elif choice == "💰 Cassa Pazienti":
-    st.markdown("<div class='section-banner'><h1>💰 CASSA PAZIENTI</h1></div>", unsafe_allow_html=True)
-    p_data = db_query("SELECT id, nome FROM pazienti ORDER BY nome")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.subheader("Nuovo Movimento")
-        with st.form("cassa_f"):
-            p_c = st.selectbox("Paziente", [p[1] for p in p_data])
-            t_m = st.radio("Tipo", ["ENTRATA", "USCITA"])
-            val = st.number_input("Euro", min_value=0.0)
-            cau = st.text_input("Causale")
-            if st.form_submit_button("ESEGUI"):
-                pid = [p[0] for p in p_data if p[1] == p_c][0]
-                db_query("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)",
-                         (pid, oggi_str, cau, val, t_m, firma_op), commit=True)
-                st.success("Operazione registrata.")
-                st.rerun()
-    with c2:
-        st.subheader("Saldo Corrente")
-        p_s = st.selectbox("Saldo di:", [p[1] for p in p_data])
-        sid = [p[0] for p in p_data if p[1] == p_s][0]
-        ent = db_query("SELECT SUM(importo) FROM cassa WHERE p_id=? AND tipo='ENTRATA'", (sid,))[0][0] or 0
-        usc = db_query("SELECT SUM(importo) FROM cassa WHERE p_id=? AND tipo='USCITA'", (sid,))[0][0] or 0
-        st.metric("DISPONIBILITÀ", f"{ent - usc:.2f} €")
-
-# --- 8. PANNELLO ADMIN (CONTROLLO TOTALE) ---
-elif choice == "⚙️ Pannello Admin":
-    st.markdown("<h1>⚙️ AMMINISTRAZIONE ELITE</h1>", unsafe_allow_html=True)
-    t1, t2 = st.tabs(["Personale", "Anagrafica Pazienti"])
-    with t1:
-        with st.form("admin_staff"):
-            st.subheader("Nuovo Operatore")
-            nu, np, nn, nc, nq = st.text_input("User"), st.text_input("Pass"), st.text_input("Nome"), st.text_input("Cognome"), st.selectbox("Ruolo", ["Medico", "Infermiere", "Educatore", "OPSI", "OSS", "Psicologo", "Assistente Sociale"])
-            if st.form_submit_button("ATTIVA ACCOUNT"):
-                db_query("INSERT INTO utenti VALUES (?,?,?,?,?)", (nu, hash_pw(np), nn, nc, nq), commit=True)
-                st.success("Account Operativo.")
-    with t2:
-        with st.form("admin_pax"):
-            st.subheader("Inserimento Paziente")
-            p_n = st.text_input("Nome Cognome")
-            p_r = st.selectbox("Reparto", ["REMS A", "REMS B", "MODULO TRANSITO"])
-            if st.form_submit_button("REGISTRA"):
-                db_query("INSERT INTO pazienti (nome, reparto) VALUES (?,?)", (p_n, p_r), commit=True)
-                st.success("Paziente inserito nel database.")
+        for lid, ldt, lru, lop, lnt, lpnome in tutti_log:
+            cl1, cl2 = st.columns([0.85, 0.15])
+            cl1.write(f"[{ldt}] **{lpnome}** - **{lru}** ({lop}): {lnt}")
+            if cl2.button("🗑️", key=f"del_log_{lid}"): db_run("DELETE FROM eventi WHERE id_u=?", (lid,), True); st.rerun()
