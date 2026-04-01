@@ -115,20 +115,13 @@ def logica_equipe(p_id, ruolo_op, firma_op):
     now = datetime.now()
     adesso_str = now.strftime("%d/%m/%Y %H:%M")
     
-    # Logica per il reset alle 06:00
     if now.hour < 6:
-        # Se siamo prima delle 6, il "giorno operativo" è ancora quello iniziato ieri
         data_rif = (now.replace(hour=0, minute=0) - pd.Timedelta(days=1)).strftime("%d/%m/%Y")
-        ora_rif = "06:00"
     else:
-        # Dopo le 6, il riferimento è oggi alle 6
         data_rif = now.strftime("%d/%m/%Y")
-        ora_rif = "06:00"
+    ora_rif = "06:00"
 
-    st.subheader(f"Situazione Clinica Recente")
-    render_postits(p_id, limit=5)
-    st.divider()
-
+    # --- PARTE SUPERIORE: MODULI OPERATIVI ---
     if ruolo_op == "Psichiatra":
         t1, t2 = st.tabs(["💊 NUOVA PRESCRIZIONE", "🔄 MODIFICA TERAPIA"])
         with t1:
@@ -143,9 +136,7 @@ def logica_equipe(p_id, ruolo_op, firma_op):
             for tid, fr, ds, mv, pv, nv in terapie:
                 cf, cm, cp, cn, cd = st.columns([3,1,1,1,1])
                 cf.write(f"**{fr}** ({ds})")
-                nm = cm.checkbox("M", value=bool(mv), key=f"m{tid}")
-                np = cp.checkbox("P", value=bool(pv), key=f"p{tid}")
-                nn = cn.checkbox("N", value=bool(nv), key=f"n{tid}")
+                nm, np, nn = cm.checkbox("M", value=bool(mv), key=f"m{tid}"), cp.checkbox("P", value=bool(pv), key=f"p{tid}"), cn.checkbox("N", value=bool(nv), key=f"n{tid}")
                 if nm != mv or np != pv or nn != nv:
                     db_run("UPDATE terapie SET mat=?, pom=?, nott=? WHERE id_u=?", (int(nm), int(np), int(nn), tid), True)
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"🔄 Modifica turni farmaco: {fr}", "Psichiatra", firma_op), True); st.rerun()
@@ -154,34 +145,28 @@ def logica_equipe(p_id, ruolo_op, firma_op):
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"🗑️ Eliminata terapia: {fr}", "Psichiatra", firma_op), True); st.rerun()
 
     elif ruolo_op == "Infermiere":
-        t1, t2, t3 = st.tabs(["💊 SOMMINISTRAZIONI", "📝 CONSEGNE", "📊 PARAMETRI VITALI"])
+        t1, t2, t3 = st.tabs(["💊 SOMMINISTRAZIONI", "📝 CONSEGNE", "📊 PARAMETRI"])
         with t1:
             ter = db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,))
-            
-            # Recuperiamo gli eventi solo da dopo l'ultimo reset delle 06:00
             rif_full = f"{data_rif} {ora_rif}"
-            eventi_ciclo_attuale = db_run("SELECT nota FROM eventi WHERE id=? AND data >= ?", (p_id, rif_full))
-            note_ciclo = [ev[0] for ev in eventi_ciclo_attuale]
-
+            eventi_ciclo = db_run("SELECT nota FROM eventi WHERE id=? AND data >= ?", (p_id, rif_full))
+            note_ciclo = [ev[0] for ev in eventi_ciclo]
             mostrati = 0
             for t in ter:
                 turni_disp = []
                 if t[3] and not any(f"TERAPIA MAT: {t[1]}" in n for n in note_ciclo): turni_disp.append("MAT")
                 if t[4] and not any(f"TERAPIA POM: {t[1]}" in n for n in note_ciclo): turni_disp.append("POM")
                 if t[5] and not any(f"TERAPIA NOT: {t[1]}" in n for n in note_ciclo): turni_disp.append("NOT")
-                
                 if turni_disp:
                     mostrati += 1
                     with st.expander(f"📌 {t[1]} - {t[2]}", expanded=True):
                         c1, c2, c3 = st.columns(3)
-                        scelta_t = c1.selectbox("Turno", turni_disp, key=f"t_{t[0]}")
+                        st_turno = c1.selectbox("Turno", turni_disp, key=f"t_{t[0]}")
                         esito = c2.radio("Esito", ["ASSUNTA", "RIFIUTATA"], key=f"e_{t[0]}", horizontal=True)
-                        if c3.button(f"REGISTRA {scelta_t}", key=f"b_{t[0]}"):
+                        if c3.button(f"REGISTRA {st_turno}", key=f"b_{t[0]}"):
                             icona = "✔️" if esito == "ASSUNTA" else "❌"
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"{icona} TERAPIA {scelta_t}: {t[1]} ({esito})", "Infermiere", firma_op), True); st.rerun()
-            
-            if mostrati == 0:
-                st.success(f"✅ Ciclo completato. La lista si riattiverà alle ore 06:00 del { (datetime.strptime(data_rif, '%d/%m/%Y') + pd.Timedelta(days=1)).strftime('%d/%m/%Y') if now.hour >= 6 else data_rif }")
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"{icona} TERAPIA {st_turno}: {t[1]} ({esito})", "Infermiere", firma_op), True); st.rerun()
+            if mostrati == 0: st.success("✅ Ciclo completato.")
 
         with t2:
             with st.form("inf_cons"):
@@ -191,8 +176,7 @@ def logica_equipe(p_id, ruolo_op, firma_op):
         with t3:
             with st.form("inf_par"):
                 c1, c2, c3 = st.columns(3)
-                pa, fc, sat = c1.text_input("PA"), c2.text_input("FC"), c3.text_input("Sat%")
-                te, gl = c1.text_input("Temp"), c2.text_input("Glic")
+                pa, fc, sat, te, gl = c1.text_input("PA"), c2.text_input("FC"), c3.text_input("Sat%"), c1.text_input("Temp"), c2.text_input("Glic")
                 if st.form_submit_button("SALVA PARAMETRI"):
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"📊 PARAMETRI: PA {pa}, FC {fc}, Sat {sat}%, T {te}, G {gl}", "Infermiere", firma_op), True); st.rerun()
 
@@ -217,6 +201,11 @@ def logica_equipe(p_id, ruolo_op, firma_op):
             if st.form_submit_button("CONFERMA"):
                 lista = [l for v, l in zip(m, ["Stanza","Fumo","Refettorio","Cortile","Caffè","Lavatrice"]) if v]
                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"🧹 MANSIONI: {', '.join(lista)}", "OSS", firma_op), True); st.rerun()
+
+    # --- PARTE INFERIORE: SITUAZIONE CLINICA RECENTE ---
+    st.divider()
+    st.subheader(f"Situazione Clinica Recente")
+    render_postits(p_id, limit=8)
 
 # --- NAVIGAZIONE ---
 if nav == "📊 Monitoraggio":
