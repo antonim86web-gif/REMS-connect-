@@ -100,7 +100,7 @@ if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"):
 
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
-    Sviluppato da: Antonio Perito<br>
+    Sviluppato da: AntonioWebMaster<br>
     Versione: ELITE PRO v15.5<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
@@ -152,7 +152,6 @@ elif nav == "👥 Modulo Equipe":
                 for i, (t_n, t_idx, t_css, t_ico) in enumerate(turni):
                     with cols[i]:
                         for f in [x for x in terapie if x[t_idx]]:
-                            # STRINGA MAGICA
                             check = db_run("SELECT id_u FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%SOMM ({t_n}): {f[1]}%", f"{oggi}%"))
                             if not check:
                                 st.markdown(f"<div class='therapy-container'><div class='turn-header {t_css}'>{t_ico} {t_n}</div><b>{f[1]}</b><br>{f[2]}</div>", unsafe_allow_html=True)
