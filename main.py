@@ -90,13 +90,6 @@ if not st.session_state.user_session:
             if st.form_submit_button("ENTRA"):
                 res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
                 if res: st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2]}; st.rerun()
-    with t_reg:
-        with st.form("r"):
-            nu, np = st.text_input("Username"), st.text_input("Password", type="password")
-            nn, nc = st.text_input("Nome"), st.text_input("Cognome")
-            nq = st.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS"])
-            if st.form_submit_button("REGISTRA"):
-                db_run("INSERT INTO utenti VALUES (?,?,?,?,?)", (nu, hash_pw(np), nn, nc, nq), True); st.success("Registrato!"); st.rerun()
     st.stop()
 
 u = st.session_state.user_session
@@ -115,13 +108,13 @@ def logica_equipe(p_id, ruolo_op, firma_op):
     now = datetime.now()
     adesso_str = now.strftime("%d/%m/%Y %H:%M")
     
+    # Calcolo data riferimento per il ciclo delle 06:00
     if now.hour < 6:
         data_rif = (now.replace(hour=0, minute=0) - pd.Timedelta(days=1)).strftime("%d/%m/%Y")
     else:
         data_rif = now.strftime("%d/%m/%Y")
-    ora_rif = "06:00"
+    rif_full = f"{data_rif} 06:00"
 
-    # --- PARTE SUPERIORE: MODULI OPERATIVI ---
     if ruolo_op == "Psichiatra":
         t1, t2 = st.tabs(["💊 NUOVA PRESCRIZIONE", "🔄 MODIFICA TERAPIA"])
         with t1:
@@ -148,15 +141,20 @@ def logica_equipe(p_id, ruolo_op, firma_op):
         t1, t2, t3 = st.tabs(["💊 SOMMINISTRAZIONI", "📝 CONSEGNE", "📊 PARAMETRI"])
         with t1:
             ter = db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,))
-            rif_full = f"{data_rif} {ora_rif}"
-            eventi_ciclo = db_run("SELECT nota FROM eventi WHERE id=? AND data >= ?", (p_id, rif_full))
-            note_ciclo = [ev[0] for ev in eventi_ciclo]
             mostrati = 0
             for t in ter:
+                turni_prescritti = []
+                if t[3]: turni_prescritti.append("MAT")
+                if t[4]: turni_prescritti.append("POM")
+                if t[5]: turni_prescritti.append("NOT")
+                
                 turni_disp = []
-                if t[3] and not any(f"TERAPIA MAT: {t[1]}" in n for n in note_ciclo): turni_disp.append("MAT")
-                if t[4] and not any(f"TERAPIA POM: {t[1]}" in n for n in note_ciclo): turni_disp.append("POM")
-                if t[5] and not any(f"TERAPIA NOT: {t[1]}" in n for n in note_ciclo): turni_disp.append("NOT")
+                for tp in turni_prescritti:
+                    # Controllo RIGOROSO: Cerca se esiste un evento per questo farmaco e questo turno dopo il reset
+                    check = db_run("SELECT id_u FROM eventi WHERE id=? AND data >= ? AND nota LIKE ?", (p_id, rif_full, f"%TERAPIA {tp}: {t[1]}%"))
+                    if not check:
+                        turni_disp.append(tp)
+                
                 if turni_disp:
                     mostrati += 1
                     with st.expander(f"📌 {t[1]} - {t[2]}", expanded=True):
@@ -165,8 +163,10 @@ def logica_equipe(p_id, ruolo_op, firma_op):
                         esito = c2.radio("Esito", ["ASSUNTA", "RIFIUTATA"], key=f"e_{t[0]}", horizontal=True)
                         if c3.button(f"REGISTRA {st_turno}", key=f"b_{t[0]}"):
                             icona = "✔️" if esito == "ASSUNTA" else "❌"
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"{icona} TERAPIA {st_turno}: {t[1]} ({esito})", "Infermiere", firma_op), True); st.rerun()
-            if mostrati == 0: st.success("✅ Ciclo completato.")
+                            # Nota formattata per essere riconosciuta dal controllo LIKE
+                            nota_somm = f"{icona} TERAPIA {st_turno}: {t[1]} ({esito})"
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, nota_somm, "Infermiere", firma_op), True); st.rerun()
+            if mostrati == 0: st.success("✅ Ciclo terapie completato per questo paziente.")
 
         with t2:
             with st.form("inf_cons"):
@@ -177,7 +177,7 @@ def logica_equipe(p_id, ruolo_op, firma_op):
             with st.form("inf_par"):
                 c1, c2, c3 = st.columns(3)
                 pa, fc, sat, te, gl = c1.text_input("PA"), c2.text_input("FC"), c3.text_input("Sat%"), c1.text_input("Temp"), c2.text_input("Glic")
-                if st.form_submit_button("SALVA PARAMETRI"):
+                if st.form_submit_button("SALVA"):
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"📊 PARAMETRI: PA {pa}, FC {fc}, Sat {sat}%, T {te}, G {gl}", "Infermiere", firma_op), True); st.rerun()
 
     elif ruolo_op == "Educatore":
@@ -202,7 +202,6 @@ def logica_equipe(p_id, ruolo_op, firma_op):
                 lista = [l for v, l in zip(m, ["Stanza","Fumo","Refettorio","Cortile","Caffè","Lavatrice"]) if v]
                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, adesso_str, f"🧹 MANSIONI: {', '.join(lista)}", "OSS", firma_op), True); st.rerun()
 
-    # --- PARTE INFERIORE: SITUAZIONE CLINICA RECENTE ---
     st.divider()
     st.subheader(f"Situazione Clinica Recente")
     render_postits(p_id, limit=8)
@@ -244,8 +243,17 @@ elif nav == "👥 Modulo Equipe":
         logica_equipe(p_id, ruolo_da_usare, firma_da_usare)
 
 elif nav == "⚙️ Sistema":
-    st.markdown("<div class='section-banner'><h2>AGGIUNTA PAZIENTI</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-banner'><h2>GESTIONE ANAGRAFICA</h2></div>", unsafe_allow_html=True)
     with st.form("p_add"):
         np = st.text_input("Nome Paziente")
         if st.form_submit_button("AGGIUNGI"):
             db_run("INSERT INTO pazienti (nome) VALUES (?)", (np.upper(),), True); st.rerun()
+    
+    st.divider()
+    st.subheader("Pazienti Attuali")
+    p_all = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    for pid, nome in p_all:
+        col1, col2 = st.columns([0.8, 0.2])
+        col1.write(nome)
+        if col2.button("Elimina", key=f"delp_{pid}"):
+            db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); st.rerun()
