@@ -1,11 +1,16 @@
 import sqlite3
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v26.0 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v26.0", layout="wide", page_icon="🏥")
+# --- FUNZIONE ORARIO ITALIA (UTC+2) ---
+def get_now_it():
+    # Correzione di 2 ore rispetto all'orario del server (UTC)
+    return datetime.now(timezone.utc) + timedelta(hours=2)
+
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v27.0 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v27.0", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -110,7 +115,6 @@ if not st.session_state.user_session:
             reg_q = st.selectbox("Qualifica/Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Admin"])
             if st.form_submit_button("CREA ACCOUNT"):
                 if reg_u and reg_p and reg_n and reg_c:
-                    # Controllo se l'utente esiste già
                     exist = db_run("SELECT user FROM utenti WHERE user=?", (reg_u,))
                     if exist:
                         st.warning("Questo username è già in uso.")
@@ -139,8 +143,8 @@ if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"):
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v26.0<br>
-    Data: {datetime.now().strftime('%Y')}
+    Versione: ELITE PRO v27.0<br>
+    Data: {get_now_it().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
 
@@ -159,7 +163,8 @@ elif nav == "👥 Modulo Equipe":
     if p_lista:
         p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
-        now = datetime.now(); oggi = now.strftime("%d/%m/%Y")
+        now = get_now_it()
+        oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
             t1, t2 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie"])
@@ -222,7 +227,7 @@ elif nav == "👥 Modulo Equipe":
             with st.form("cs"):
                 tp, im, cau = st.selectbox("Tipo", ["ENTRATA", "USCITA"]), st.number_input("€"), st.text_input("Causale")
                 if st.form_submit_button("REGISTRA"):
-                    db_run("INSERT INTO cassa (p_id, data, cauale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
+                    db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore", firma_op), True); st.rerun()
 
         st.divider(); render_postits(p_id, filter_role=ruolo_corr)
@@ -240,7 +245,7 @@ elif nav == "📅 Appuntamenti":
             n_app = st.text_input("Causale (es: Visita Oculistica, Colloquio, Uscita)")
             if st.form_submit_button("SALVA IN AGENDA"):
                 db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore) VALUES (?,?,?,?,'PROGRAMMATO',?)", (p_app_id, str(d_app), str(h_app)[:5], n_app, firma_op), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_app_id, datetime.now().strftime("%d/%m/%Y %H:%M"), f"📅 Programmato appuntamento: {n_app} per il {d_app}", u['ruolo'], firma_op), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_app_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 Programmato appuntamento: {n_app} per il {d_app}", u['ruolo'], firma_op), True)
                 st.success("Appuntamento registrato!"); st.rerun()
 
     with t_agenda:
