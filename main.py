@@ -8,8 +8,8 @@ import pandas as pd
 def get_now_it():
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.3 (VERSIONE FINALE) ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v28.3", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.4 (TOTALE) ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v28.4", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -97,6 +97,7 @@ if not st.session_state.user_session:
     with c_l:
         st.subheader("Login")
         with st.form("login_main"):
+            # Trim degli spazi e minuscolo forzato per evitare errori
             u_i = st.text_input("Username").lower().strip()
             p_i = st.text_input("Password", type="password")
             if st.form_submit_button("ACCEDI"):
@@ -104,25 +105,25 @@ if not st.session_state.user_session:
                 if res: 
                     st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}
                     st.rerun()
-                else: st.error("Credenziali errate o utente inesistente.")
+                else: st.error("Errore login: Credenziali errate o utente non creato.")
     with c_r:
         st.subheader("Registrazione")
         with st.form("reg_main"):
-            ru = st.text_input("User").lower().strip()
-            rp = st.text_input("PW", type="password")
+            ru = st.text_input("Scegli Username").lower().strip()
+            rp = st.text_input("Scegli Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
-            # Lista Ruoli Testata (Psichiatra -> OPSI)
-            rq = st.selectbox("Ruolo", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI", "Admin"])
-            if st.form_submit_button("CREA NUOVO OPERATORE"):
+            # Lista ruoli completa e verificata
+            rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI", "Admin"])
+            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
                     esistente = db_run("SELECT user FROM utenti WHERE user=?", (ru,))
-                    if esistente: 
-                        st.error("Errore: Username già occupato.")
+                    if esistente:
+                        st.error("Username già in uso.")
                     else:
                         db_run("INSERT INTO utenti VALUES (?,?,?,?,?)", (ru, hash_pw(rp), rn.capitalize(), rc.capitalize(), rq), True)
-                        st.success(f"Operatore {rq} creato! Puoi fare il login.")
-                else: st.warning("Compila tutti i campi.")
+                        st.success(f"Profilo {rq} creato correttamente nel database!")
+                else: st.warning("Compila tutti i campi per la registrazione.")
     st.stop()
 
 u = st.session_state.user_session
