@@ -4,8 +4,8 @@ from datetime import datetime
 import hashlib
 import pandas as pd
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v16.5 ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v16.5", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v18.0 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v18.0", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -51,19 +51,11 @@ DB_NAME = "rems_final_v12.db"
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        # Struttura base
         cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
         cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
-        
-        # FIX AUTOMATICO: Aggiunta colonne se mancanti (MIGRAZIONE)
-        try: cur.execute("ALTER TABLE utenti ADD COLUMN contratto TEXT")
-        except: pass
-        try: cur.execute("ALTER TABLE utenti ADD COLUMN scadenza TEXT")
-        except: pass
-        
         try:
             if query: cur.execute(query, params)
             if commit: conn.commit()
@@ -91,7 +83,7 @@ if not st.session_state.user_session:
         u_i, p_i = st.text_input("Username"), st.text_input("Password", type="password")
         if st.form_submit_button("ACCEDI AL SISTEMA"):
             res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
-            if res: st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2]}; st.rerun()
+            if res: st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}; st.rerun()
     st.stop()
 
 u = st.session_state.user_session
@@ -99,17 +91,15 @@ firma_op = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 
 # --- SIDEBAR ---
 st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
-st.sidebar.markdown(f"<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
-
+st.sidebar.markdown(f民主黨<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
 nav = st.sidebar.radio("NAVIGAZIONE", ["📊 Monitoraggio", "👥 Modulo Equipe", "⚙️ Admin"])
-
 if st.sidebar.button("CHIUDI SESSIONE (LOGOUT)"): 
     st.session_state.user_session = None; st.rerun()
 
 st.sidebar.markdown(f"""
 <div class='sidebar-footer'>
     Sviluppato da: AntonioWebMaster<br>
-    Versione: ELITE PRO v16.5<br>
+    Versione: ELITE PRO v18.0<br>
     Data: {datetime.now().strftime('%Y')}
 </div>
 """, unsafe_allow_html=True)
@@ -199,22 +189,25 @@ elif nav == "👥 Modulo Equipe":
 
 elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRATIVO ELITE</h2></div>", unsafe_allow_html=True)
-    tab1, tab2, tab3 = st.tabs(["👥 GESTIONE OPERATORI", "👤 GESTIONE PAZIENTI", "🛡️ SICUREZZA LOG"])
+    tab1, tab2, tab3 = st.tabs(["👥 UTENTI & CREDENZIALI", "👤 GESTIONE PAZIENTI", "🛡️ SICUREZZA LOG"])
     
     with tab1:
-        st.subheader("Contratti e Personale")
-        ops = db_run("SELECT user, nome, cognome, qualifica, contratto, scadenza FROM utenti")
-        for o_user, o_nome, o_cogn, o_qual, o_cont, o_scad in ops:
-            with st.expander(f"Operatore: {o_nome} {o_cogn} ({o_qual})"):
-                with st.form(f"form_o_{o_user}"):
-                    c1, c2 = st.columns(2)
-                    c_list = ["Indeterminato", "Determinato", "P.IVA", "Interinale"]
-                    idx_c = c_list.index(o_cont) if o_cont in c_list else 0
-                    new_cont = c1.selectbox("Tipo Contratto", c_list, index=idx_c)
-                    new_scad = c2.text_input("Scadenza (GG/MM/AAAA)", value=o_scad if o_scad else "")
-                    if st.form_submit_button("SALVA DATI CONTRATTUALI"):
-                        db_run("UPDATE utenti SET contratto=?, scadenza=? WHERE user=?", (new_cont, new_scad, o_user), True); st.rerun()
-    
+        st.subheader("Database Operatori (Username e Password)")
+        # Recupero utenti con password (hash o testo se non cifrato)
+        users_full = db_run("SELECT user, pwd, nome, cognome, qualifica FROM utenti")
+        
+        for u_id, u_pw, u_n, u_c, u_q in users_full:
+            with st.container():
+                c_u1, c_u2, c_u3 = st.columns([0.4, 0.4, 0.2])
+                c_u1.markdown(f"**{u_n} {u_c}** ({u_q})")
+                c_u2.code(f"User: {u_id} | PW: {u_pw[:15]}...") # Mostra parte della password (hash)
+                if c_u3.button("ELIMINA 🗑️", key=f"del_u_{u_id}"):
+                    if u_id == u['uid']: st.error("Impossibile auto-eliminarsi")
+                    else:
+                        db_run("DELETE FROM utenti WHERE user=?", (u_id,), True)
+                        st.success(f"Utente {u_id} rimosso."); st.rerun()
+                st.divider()
+
     with tab2:
         st.subheader("Anagrafica Pazienti")
         with st.form("new_p"):
@@ -226,9 +219,9 @@ elif nav == "⚙️ Admin":
         pazs = db_run("SELECT id, nome FROM pazienti")
         for p_id_a, p_nome_a in pazs:
             col_a, col_b, col_c = st.columns([0.6, 0.2, 0.2])
-            new_n = col_a.text_input("Modifica Nome", value=p_nome_a, key=f"edit_p_{p_id_a}")
+            new_n_p = col_a.text_input("Modifica Nome", value=p_nome_a, key=f"edit_p_{p_id_a}")
             if col_b.button("💾", key=f"save_p_{p_id_a}"):
-                db_run("UPDATE pazienti SET nome=? WHERE id=?", (new_n.upper(), p_id_a), True); st.rerun()
+                db_run("UPDATE pazienti SET nome=? WHERE id=?", (new_n_p.upper(), p_id_a), True); st.rerun()
             if col_c.button("🗑️", key=f"del_p_{p_id_a}"):
                 db_run("DELETE FROM pazienti WHERE id=?", (p_id_a,), True)
                 db_run("DELETE FROM terapie WHERE p_id=?", (p_id_a,), True)
@@ -236,14 +229,20 @@ elif nav == "⚙️ Admin":
                 st.rerun()
 
     with tab3:
-        st.subheader("Pulizia Mirata Diario Clinico")
+        st.subheader("Cancellazione Puntuale Note Diario")
         pazs_log = db_run("SELECT id, nome FROM pazienti")
         for pl_id, pl_nome in pazs_log:
-            col_l1, col_l2 = st.columns([0.8, 0.2])
-            col_l1.write(f"Voci diario per: **{pl_nome}**")
-            if col_l2.button("CANCELLA LOG ❌", key=f"clear_log_{pl_id}"):
-                db_run("DELETE FROM eventi WHERE id=?", (pl_id,), True)
-                st.success(f"Log di {pl_nome} eliminati!"); st.rerun()
+            with st.expander(f"Dettaglio Log: {pl_nome}"):
+                # Recupera ogni singola nota per il paziente
+                voci = db_run("SELECT id_u, data, nota, op FROM eventi WHERE id=? ORDER BY id_u DESC", (pl_id,))
+                if not voci:
+                    st.write("Nessuna nota presente.")
+                for v_id, v_data, v_nota, v_op in voci:
+                    cv1, cv2 = st.columns([0.85, 0.15])
+                    cv1.write(f"[{v_data}] **{v_op}**: {v_nota}")
+                    if cv2.button("❌", key=f"del_nota_{v_id}"):
+                        db_run("DELETE FROM eventi WHERE id_u=?", (v_id,), True)
+                        st.rerun()
         
         st.divider()
         st.subheader("Reset Globale")
