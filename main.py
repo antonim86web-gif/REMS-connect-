@@ -14,6 +14,19 @@ st.markdown("""
     .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
     .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
 
+    /* MODIFICA SOLO TASTO LOGOUT VERDE */
+    div.stButton > button:first-child:contains("LOGOUT") {
+        background-color: #22c55e !important;
+        color: white !important;
+        border: 1px solid #16a34a !important;
+    }
+    
+    section[data-testid="stSidebar"] .stButton > button {
+        background-color: #22c55e !important;
+        color: white !important;
+        border: 1px solid #16a34a !important;
+    }
+
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
     .postit-body { font-size: 1rem; line-height: 1.4; font-weight: 500; }
