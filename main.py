@@ -52,10 +52,11 @@ st.markdown("""
 # --- DATABASE ENGINE ---
 DB_NAME = "rems_final_v12.db"
 
+def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
+
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
-        # FIX OPERATIONAL ERROR: Reset strutturale se le colonne non corrispondono
         try:
             cur.execute("SELECT user, pwd, nome, cognome, qualifica FROM utenti LIMIT 1")
         except sqlite3.OperationalError:
@@ -70,6 +71,11 @@ def db_run(query, params=(), commit=False):
         cur.execute("CREATE TABLE IF NOT EXISTS stanze (id TEXT PRIMARY KEY, reparto TEXT, tipo TEXT)")
         cur.execute("CREATE TABLE IF NOT EXISTS assegnazioni (p_id INTEGER UNIQUE, stanza_id TEXT, letto INTEGER, data_ass TEXT, FOREIGN KEY(p_id) REFERENCES pazienti(id))")
         
+        # --- ADMIN DEFAULT E STANZE ---
+        if cur.execute("SELECT COUNT(*) FROM utenti WHERE user='admin'").fetchone()[0] == 0:
+            cur.execute("INSERT INTO utenti VALUES (?,?,?,?,?)", ("admin", hash_pw("perito2026"), "SUPER", "USER", "Admin"))
+            conn.commit()
+
         if cur.execute("SELECT COUNT(*) FROM stanze").fetchone()[0] == 0:
             for i in range(1, 7): cur.execute("INSERT INTO stanze VALUES (?,?,?)", (f"A{i}", "A", "ISOLAMENTO" if i==6 else "STANDARD"))
             for i in range(1, 11): cur.execute("INSERT INTO stanze VALUES (?,?,?)", (f"B{i}", "B", "ISOLAMENTO" if i==10 else "STANDARD"))
@@ -80,8 +86,6 @@ def db_run(query, params=(), commit=False):
             return cur.fetchall()
         except Exception as e:
             return []
-
-def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
 
 def render_postits(p_id=None, limit=50, filter_role=None):
     query = "SELECT data, ruolo, op, nota FROM eventi WHERE 1=1"
@@ -118,14 +122,18 @@ if not st.session_state.user_session:
             rp = st.text_input("Scegli Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
-            rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI", "Admin"])
+            # --- ADMIN RIMOSSO DALLA LISTA ---
+            rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
             if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
-                    esistente = db_run("SELECT user FROM utenti WHERE user=?", (ru,))
-                    if esistente: st.error("Username già in uso.")
+                    if ru == "admin": 
+                        st.error("Username 'admin' riservato.")
                     else:
-                        db_run("INSERT INTO utenti (user, pwd, nome, cognome, qualifica) VALUES (?,?,?,?,?)", (ru, hash_pw(rp), rn.capitalize(), rc.capitalize(), rq), True)
-                        st.success(f"Profilo {rq} creato correttamente! Ora puoi accedere.")
+                        esistente = db_run("SELECT user FROM utenti WHERE user=?", (ru,))
+                        if esistente: st.error("Username già in uso.")
+                        else:
+                            db_run("INSERT INTO utenti (user, pwd, nome, cognome, qualifica) VALUES (?,?,?,?,?)", (ru, hash_pw(rp), rn.capitalize(), rc.capitalize(), rq), True)
+                            st.success(f"Profilo {rq} creato correttamente! Ora puoi accedere.")
                 else: st.warning("Compila tutti i campi.")
     st.stop()
 
@@ -301,11 +309,15 @@ elif nav == "⚙️ Admin":
     with tab1:
         for us, un, uc, uq in db_run("SELECT user, nome, cognome, qualifica FROM utenti"):
             c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
-            if c2.button("ELIMINA", key=f"d_{us}"): db_run("DELETE FROM utenti WHERE user=?", (us,), True); st.rerun()
+            # --- PROTEZIONE ADMIN: L'UTENTE 'admin' NON PUO' ESSERE ELIMINATO ---
+            if us != "admin":
+                if c2.button("ELIMINA", key=f"d_{us}"): db_run("DELETE FROM utenti WHERE user=?", (us,), True); st.rerun()
+            else:
+                c2.markdown("🔒 *Protetto*")
     with tab2:
         with st.form("np"):
-            np = st.text_input("Nuovo Paziente")
-            if st.form_submit_button("AGGIUNGI"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (np.upper(),), True); st.rerun()
+            np_val = st.text_input("Nuovo Paziente")
+            if st.form_submit_button("AGGIUNGI"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (np_val.upper(),), True); st.rerun()
         for pid, pn in db_run("SELECT id, nome FROM pazienti"):
             c1, c2 = st.columns([0.8, 0.2]); c1.write(pn)
             if c2.button("ELIMINA", key=f"dp_{pid}"): db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True); st.rerun()
