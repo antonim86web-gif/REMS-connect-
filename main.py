@@ -9,8 +9,8 @@ import calendar
 def get_now_it():
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.8 (INTEGRALE) ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v28.8", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9 (INTEGRALE) ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v28.9", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -22,17 +22,16 @@ st.markdown("""
     .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
     .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
     
-    /* ALERT DINAMICO SIDEBAR */
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
-    /* CALENDARIO DINAMICO */
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: #f1f5f9; padding: 15px; border-radius: 15px; }
-    .cal-day-head { text-align: center; font-weight: 800; color: #1e3a8a; padding: 5px; }
-    .cal-cell { background: white; min-height: 100px; border-radius: 8px; padding: 5px; border: 1px solid #e2e8f0; position: relative; }
-    .cal-cell-today { border: 3px solid #00ff00 !important; background: #f0fff4; }
-    .day-num { font-weight: 900; color: #64748b; font-size: 0.9rem; }
-    .event-tag { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-top: 2px; display: block; border-left: 3px solid #2563eb; }
+    /* STILI TABELLA AGENDA HTML */
+    .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
+    .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 100px; padding: 5px; position: relative; }
+    .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
+    .event-tag-html { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; line-height: 1.1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
 
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
@@ -141,8 +140,7 @@ if not st.session_state.user_session:
             rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
             if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
-                    if ru == "admin": 
-                        st.error("Username 'admin' riservato.")
+                    if ru == "admin": st.error("Username 'admin' riservato.")
                     else:
                         esistente = db_run("SELECT user FROM utenti WHERE user=?", (ru,))
                         if esistente: st.error("Username già in uso.")
@@ -156,11 +154,10 @@ u = st.session_state.user_session
 firma_op = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
 oggi_iso = get_now_it().strftime("%Y-%m-%d")
 
-# --- SIDEBAR CON ALERT ---
+# --- SIDEBAR ---
 st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
 st.sidebar.markdown(f"<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
 
-# Conteggio appuntamenti oggi per Alert
 conta_oggi = db_run("SELECT COUNT(*) FROM appuntamenti WHERE data=? AND stato='PROGRAMMATO'", (oggi_iso,))[0][0]
 if conta_oggi > 0:
     st.sidebar.markdown(f"<div class='alert-sidebar'>⚠️ {conta_oggi} SCADENZE OGGI</div>", unsafe_allow_html=True)
@@ -170,7 +167,7 @@ if u['ruolo'] == "Admin": opts.append("⚙️ Admin")
 nav = st.sidebar.radio("NAVIGAZIONE", opts)
 
 if st.sidebar.button("LOGOUT"): st.session_state.user_session = None; st.rerun()
-st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.8 Elite</div>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
 # --- MODULO MAPPA ---
 if nav == "🗺️ Mappa Posti Letto":
@@ -311,19 +308,19 @@ elif nav == "👥 Modulo Equipe":
         st.divider(); render_postits(p_id)
 
 elif nav == "📅 Agenda Dinamica":
-    st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA ANNUALE</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
     
     # Navigazione Mese/Anno
-    c1, c2, c3 = st.columns([1,2,1])
-    with c1: 
+    c_nav1, c_nav2, c_nav3 = st.columns([1,2,1])
+    with c_nav1: 
         if st.button("⬅️ Mese Precedente"): 
             st.session_state.cal_month -= 1
             if st.session_state.cal_month < 1: st.session_state.cal_month=12; st.session_state.cal_year-=1
             st.rerun()
-    with c2: 
+    with c_nav2: 
         mesi_nomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
         st.markdown(f"<h3 style='text-align:center;'>{mesi_nomi[st.session_state.cal_month-1]} {st.session_state.cal_year}</h3>", unsafe_allow_html=True)
-    with c3:
+    with c_nav3:
         if st.button("Mese Successivo ➡️"):
             st.session_state.cal_month += 1
             if st.session_state.cal_month > 12: st.session_state.cal_month=1; st.session_state.cal_year+=1
@@ -332,27 +329,47 @@ elif nav == "📅 Agenda Dinamica":
     col_cal, col_ins = st.columns([3, 1])
     
     with col_cal:
-        st.markdown("<div class='cal-grid'>", unsafe_allow_html=True)
-        for d in ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]:
-            st.markdown(f"<div class='cal-day-head'>{d}</div>", unsafe_allow_html=True)
+        # Recupero Eventi Mese per query unica (ottimizzazione perito)
+        start_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-01"
+        end_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-31"
+        evs_mese = db_run("SELECT data, p.nome, a.ora FROM appuntamenti a JOIN pazienti p ON a.p_id=p.id WHERE a.data BETWEEN ? AND ? AND a.stato='PROGRAMMATO'", (start_d, end_d))
+        
+        mappa_ev = {}
+        for d_ev, p_n, h_ev in evs_mese:
+            g_int = int(d_ev.split("-")[2])
+            if g_int not in mappa_ev: mappa_ev[g_int] = []
+            mappa_ev[g_int].append(f"<b>{h_ev}</b> {p_n}")
+
+        # Costruzione Tabella HTML (Web Standard per mobile)
+        cal_html = "<table class='cal-table'><thead><tr>"
+        for d_nome in ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]:
+            cal_html += f"<th>{d_nome}</th>"
+        cal_html += "</tr></thead><tbody>"
         
         cal_obj = calendar.Calendar(firstweekday=0)
         for week in cal_obj.monthdayscalendar(st.session_state.cal_year, st.session_state.cal_month):
+            cal_html += "<tr>"
             for day in week:
-                if day == 0: st.markdown("<div></div>", unsafe_allow_html=True)
+                if day == 0:
+                    cal_html += "<td style='background:#f8fafc;'></td>"
                 else:
-                    d_str = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
-                    is_today = "cal-cell-today" if d_str == oggi_iso else ""
-                    evs = db_run("SELECT p.nome, a.ora, a.id_u FROM appuntamenti a JOIN pazienti p ON a.p_id=p.id WHERE a.data=? AND a.stato='PROGRAMMATO'", (d_str,))
+                    d_iso = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
+                    cls_today = "today-html" if d_iso == oggi_iso else ""
                     
-                    st.markdown(f"<div class='cal-cell {is_today}'><span class='day-num'>{day}</span>", unsafe_allow_html=True)
-                    for p_n, p_h, a_id in evs:
-                        st.markdown(f"<span class='event-tag'><b>{p_h}</b> {p_n}</span>", unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+                    g_evs = mappa_ev.get(day, [])
+                    html_evs = "".join([f"<div class='event-tag-html'>{e}</div>" for e in g_evs])
+                    
+                    cal_html += f"""
+                    <td class='{cls_today}'>
+                        <span class='day-num-html'>{day}</span>
+                        {html_evs}
+                    </td>"""
+            cal_html += "</tr>"
+        cal_html += "</tbody></table>"
+        st.markdown(cal_html, unsafe_allow_html=True)
 
     with col_ins:
-        st.subheader("➕ Programma")
+        st.subheader("➕ Nuovo")
         with st.form("add_app_cal"):
             p_l = db_run("SELECT id, nome FROM pazienti")
             ps = st.selectbox("Paziente", [p[1] for p in p_l])
@@ -362,12 +379,13 @@ elif nav == "📅 Agenda Dinamica":
             if st.form_submit_button("REGISTRA"):
                 pid = [p[0] for p in p_l if p[1]==ps][0]
                 db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore) VALUES (?,?,?,?,'PROGRAMMATO',?)", (pid, str(dat), str(ora)[:5], not_a, firma_op), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 Appuntamento: {not_a} il {dat}", u['ruolo'], firma_op), True)
                 st.rerun()
         st.divider()
         st.subheader("📋 Lista Attivi")
         agenda_list = db_run("SELECT a.id_u, a.data, a.ora, p.nome FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.stato='PROGRAMMATO' ORDER BY a.data, a.ora")
         for aid, adt, ahr, apn in agenda_list:
-            st.write(f"● {adt} {ahr} - {apn}")
+            st.markdown(f"**{adt} {ahr}**<br>{apn}", unsafe_allow_html=True)
             if st.button("FATTO", key=f"f_{aid}"):
                 db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True)
                 st.rerun()
@@ -380,8 +398,7 @@ elif nav == "⚙️ Admin":
             c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
             if us != "admin":
                 if c2.button("ELIMINA", key=f"d_{us}"): db_run("DELETE FROM utenti WHERE user=?", (us,), True); st.rerun()
-            else:
-                c2.markdown("🔒 *Protetto*")
+            else: c2.markdown("🔒 *Protetto*")
     with tab2:
         with st.form("np"):
             np_val = st.text_input("Nuovo Paziente")
@@ -390,7 +407,6 @@ elif nav == "⚙️ Admin":
             c1, c2 = st.columns([0.8, 0.2]); c1.write(pn)
             if c2.button("ELIMINA", key=f"dp_{pid}"): db_run("DELETE FROM pazienti WHERE id=?", (pid,), True); db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True); st.rerun()
     with tab3:
-        st.subheader("Cancellazione Selettiva Log")
         lista_p = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
         filtro_p = st.selectbox("Filtra per Paziente:", ["TUTTI"] + [p[1] for p in lista_p])
         query_log = "SELECT e.id_u, e.data, e.ruolo, e.op, e.nota, p.nome FROM eventi e JOIN pazienti p ON e.id = p.id"
