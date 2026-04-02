@@ -396,33 +396,76 @@ elif nav == "👥 Modulo Equipe":
                         st.rerun()
             with t4: render_stu_operativa_interattiva(p_id, ruolo_corr, firma_op)
 
-        elif ruolo_corr == "Infermiere":
-            t1, t2, t3, t4 = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📑 S.T.U."])
+                elif ruolo_corr == "Infermiere":
+            t1, t2, t3, t4 = st.tabs(["💊 SOMMINISTRAZIONE", "💓 PARAMETRI", "📝 CONSEGNE", "📑 S.T.U. INTERATTIVA"])
             with t1:
+                # Recupero tutte le terapie del paziente
                 terapie = db_run("SELECT id_u, farmaco, dose, mat, pom, nott, bis FROM terapie WHERE p_id=?", (p_id,))
-                cols = st.columns(4); turni = [("MAT", 2, "mat-style", "☀️"), ("POM", 3, "pom-style", "🌤️"), ("NOT", 4, "not-style", "🌙"), ("BIS", 5, "not-style", "🧪")]
-                for i, (t_n, t_idx, t_css, t_ico) in enumerate(turni):
+                
+                # Definizione colonne: Nome colonna, Indice nel DB, Classe CSS, Icona
+                sezioni = [
+                    ("MATTINA", 3, "mat-style", "☀️"), 
+                    ("POMERIGGIO", 4, "pom-style", "🌤️"), 
+                    ("NOTTE", 5, "not-style", "🌙"), 
+                    ("AL BISOGNO", 7, "not-style", "🧪") # L'indice 7 corrisponde a 'bis' nella query
+                ]
+                
+                cols = st.columns(4)
+                for i, (titolo, idx_db, css, icona) in enumerate(sezioni):
                     with cols[i]:
-                        for f in [x for x in terapie if x[t_idx]]:
-                            check = db_run("SELECT id_u FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%SOMM ({t_n}): {f[1]}%", f"{oggi}%"))
+                        st.markdown(f"<div class='turn-header {css}'>{icona} {titolo}</div>", unsafe_allow_html=True)
+                        # Filtro i farmaci che hanno il flag attivo (1) per questa fascia oraria
+                        farmaci_fascia = [f for f in terapie if f[idx_db] == 1]
+                        
+                        if not farmaci_fascia:
+                            st.caption("Nessuna terapia")
+                        
+                        for f in farmaci_fascia:
+                            f_id, f_nome, f_dose = f[0], f[1], f[2]
+                            # Controllo se è già stato somministrato OGGI in questa fascia
+                            chiave_somm = f"%✔️ SOMM ({titolo}): {f_nome}%"
+                            check = db_run("SELECT id_u FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
+                                           (p_id, chiave_somm, f"{oggi}%"))
+                            
                             if not check:
-                                st.markdown(f"<div class='therapy-container'><div class='turn-header {t_css}'>{t_ico} {t_n}</div><b>{f[1]}</b><br>{f[2]}</div>", unsafe_allow_html=True)
-                                if st.button(f"CONFERMA", key=f"ok_{f[0]}_{t_n}"): 
-                                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"✔️ SOMM ({t_n}): {f[1]}", "Infermiere", firma_op), True)
+                                # Box Terapia da somministrare
+                                st.markdown(f"""
+                                <div class='therapy-container'>
+                                    <small>{titolo}</small><br>
+                                    <b>{f_nome}</b><br>{f_dose}
+                                </div>
+                                """, unsafe_allow_html=True)
+                                if st.button(f"REGISTRA", key=f"btn_{f_id}_{titolo}", use_container_width=True):
+                                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                                           (p_id, now.strftime("%d/%m/%Y %H:%M"), f"✔️ SOMM ({titolo}): {f_nome} {f_dose}", "Infermiere", firma_op), True)
                                     st.rerun()
+                            else:
+                                st.success(f"✅ {f_nome} fatto")
+
             with t2:
-                with st.form("vit"):
-                    pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
-                    if st.form_submit_button("REGISTRA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True)
+                with st.form("vit_inf"):
+                    c1, c2, c3 = st.columns(3)
+                    pa = c1.text_input("PA (Pressione)")
+                    fc = c2.text_input("FC (Frequenza)")
+                    sat = c3.text_input("SatO2")
+                    tc = c1.text_input("TC (Temp)")
+                    gl = c2.text_input("Glicemia")
+                    if st.form_submit_button("REGISTRA PARAMETRI"): 
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PARAMETRI: PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True)
                         st.rerun()
+
             with t3:
-                with st.form("ni"):
-                    txt = st.text_area("Consegna Clinica"); 
-                    if st.form_submit_button("SALVA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
+                with st.form("consegna_inf"):
+                    txt = st.text_area("Diario Infermieristico / Consegne")
+                    if st.form_submit_button("SALVA IN DIARIO"): 
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
                         st.rerun()
-            with t4: render_stu_operativa_interattiva(p_id, ruolo_corr, firma_op)
+
+            with t4:
+                # Questa richiama la STU con la marcatura A/R e il pop-up
+                render_stu_operativa_interattiva(p_id, ruolo_corr, firma_op)
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST/VALUTAZIONE"])
