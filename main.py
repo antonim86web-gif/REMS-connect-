@@ -1,22 +1,27 @@
 import sqlite3
-
-def aggiorna_database_emergenza():
-    conn = sqlite3.connect('rems_final_v12.db')
-    c = conn.cursor()
-    try:
-        # Questo comando aggiunge la colonna mancante se non esiste
-        c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
-        conn.commit()
-        print("Colonna tipo_evento aggiunta con successo!")
-    except sqlite3.OperationalError:
-        # Se la colonna esiste già, non fa nulla e non dà errore
-        print("La colonna esiste già, tutto ok.")
-    conn.close()
 import streamlit as st
 from datetime import datetime, timedelta, timezone
 import hashlib
 import pandas as pd
 import calendar
+
+# --- FUNZIONE AGGIORNAMENTO DB (PER COLONNE NUOVE) ---
+def aggiorna_struttura_db():
+    conn = sqlite3.connect('rems_final_v12.db')
+    c = conn.cursor()
+    try:
+        # Aggiunta colonna tipo_evento se mancante
+        c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
+    except: pass
+    try:
+        # Aggiunta colonna figura_professionale per i filtri mirati
+        c.execute("ALTER TABLE eventi ADD COLUMN figura_professionale TEXT")
+    except: pass
+    conn.commit()
+    conn.close()
+
+# Esegui aggiornamento all'avvio
+aggiorna_struttura_db()
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
@@ -39,22 +44,11 @@ st.markdown("""
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
     .cal-table { 
-        width:100%; 
-        border-collapse: collapse; 
-        table-layout: fixed; 
-        background: white; 
-        border-radius: 12px; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        width:100%; border-collapse: collapse; table-layout: fixed; background: white; 
+        border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     }
     .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
-    .cal-table td { 
-        border: 1px solid #e2e8f0; 
-        vertical-align: top; 
-        height: 150px; 
-        padding: 5px; 
-        position: relative; 
-        overflow: visible !important; /* Forza la visibilità fuori dalla cella */
-    }
+    .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; overflow: visible !important; }
     .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
     
     .event-tag-html { 
@@ -65,33 +59,13 @@ st.markdown("""
     .event-tag-html .tooltip-text {
         visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff;
         text-align: left; border-radius: 8px; padding: 12px; position: absolute;
-        z-index: 9999 !important; /* Porta in primissimo piano */
-        bottom: 125%; left: 0%; 
-        opacity: 0;
+        z-index: 9999 !important; bottom: 125%; left: 0%; opacity: 0;
         transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
         font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44;
         pointer-events: none;
     }
     .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
     
-    .event-tag-html { 
-        font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; 
-        border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; 
-        line-height: 1.1; position: relative; cursor: help; 
-    }
-    .event-tag-html .tooltip-text {
-        visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff;
-        text-align: left; border-radius: 8px; padding: 12px; position: absolute;
-        z-index: 1000; bottom: 125%; left: 50%; margin-left: -110px; opacity: 0;
-        transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44;
-    }
-    .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
-    .event-tag-html .tooltip-text::after {
-        content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
-        border-width: 5px; border-style: solid; border-color: #1e3a8a transparent transparent transparent;
-    }
-
     .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
@@ -132,10 +106,9 @@ def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
         try:
-            # Init schema if not exists
             cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE)")
-            cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, figura_professionale TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
             cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
             cur.execute("CREATE TABLE IF NOT EXISTS appuntamenti (id_u INTEGER PRIMARY KEY AUTOINCREMENT, p_id INTEGER, data TEXT, ora TEXT, nota TEXT, stato TEXT, autore TEXT, tipo_evento TEXT, mezzo TEXT, accompagnatore TEXT)")
@@ -156,11 +129,18 @@ def db_run(query, params=(), commit=False):
             st.error(f"Errore DB: {e}")
             return []
 
-def render_postits(p_id=None, limit=50, filter_role=None):
-    query = "SELECT data, ruolo, op, nota FROM eventi WHERE 1=1"
-    params = []
-    if p_id: query += " AND id=?"; params.append(p_id)
-    if filter_role: query += " AND ruolo=?"; params.append(filter_role)
+def render_postits(p_id, limit=50):
+    # Innesto Filtro con Key Univoca per evitare errore DuplicateElementId
+    ruoli_disp = ["Tutti", "Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"]
+    scelta_ruolo = st.multiselect("Filtra per Figura Professionale", ruoli_disp, default="Tutti", key=f"filt_{p_id}")
+
+    query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
+    params = [p_id]
+    
+    if "Tutti" not in scelta_ruolo and scelta_ruolo:
+        query += f" AND ruolo IN ({','.join(['?']*len(scelta_ruolo))})"
+        params.extend(scelta_ruolo)
+
     res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
     for d, r, o, nt in res:
         role_map = {"Psichiatra":"psichiatra", "Infermiere":"infermiere", "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", "Assistente Sociale":"sociale", "OPSI":"opsi"}
@@ -245,7 +225,7 @@ if nav == "🗺️ Mappa Posti Letto":
             st.markdown("</div></div>", unsafe_allow_html=True)
     with st.expander("Sposta Paziente"):
         p_list = db_run("SELECT id, nome FROM pazienti")
-        sel_p = st.selectbox("Paziente", [p[1] for p in p_list], index=None)
+        sel_p = st.selectbox("Paziente", [p[1] for p in p_l if p[1]==sel_p][0] if 'p_l' in locals() else [p[1] for p in p_list], index=None)
         if sel_p:
             pid = [p[0] for p in p_list if p[1]==sel_p][0]
             posti_liberi = [f"{sid}-L{l}" for sid, si in mappa.items() for l, po in si['letti'].items() if not po]
@@ -261,7 +241,8 @@ if nav == "🗺️ Mappa Posti Letto":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     for pid, nome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
-        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): render_postits(pid)
+        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): 
+            render_postits(pid)
 
 elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
