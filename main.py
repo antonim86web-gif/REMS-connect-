@@ -30,9 +30,27 @@ st.markdown("""
     .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
     .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; }
     .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
-    .event-tag-html { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; line-height: 1.1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
+    
+    /* --- NUOVO SISTEMA TOOLTIP (POP-UP ALL'HOVER) --- */
+    .event-tag-html { 
+        font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; 
+        border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; 
+        line-height: 1.1; position: relative; cursor: help; 
+    }
+    .event-tag-html .tooltip-text {
+        visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff;
+        text-align: left; border-radius: 8px; padding: 12px; position: absolute;
+        z-index: 1000; bottom: 125%; left: 50%; margin-left: -110px; opacity: 0;
+        transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44;
+    }
+    .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
+    .event-tag-html .tooltip-text::after {
+        content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
+        border-width: 5px; border-style: solid; border-color: #1e3a8a transparent transparent transparent;
+    }
 
+    .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
     
@@ -72,7 +90,6 @@ def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
         try:
-            # Verifica e creazione tabelle se mancanti
             cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE)")
             cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
@@ -82,7 +99,6 @@ def db_run(query, params=(), commit=False):
             cur.execute("CREATE TABLE IF NOT EXISTS stanze (id TEXT PRIMARY KEY, reparto TEXT, tipo TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS assegnazioni (p_id INTEGER UNIQUE, stanza_id TEXT, letto INTEGER, data_ass TEXT, FOREIGN KEY(p_id) REFERENCES pazienti(id))")
             
-            # Init Admin e Stanze
             if cur.execute("SELECT COUNT(*) FROM utenti WHERE user='admin'").fetchone()[0] == 0:
                 cur.execute("INSERT INTO utenti VALUES (?,?,?,?,?)", ("admin", hash_pw("perito2026"), "SUPER", "USER", "Admin"))
             
@@ -304,7 +320,6 @@ elif nav == "👥 Modulo Equipe":
 elif nav == "📅 Agenda Dinamica":
     st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
     
-    # Navigazione Mese/Anno
     c_nav1, c_nav2, c_nav3 = st.columns([1,2,1])
     with c_nav1: 
         if st.button("⬅️ Mese Precedente"): 
@@ -325,16 +340,32 @@ elif nav == "📅 Agenda Dinamica":
     with col_cal:
         start_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-01"
         end_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-31"
-        evs_mese = db_run("SELECT data, p.nome, a.ora, a.tipo_evento, a.mezzo FROM appuntamenti a JOIN pazienti p ON a.p_id=p.id WHERE a.data BETWEEN ? AND ? AND a.stato='PROGRAMMATO'", (start_d, end_d))
+        
+        # QUERY AGGIORNATA PER TOOLTIP
+        evs_mese = db_run("""
+            SELECT a.data, p.nome, a.ora, a.tipo_evento, a.mezzo, a.nota, a.accompagnatore 
+            FROM appuntamenti a 
+            JOIN pazienti p ON a.p_id=p.id 
+            WHERE a.data BETWEEN ? AND ? AND a.stato='PROGRAMMATO'
+        """, (start_d, end_d))
         
         mappa_ev = {}
-        for d_ev, p_n, h_ev, t_ev, m_ev in evs_mese:
+        for d_ev, p_n, h_ev, t_ev, m_ev, nt_ev, acc_ev in evs_mese:
             try:
                 g_int = int(d_ev.split("-")[2])
                 if g_int not in mappa_ev: mappa_ev[g_int] = []
                 prefix = "🚗" if t_ev == "Uscita Esterna" else "🏠"
-                mezzo_txt = f" ({m_ev})" if m_ev != "Nessuno" else ""
-                mappa_ev[g_int].append(f"<b>{h_ev}</b> {prefix} {p_n}{mezzo_txt}")
+                
+                # HTML DEL POP-UP (Tooltip)
+                info_popup = f"<b>{t_ev}</b><br>⏰ {h_ev}<br>👤 {p_n}<br>🚗 {m_ev}<br>🤝 Accomp: {acc_ev}<br>📝 {nt_ev}"
+                
+                tag_final = f'''
+                    <div class="event-tag-html">
+                        {prefix} {p_n}
+                        <span class="tooltip-text">{info_popup}</span>
+                    </div>
+                '''
+                mappa_ev[g_int].append(tag_final)
             except: pass
 
         cal_html = "<table class='cal-table'><thead><tr>"
@@ -352,53 +383,36 @@ elif nav == "📅 Agenda Dinamica":
                     d_iso = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
                     cls_today = "today-html" if d_iso == oggi_iso else ""
                     g_evs = mappa_ev.get(day, [])
-                    html_evs = "".join([f"<div class='event-tag-html'>{e}</div>" for e in g_evs])
+                    html_evs = "".join(g_evs)
                     cal_html += f"<td class='{cls_today}'><span class='day-num-html'>{day}</span>{html_evs}</td>"
             cal_html += "</tr>"
         cal_html += "</tbody></table>"
         st.markdown(cal_html, unsafe_allow_html=True)
 
-        # --- NOTA / REPORT SOTTO IL CALENDARIO ---
-        st.markdown("### 📝 Report Appuntamenti del Mese")
-        if evs_mese:
-            df_report = pd.DataFrame(evs_mese, columns=["Data", "Paziente", "Ora", "Tipo", "Mezzo"])
-            st.dataframe(df_report, use_container_width=True, hide_index=True)
-        else:
-            st.info("Nessun appuntamento programmato per questo mese.")
-
     with col_ins:
         st.subheader("➕ Nuovo Appuntamento")
         with st.form("add_app_cal"):
             p_l = db_run("SELECT id, nome FROM pazienti")
-            # Selezione Multipla Pazienti
             ps_sel = st.multiselect("Seleziona Paziente/i", [p[1] for p in p_l])
             tipo_e = st.selectbox("Tipo Evento", ["Uscita Esterna", "Appuntamento Interno"])
             dat = st.date_input("Giorno")
             ora = st.time_input("Ora")
-            
             mezzo_usato = "Nessuno"
             if tipo_e == "Uscita Esterna":
                 mezzo_usato = st.selectbox("Macchina", ["Mitsubishi", "Fiat Qubo", "Nessuno"])
-                check_mezzi = db_run("SELECT mezzo FROM appuntamenti WHERE data=? AND ora=? AND stato='PROGRAMMATO'", (str(dat), str(ora)[:5]))
-                mezzi_occupati = [m[0] for m in check_mezzi if m[0] != "Nessuno"]
-                if len(mezzi_occupati) >= 2: st.error("⚠️ ENTRAMBE LE MACCHINE IMPEGNATE!")
             
             accomp = st.text_input("Accompagnatore")
             not_a = st.text_area("Note / Causale")
             
             if st.form_submit_button("REGISTRA"):
-                if not ps_sel:
-                    st.error("Seleziona almeno un paziente!")
+                if not ps_sel: st.error("Seleziona almeno un paziente!")
                 else:
                     for nome_p in ps_sel:
                         pid = [p[0] for p in p_l if p[1]==nome_p][0]
-                        # Inserimento in Appuntamenti
                         db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", 
                                (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
-                        # Log Eventi
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a} con {accomp} (Mezzo: {mezzo_usato})", u['ruolo'], firma_op), True)
-                    st.success(f"Registrati {len(ps_sel)} appuntamenti!")
+                               (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u['ruolo'], firma_op), True)
                     st.rerun()
         
         st.divider()
@@ -407,8 +421,7 @@ elif nav == "📅 Agenda Dinamica":
         for aid, adt, ahr, apn, atev in agenda_list:
             st.markdown(f"**{adt} {ahr}** - {atev}<br>{apn}", unsafe_allow_html=True)
             if st.button("FATTO", key=f"f_{aid}"):
-                db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True)
-                st.rerun()
+                db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True); st.rerun()
 
 elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO ADMIN</h2></div>", unsafe_allow_html=True)
