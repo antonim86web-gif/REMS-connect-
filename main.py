@@ -3,48 +3,29 @@ import sqlite3
 import calendar
 from datetime import datetime
 
-# --- CONFIGURAZIONE PAGINA ---
+# --- CONFIGURAZIONE E STILE ---
 st.set_page_config(page_title="REMS Connect ELITE", layout="wide")
 
-# CSS CORRETTO PER QUADRATINI E SCROLL
 st.markdown("""
     <style>
     .scroll-giorni { 
-        display: flex; 
-        overflow-x: auto; 
-        gap: 5px; 
-        padding: 15px 5px;
-        background: #f8f9fa;
-        border-radius: 8px;
+        display: flex; overflow-x: auto; gap: 6px; padding: 15px 8px;
+        background: #f1f3f5; border-radius: 10px; margin-bottom: 10px;
     }
     .quadratino {
-        min-width: 35px; 
-        height: 45px; 
-        border-radius: 6px; 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        justify-content: center; 
-        font-size: 11px;
-        border: 1px solid #ddd;
-        background: white;
+        min-width: 38px; height: 50px; border-radius: 6px; 
+        display: flex; flex-direction: column; align-items: center; 
+        justify-content: center; border: 1px solid #ced4da; background: white;
     }
-    .oggi-border { border: 2px solid #1e3a8a !important; background-color: #fffde7 !important; }
-    .header-turno { 
-        background: #1e3a8a; color: white; padding: 10px; 
-        border-radius: 5px; margin-top: 20px; font-weight: bold;
-    }
-    .farmaco-box {
-        padding: 10px; border-left: 5px solid #1e3a8a;
-        background: #ffffff; margin-top: 10px; border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
+    .oggi-attivo { border: 3px solid #1e3a8a !important; background-color: #fff9c4 !important; }
+    .farmaco-label { font-size: 1.2rem; font-weight: 700; color: #1e3a8a; margin-top: 10px; }
+    .info-dose { color: #666; font-size: 0.95rem; margin-bottom: 10px; }
+    .sez-turno { background: #1e3a8a; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- FUNZIONI DATABASE ---
+# --- DATABASE ---
 DB_NAME = "rems_final_v12.db"
-
 def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME) as conn:
         cursor = conn.cursor()
@@ -56,97 +37,100 @@ def db_run(query, params=(), commit=False):
             st.error(f"Errore: {e}")
             return []
 
-# Inizializzazione automatica colonne
-def init_db():
-    db_run("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT, stato TEXT DEFAULT 'ATTIVO')", commit=True)
-    db_run("CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, esito TEXT)", commit=True)
-    db_run("CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY, p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, is_prn INTEGER DEFAULT 0)", commit=True)
-    try: db_run("ALTER TABLE eventi ADD COLUMN esito TEXT", commit=True)
-    except: pass
-    try: db_run("ALTER TABLE terapie ADD COLUMN is_prn INTEGER DEFAULT 0", commit=True)
-    except: pass
-
-init_db()
-
-# --- LOGICA SMARCAMENTO ---
-def genera_smarcamento(p_id, farmaci, turno_target, titolo):
-    if turno_target == "TAB":
-        f_list = [f for f in farmaci if len(f) > 6 and f[6] == 1]
-    else:
-        mappa = {"MAT": 3, "POM": 4, "NOT": 5}
-        f_list = [f for f in farmaci if len(f) > mappa[turno_target] and f[mappa[turno_target]] == 1]
-
-    if not f_list: return
-
-    st.markdown(f"<div class='header-turno'>{titolo}</div>", unsafe_allow_html=True)
-    oggi = datetime.now()
-    giorni_mese = calendar.monthrange(oggi.year, oggi.month)[1]
-
-    for f in f_list:
-        st.markdown(f"<div class='farmaco-box'><b>{f[1]}</b> - {f[2]}</div>", unsafe_allow_html=True)
-        
-        # Recupero firme
-        firme = db_run("SELECT data, esito FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
-                       (p_id, f"%({turno_target}): {f[1]}%", f"%/{oggi.strftime('%m/%Y')}%"))
-        firme_map = {int(d[0].split("/")[0]): d[1] for d in firme if d[1]}
-
-        # DISEGNO LA STRISCIA (Corretto con unsafe_allow_html)
-        html_giorni = "<div class='scroll-giorni'>"
-        for d in range(1, giorni_mese + 1):
-            esito = firme_map.get(d, "")
-            classe = "quadratino oggi-border" if d == oggi.day else "quadratino"
-            color = "green" if esito == "A" else ("red" if esito == "R" else "#333")
-            bg = "#dcfce7" if esito == "A" else ("#fee2e2" if esito == "R" else "white")
-            
-            html_giorni += f"""
-            <div class='{classe}' style='background:{bg}; color:{color};'>
-                <span style='font-size:9px; color:#666;'>{d}</span>
-                <b style='font-size:14px;'>{esito if esito else '-'}</b>
-            </div>"""
-        html_giorni += "</div>"
-        
-        st.markdown(html_giorni, unsafe_allow_html=True)
-
-        # BOTTONI FIRMA
-        if oggi.day not in firme_map:
-            c1, c2, c3 = st.columns([1, 1, 1])
-            if c2.button(f"✅ ASSUNTO", key=f"A_{f[0]}_{turno_target}", use_container_width=True):
-                registra_firma(p_id, f[1], turno_target, "A")
-            if c3.button(f"❌ RIFIUTATO", key=f"R_{f[0]}_{turno_target}", use_container_width=True):
-                registra_firma(p_id, f[1], turno_target, "R")
-        else:
-            st.success(f"Smarcato: {firme_map[oggi.day]}")
-
+# --- LOGICA CORE ---
 def registra_firma(p_id, farmaco, turno, esito):
     ora = datetime.now().strftime("%d/%m/%Y %H:%M")
     db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
            (p_id, ora, f"✔️ SOMM ({turno}): {farmaco}", "Infermiere", "Op", esito), commit=True)
     st.rerun()
 
-# --- APP ---
-p_list = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
-if p_list:
-    sel_p = st.selectbox("Paziente", [p[1] for p in p_list])
-    p_id = [p[0] for p in p_list if p[1] == sel_p][0]
+def mostra_farmaci_selettivi(p_id, farmaci, turno_selezionato):
+    # Mapping per filtrare i farmaci dal DB
+    mappa_chiavi = {
+        "Mattina (08:00 - 13:00)": ["MAT", "POM"], # Uniamo i due blocchi come chiesto
+        "Pomeriggio/Notte (16:00 - 20:00)": ["POM", "NOT"],
+        "TAB (Al Bisogno)": ["TAB"]
+    }
+    
+    # Identifichiamo quali indici della tupla farmaco controllare
+    # farmaco = (id_u, nome, dose, mat, pom, nott, is_prn)
+    indici = {"MAT": 3, "POM": 4, "NOT": 5, "TAB": 6}
+    
+    f_filtrati = []
+    chiavi_attive = mappa_chiavi[turno_selezionato]
+    
+    for f in farmaci:
+        for k in chiavi_attive:
+            if f[indici[k]] == 1:
+                f_filtrati.append((f, k)) # Salviamo il farmaco e il turno specifico
 
-    t_inf, t_med = st.tabs(["💊 Infermiere", "🩺 Medico"])
+    if not f_filtrati:
+        st.info(f"Nessun farmaco previsto per: {turno_selezionato}")
+        return
 
-    with t_inf:
+    st.markdown(f"<div class='sez-turno'>Visualizzazione: {turno_selezionato}</div>", unsafe_allow_html=True)
+    
+    oggi = datetime.now()
+    giorni_mese = calendar.monthrange(oggi.year, oggi.month)[1]
+    mese_corrente = oggi.strftime("%m/%Y")
+
+    for f_data, t_key in f_filtrati:
+        f_id, f_nome, f_dose = f_data[0], f_data[1], f_data[2]
+        
+        st.markdown(f"<div class='farmaco-label'>{f_nome} <small style='color:orange;'>({t_key})</small></div><div class='info-dose'>{f_dose}</div>", unsafe_allow_html=True)
+        
+        firme = db_run("SELECT data, esito FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
+                       (p_id, f"%({t_key}): {f_nome}%", f"%/{mese_corrente}%"))
+        firme_map = {int(d[0].split("/")[0]): d[1] for d in firme if d[1]}
+
+        # Striscia Giorni
+        html_giorni = "<div class='scroll-giorni'>"
+        for d in range(1, giorni_mese + 1):
+            esito = firme_map.get(d, "")
+            is_today = "oggi-attivo" if d == oggi.day else ""
+            color = "green" if esito == "A" else ("red" if esito == "R" else "#888")
+            bg = "#dcfce7" if esito == "A" else ("#fee2e2" if esito == "R" else "white")
+            html_giorni += f"<div class='quadratino {is_today}' style='background:{bg}; color:{color};'><span style='font-size:10px;'>{d}</span><b>{esito if esito else '-'}</b></div>"
+        html_giorni += "</div>"
+        st.markdown(html_giorni, unsafe_allow_html=True)
+
+        # Bottoni Firma
+        if oggi.day not in firme_map:
+            c1, c2, c3 = st.columns([1, 1, 1])
+            if c2.button(f"✅ ASSUNTO", key=f"A_{f_id}_{t_key}", use_container_width=True):
+                registra_firma(p_id, f_nome, t_key, "A")
+            if c3.button(f"❌ RIFIUTATO", key=f"R_{f_id}_{t_key}", use_container_width=True):
+                registra_firma(p_id, f_nome, t_key, "R")
+        else:
+            st.success(f"Eseguito per oggi: {firme_map[oggi.day]}")
+        st.divider()
+
+# --- INTERFACCIA ---
+p_data = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
+if p_data:
+    sel_p = st.sidebar.selectbox("👤 PAZIENTE", [p[1] for p in p_data])
+    p_id = [p[0] for p in p_data if p[1] == sel_p][0]
+
+    tab_inf, tab_med = st.tabs(["💊 REGISTRO INFERMIERE", "🩺 AREA MEDICA"])
+
+    with tab_inf:
+        # IL NUOVO MENÙ A TENDINA PER I TURNI
+        scelta_turno = st.selectbox("🕒 SELEZIONA TURNO DI LAVORO", 
+                                    ["Mattina (08:00 - 13:00)", 
+                                     "Pomeriggio/Notte (16:00 - 20:00)", 
+                                     "TAB (Al Bisogno)"])
+        
         farmaci = db_run("SELECT id_u, farmaco, dose, mat, pom, nott, is_prn FROM terapie WHERE p_id=?", (p_id,))
         if farmaci:
-            genera_smarcamento(p_id, farmaci, "MAT", "☀️ MATTINO (08:00)")
-            genera_smarcamento(p_id, farmaci, "POM", "⛅ POMERIGGIO (16:00)")
-            genera_smarcamento(p_id, farmaci, "NOT", "🌙 NOTTE (20:00)")
-            genera_smarcamento(p_id, farmaci, "TAB", "🆘 TAB (Al Bisogno)")
-        else:
-            st.info("Nessuna terapia.")
+            mostra_farmaci_selettivi(p_id, farmaci, scelta_turno)
 
-    with t_med:
+    with tab_med:
         with st.form("med"):
+            st.write("📝 Nuova Terapia")
             f = st.text_input("Farmaco")
             d = st.text_input("Dose")
             o = st.selectbox("Orario", ["MATTINO (08:00)", "POMERIGGIO (16:00)", "NOTTE (20:00)", "TAB (Al Bisogno)"])
-            if st.form_submit_button("Prescrivi"):
+            if st.form_submit_button("Salva"):
                 m, p, n, tsu = (1,0,0,0) if "MAT" in o else ((0,1,0,0) if "POM" in o else ((0,0,1,0) if "NOT" in o else (0,0,0,1)))
                 db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, is_prn) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, m, p, n, tsu), commit=True)
                 st.rerun()
