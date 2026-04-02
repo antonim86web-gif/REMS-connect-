@@ -396,7 +396,7 @@ elif nav == "👥 Modulo Equipe":
                         st.rerun()
             with t4: render_stu_operativa_interattiva(p_id, ruolo_corr, firma_op)
 
-    elif ruolo_corr == "Infermiere":
+elif ruolo_corr == "Infermiere":
             t1, t2, t3, t4 = st.tabs(["💊 SOMMINISTRAZIONE", "💓 PARAMETRI", "📝 CONSEGNE", "📑 S.T.U. INTERATTIVA"])
             with t1:
                 # Recupero tutte le terapie del paziente
