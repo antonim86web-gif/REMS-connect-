@@ -9,18 +9,21 @@ st.set_page_config(page_title="REMS Connect ELITE", layout="wide")
 st.markdown("""
     <style>
     .scroll-giorni { 
-        display: flex; overflow-x: auto; gap: 6px; padding: 15px 8px;
-        background: #f1f3f5; border-radius: 10px; margin-bottom: 10px;
+        display: flex; overflow-x: auto; gap: 8px; padding: 15px 5px;
+        background: #f8f9fa; border-radius: 10px; margin-bottom: 15px;
+        border: 1px solid #e9ecef;
     }
     .quadratino {
-        min-width: 38px; height: 50px; border-radius: 6px; 
+        min-width: 40px; height: 50px; border-radius: 8px; 
         display: flex; flex-direction: column; align-items: center; 
-        justify-content: center; border: 1px solid #ced4da; background: white;
+        justify-content: center; border: 1px solid #dee2e6; background: white;
+        box-shadow: 1px 1px 3px rgba(0,0,0,0.05);
     }
-    .oggi-attivo { border: 3px solid #1e3a8a !important; background-color: #fff9c4 !important; }
-    .farmaco-label { font-size: 1.2rem; font-weight: 700; color: #1e3a8a; margin-top: 10px; }
-    .info-dose { color: #666; font-size: 0.95rem; margin-bottom: 10px; }
-    .sez-turno { background: #1e3a8a; color: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+    .oggi-attivo { border: 3px solid #1e3a8a !important; background-color: #fff9c4 !important; font-weight: bold; }
+    .farmaco-label { font-size: 1.2rem; font-weight: 800; color: #1e3a8a; margin-top: 15px; }
+    .info-dose { color: #555; font-size: 1rem; margin-bottom: 5px; font-style: italic; }
+    /* Forza il popover a non essere tagliato */
+    div[data-testid="stPopover"] { width: 100%; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -37,39 +40,32 @@ def db_run(query, params=(), commit=False):
             st.error(f"Errore: {e}")
             return []
 
-# --- LOGICA CORE ---
+# --- LOGICA FIRMA ---
 def registra_firma(p_id, farmaco, turno, esito):
     ora = datetime.now().strftime("%d/%m/%Y %H:%M")
     db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
            (p_id, ora, f"✔️ SOMM ({turno}): {farmaco}", "Infermiere", "Op", esito), commit=True)
     st.rerun()
 
+# --- RENDERING SMARCAMENTO ---
 def mostra_farmaci_selettivi(p_id, farmaci, turno_selezionato):
-    # Mapping per filtrare i farmaci dal DB
     mappa_chiavi = {
-        "Mattina (08:00 - 13:00)": ["MAT", "POM"], # Uniamo i due blocchi come chiesto
+        "Mattina (08:00 - 13:00)": ["MAT", "POM"],
         "Pomeriggio/Notte (16:00 - 20:00)": ["POM", "NOT"],
         "TAB (Al Bisogno)": ["TAB"]
     }
-    
-    # Identifichiamo quali indici della tupla farmaco controllare
-    # farmaco = (id_u, nome, dose, mat, pom, nott, is_prn)
     indici = {"MAT": 3, "POM": 4, "NOT": 5, "TAB": 6}
     
-    f_filtrati = []
     chiavi_attive = mappa_chiavi[turno_selezionato]
-    
+    f_filtrati = []
     for f in farmaci:
         for k in chiavi_attive:
-            if f[indici[k]] == 1:
-                f_filtrati.append((f, k)) # Salviamo il farmaco e il turno specifico
+            if f[indici[k]] == 1: f_filtrati.append((f, k))
 
     if not f_filtrati:
-        st.info(f"Nessun farmaco previsto per: {turno_selezionato}")
+        st.info("Nessuna terapia prevista per questo orario.")
         return
 
-    st.markdown(f"<div class='sez-turno'>Visualizzazione: {turno_selezionato}</div>", unsafe_allow_html=True)
-    
     oggi = datetime.now()
     giorni_mese = calendar.monthrange(oggi.year, oggi.month)[1]
     mese_corrente = oggi.strftime("%m/%Y")
@@ -77,13 +73,16 @@ def mostra_farmaci_selettivi(p_id, farmaci, turno_selezionato):
     for f_data, t_key in f_filtrati:
         f_id, f_nome, f_dose = f_data[0], f_data[1], f_data[2]
         
-        st.markdown(f"<div class='farmaco-label'>{f_nome} <small style='color:orange;'>({t_key})</small></div><div class='info-dose'>{f_dose}</div>", unsafe_allow_html=True)
+        # Intestazione Farmaco
+        st.markdown(f"<div class='farmaco-label'>{f_nome} <span style='font-size:0.8rem; color:gray;'>[{t_key}]</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='info-dose'>{f_dose}</div>", unsafe_allow_html=True)
         
+        # Recupero firme
         firme = db_run("SELECT data, esito FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                        (p_id, f"%({t_key}): {f_nome}%", f"%/{mese_corrente}%"))
         firme_map = {int(d[0].split("/")[0]): d[1] for d in firme if d[1]}
 
-        # Striscia Giorni
+        # Striscia dei giorni
         html_giorni = "<div class='scroll-giorni'>"
         for d in range(1, giorni_mese + 1):
             esito = firme_map.get(d, "")
@@ -94,28 +93,31 @@ def mostra_farmaci_selettivi(p_id, farmaci, turno_selezionato):
         html_giorni += "</div>"
         st.markdown(html_giorni, unsafe_allow_html=True)
 
-        # Bottoni Firma
+        # IL POP-UP (POPOVER) PER LA FIRMA
         if oggi.day not in firme_map:
-            c1, c2, c3 = st.columns([1, 1, 1])
-            if c2.button(f"✅ ASSUNTO", key=f"A_{f_id}_{t_key}", use_container_width=True):
-                registra_firma(p_id, f_nome, t_key, "A")
-            if c3.button(f"❌ RIFIUTATO", key=f"R_{f_id}_{t_key}", use_container_width=True):
-                registra_firma(p_id, f_nome, t_key, "R")
+            with st.popover(f"✍️ Firma Somministrazione: {f_nome}"):
+                st.write(f"Conferma per oggi ({oggi.day}/{oggi.month})")
+                c1, c2 = st.columns(2)
+                if c1.button("✅ ASSUNTO (A)", key=f"A_{f_id}_{t_key}", use_container_width=True):
+                    registra_firma(p_id, f_nome, t_key, "A")
+                if c2.button("❌ RIFIUTATO (R)", key=f"R_{f_id}_{t_key}", use_container_width=True):
+                    registra_firma(p_id, f_nome, t_key, "R")
         else:
-            st.success(f"Eseguito per oggi: {firme_map[oggi.day]}")
+            st.success(f"Smarcato correttamente: {firme_map[oggi.day]}")
         st.divider()
 
-# --- INTERFACCIA ---
+# --- INTERFACCIA PRINCIPALE ---
 p_data = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
 if p_data:
-    sel_p = st.sidebar.selectbox("👤 PAZIENTE", [p[1] for p in p_data])
+    st.sidebar.title("🏥 REMS Menu")
+    sel_p = st.sidebar.selectbox("Paziente", [p[1] for p in p_data])
     p_id = [p[0] for p in p_data if p[1] == sel_p][0]
 
-    tab_inf, tab_med = st.tabs(["💊 REGISTRO INFERMIERE", "🩺 AREA MEDICA"])
+    tab_inf, tab_med = st.tabs(["💊 REGISTRO SMARCAMENTO", "🩺 PRESCRIZIONE MEDICA"])
 
     with tab_inf:
-        # IL NUOVO MENÙ A TENDINA PER I TURNI
-        scelta_turno = st.selectbox("🕒 SELEZIONA TURNO DI LAVORO", 
+        st.subheader(f"Paziente: {sel_p}")
+        scelta_turno = st.selectbox("Seleziona il tuo turno", 
                                     ["Mattina (08:00 - 13:00)", 
                                      "Pomeriggio/Notte (16:00 - 20:00)", 
                                      "TAB (Al Bisogno)"])
@@ -123,14 +125,16 @@ if p_data:
         farmaci = db_run("SELECT id_u, farmaco, dose, mat, pom, nott, is_prn FROM terapie WHERE p_id=?", (p_id,))
         if farmaci:
             mostra_farmaci_selettivi(p_id, farmaci, scelta_turno)
+        else:
+            st.info("Nessuna terapia attiva.")
 
     with tab_med:
-        with st.form("med"):
-            st.write("📝 Nuova Terapia")
-            f = st.text_input("Farmaco")
-            d = st.text_input("Dose")
+        with st.form("med_form"):
+            st.write("### 🩺 Nuova Prescrizione")
+            f = st.text_input("Nome Farmaco")
+            d = st.text_input("Dosaggio")
             o = st.selectbox("Orario", ["MATTINO (08:00)", "POMERIGGIO (16:00)", "NOTTE (20:00)", "TAB (Al Bisogno)"])
-            if st.form_submit_button("Salva"):
+            if st.form_submit_button("Registra Farmaco"):
                 m, p, n, tsu = (1,0,0,0) if "MAT" in o else ((0,1,0,0) if "POM" in o else ((0,0,1,0) if "NOT" in o else (0,0,0,1)))
                 db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, is_prn) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, m, p, n, tsu), commit=True)
                 st.rerun()
