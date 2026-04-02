@@ -75,7 +75,6 @@ st.markdown("""
     .role-sociale { background-color: #fff7ed; border-color: #f97316; }
     .role-opsi { background-color: #f1f5f9; border-color: #0f172a; border-style: dashed; }
 
-    .app-card { background-color: #fffbeb; border: 1px solid #fef3c7; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 6px solid #d97706; color: #1e293b; }
     .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
     .turn-header { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px; }
     .mat-style { color: #d97706; } .pom-style { color: #2563eb; } .not-style { color: #4338ca; }
@@ -192,7 +191,7 @@ nav = st.sidebar.radio("NAVIGAZIONE", opts)
 if st.sidebar.button("LOGOUT"): st.session_state.user_session = None; st.rerun()
 st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
-# --- LOGICA NAVIGAZIONE ---
+# --- MODULO MAPPA ---
 if nav == "🗺️ Mappa Posti Letto":
     st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
     stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
@@ -200,6 +199,7 @@ if nav == "🗺️ Mappa Posti Letto":
     mappa = {s[0]: {'rep': s[1], 'tipo': s[2], 'letti': {1: None, 2: None}} for s in stanze_db}
     for pid, pnome, sid, letto in paz_db:
         if sid in mappa: mappa[sid]['letti'][letto] = {'id': pid, 'nome': pnome}
+    
     c_a, c_b = st.columns(2)
     for r_code, col_obj in [("A", c_a), ("B", c_b)]:
         with col_obj:
@@ -213,6 +213,22 @@ if nav == "🗺️ Mappa Posti Letto":
                     st.markdown(f"<div class='letto-slot'>L{l}: <b>{p['nome'] if p else 'Libero'}</b></div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("</div></div>", unsafe_allow_html=True)
+
+    with st.expander("Sposta Paziente"):
+        p_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        sel_p = st.selectbox("Paziente", [p[1] for p in p_list], index=None)
+        if sel_p:
+            pid_sel = [p[0] for p in p_list if p[1]==sel_p][0]
+            posti_liberi = [f"{sid}-L{l}" for sid, si in mappa.items() for l, po in si['letti'].items() if not po]
+            dest = st.selectbox("Destinazione", posti_liberi)
+            mot = st.text_input("Motivo Trasferimento")
+            if st.button("ESEGUI TRASFERIMENTO") and mot:
+                dsid, dl = dest.split("-L")
+                db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid_sel,), True)
+                db_run("INSERT INTO assegnazioni (p_id, stanza_id, letto, data_ass) VALUES (?,?,?,?)", (pid_sel, dsid, int(dl), get_now_it().strftime("%Y-%m-%d")), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid_sel, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 TRASFERIMENTO: Spostato in {dsid} Letto {dl}. Motivo: {mot}", u['ruolo'], firma_op), True)
+                st.success("Trasferimento completato!")
+                st.rerun()
 
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
@@ -345,6 +361,7 @@ elif nav == "📅 Agenda Dinamica":
             st.session_state.cal_month += 1
             if st.session_state.cal_month > 12: st.session_state.cal_month=1; st.session_state.cal_year+=1
             st.rerun()
+            
     col_cal, col_ins = st.columns([3, 1])
     with col_cal:
         start_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-01"
@@ -360,6 +377,7 @@ elif nav == "📅 Agenda Dinamica":
                 tag_final = f'<div class="event-tag-html">{prefix} {p_n}<span class="tooltip-text">{info_popup}</span></div>'
                 mappa_ev[g_int].append(tag_final)
             except: pass
+        
         cal_html = "<table class='cal-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]]) + "</tr></thead><tbody>"
         cal_obj = calendar.Calendar(firstweekday=0)
         for week in cal_obj.monthdayscalendar(st.session_state.cal_year, st.session_state.cal_month):
@@ -373,10 +391,11 @@ elif nav == "📅 Agenda Dinamica":
             cal_html += "</tr>"
         cal_html += "</tbody></table>"
         st.markdown(cal_html, unsafe_allow_html=True)
+
     with col_ins:
         st.subheader("➕ Nuovo Appuntamento")
         with st.form("add_app_cal"):
-            p_l = db_run("SELECT id, nome FROM pazienti")
+            p_l = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
             ps_sel = st.multiselect("Paziente/i", [p[1] for p in p_l])
             tipo_e = st.selectbox("Tipo", ["Uscita Esterna", "Appuntamento Interno"])
             dat, ora = st.date_input("Giorno"), st.time_input("Ora")
@@ -388,6 +407,21 @@ elif nav == "📅 Agenda Dinamica":
                     db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u['ruolo'], firma_op), True)
                 st.rerun()
+        
+        st.divider()
+        st.subheader("📋 Lista Scadenze")
+        agenda_list = db_run("SELECT a.id_u, a.data, a.ora, p.nome, a.tipo_evento FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.data >= ? AND a.stato='PROGRAMMATO' ORDER BY a.data, a.ora", (oggi_iso,))
+        for aid, adt, ahr, apn, atev in agenda_list:
+            with st.container():
+                st.markdown(f"**{adt} {ahr}** - {atev}<br>{apn}", unsafe_allow_html=True)
+                c1, c2 = st.columns(2)
+                if c1.button("FATTO", key=f"done_{aid}"): 
+                    db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True)
+                    st.rerun()
+                if c2.button("ELIMINA", key=f"del_{aid}"):
+                    db_run("DELETE FROM appuntamenti WHERE id_u=?", (aid,), True)
+                    st.rerun()
+            st.markdown("---")
 
 elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
@@ -400,7 +434,7 @@ elif nav == "⚙️ Admin":
         with st.form("np"):
             np_val = st.text_input("Nuovo Paziente")
             if st.form_submit_button("AGGIUNGI"): db_run("INSERT INTO pazienti (nome) VALUES (?)", (np_val.upper(),), True); st.rerun()
-        for pid, pn in db_run("SELECT id, nome FROM pazienti"):
+        for pid, pn in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
             c1, c2 = st.columns([0.8, 0.2]); c1.write(pn)
             if c2.button("ELIMINA", key=f"dp_{pid}"): 
                 db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
