@@ -23,6 +23,12 @@ def aggiorna_struttura_db():
     try: c.execute("ALTER TABLE terapie ADD COLUMN bis INTEGER DEFAULT 0")
     except: pass
     
+    # Nuova Tabella per Marcatura STU puntuale (A/R) - Necessaria per il pop-up
+    c.execute("""CREATE TABLE IF NOT EXISTS stu_registrazioni (
+                 id_stu INTEGER PRIMARY KEY AUTOINCREMENT,
+                 p_id INTEGER, t_id INTEGER, giorno INTEGER, mese INTEGER, anno INTEGER,
+                 stato TEXT, op_firma TEXT, timestamp TEXT)""")
+
     # Tabella Log per Tracciabilità Legale
     c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
                  id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -63,15 +69,12 @@ st.markdown("""
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
-    /* CSS STU CARTACEA PROFESSIONALE */
-    .stu-container { overflow-x: auto; background: white; padding: 10px; border: 2px solid #000; margin-top: 20px; }
-    .stu-table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 0.7rem; color: #000; }
-    .stu-table th, .stu-table td { border: 1px solid #000; padding: 2px; text-align: center; }
-    .sticky-col { position: sticky; left: 0; background: #fff; z-index: 5; min-width: 220px !important; text-align: left !important; font-weight: bold; border-right: 2px solid #000 !important; }
-    .header-row { background: #e2e8f0; font-weight: bold; }
-    .section-label-stu { background: #000; color: #fff; text-align: left !important; padding-left: 5px !important; font-weight: 900; text-transform: uppercase; }
-    .spacer-row-stu { height: 25px; background: #f1f5f9; }
-    .cell-today-stu { background-color: #ffffcc !important; border: 2px solid #ef4444 !important; }
+    /* CSS STU OPERATIVA PROFESSIONALE */
+    .stu-container { background: white; padding: 15px; border: 2px solid #000; border-radius: 8px; margin-top: 10px; }
+    .firma-medica-box { border: 2px dashed #1e3a8a; padding: 10px; background: #f0f4f8; margin-bottom: 15px; border-radius: 5px; }
+    .stu-table-header { font-weight: 900; font-size: 0.75rem; color: #1e3a8a; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .label-a { color: #22c55e; font-weight: 900; text-align: center; }
+    .label-r { color: #ef4444; font-weight: 900; text-align: center; }
 
     /* ALTRI CSS PREESISTENTI */
     .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -140,7 +143,67 @@ def db_run(query, params=(), commit=False):
             st.error(f"Errore DB: {e}")
             return []
 
-# --- RENDERER S.T.U. (L'AGGIORNAMENTO RICHIESTO) ---
+# --- RENDERER S.T.U. OPERATIVA (AGGIORNAMENTO TOOLTIP & FIRME) ---
+def render_stu_operativa_interattiva(p_id, ruolo, operatore):
+    now = get_now_it()
+    
+    # Firma Medico Responsabile (Ultima validazione)
+    med_info = db_run("SELECT medico FROM terapie WHERE p_id=? AND medico IS NOT NULL ORDER BY id_u DESC LIMIT 1", (p_id,))
+    firma_medico = med_info[0][0] if med_info else "DA VALIDARE"
+
+    st.markdown(f"""<div class='firma-medica-box'>
+        <small style='color:#1e3a8a'>VALIDAZIONE MEDICA PIANO TERAPEUTICO:</small><br>
+        <b style='font-family:Courier; font-size:1.2rem;'>f.to Dott. {firma_medico}</b>
+    </div>""", unsafe_allow_html=True)
+
+    terapie = db_run("SELECT id_u, farmaco, dose, mat, pom, nott, bis FROM terapie WHERE p_id=?", (p_id,))
+    regs = db_run("SELECT t_id, stato, op_firma, timestamp FROM stu_registrazioni WHERE p_id=? AND giorno=? AND mese=?", 
+                  (p_id, now.day, now.month))
+    mappa_regs = {r[0]: {"stato": r[1], "op": r[2], "ora": r[3]} for r in regs}
+
+    h_cols = st.columns([2, 1, 0.4, 0.4, 0.8])
+    h_cols[0].markdown("<div class='stu-table-header'>Farmaco</div>", unsafe_allow_html=True)
+    h_cols[1].markdown("<div class='stu-table-header'>Dose</div>", unsafe_allow_html=True)
+    h_cols[2].markdown("<div class='label-a'>A</div>", unsafe_allow_html=True)
+    h_cols[3].markdown("<div class='label-r'>R</div>", unsafe_allow_html=True)
+    h_cols[4].markdown("<div class='stu-table-header'>Stato</div>", unsafe_allow_html=True)
+    st.divider()
+
+    for t in terapie:
+        t_id, f_nome, f_dose = t[0], t[1], t[2]
+        reg = mappa_regs.get(t_id)
+        cols = st.columns([2, 1, 0.4, 0.4, 0.8])
+
+        if ruolo == "Psichiatra":
+            with cols[0]: n_f = st.text_input("F", f_nome, key=f"edit_f_{t_id}", label_visibility="collapsed")
+            with cols[1]: n_d = st.text_input("D", f_dose, key=f"edit_d_{t_id}", label_visibility="collapsed")
+            with cols[2]: 
+                if st.button("💾", key=f"save_{t_id}", help="Valida e Firma Modifica"):
+                    db_run("UPDATE terapie SET farmaco=?, dose=?, medico=? WHERE id_u=?", (n_f, n_d, operatore, t_id), True)
+                    st.rerun()
+        else:
+            cols[0].write(f"**{f_nome}**")
+            cols[1].write(f"{f_dose}")
+            with cols[2]:
+                if st.button("A", key=f"a_{t_id}"):
+                    db_run("DELETE FROM stu_registrazioni WHERE t_id=? AND giorno=? AND mese=?", (t_id, now.day, now.month), True)
+                    db_run("INSERT INTO stu_registrazioni (p_id,t_id,giorno,mese,anno,stato,op_firma,timestamp) VALUES (?,?,?,?,?,?,?,?)",
+                           (p_id, t_id, now.day, now.month, now.year, "A", operatore, now.strftime("%H:%M")), True)
+                    st.rerun()
+            with cols[3]:
+                if st.button("R", key=f"r_{t_id}"):
+                    db_run("DELETE FROM stu_registrazioni WHERE t_id=? AND giorno=? AND mese=?", (t_id, now.day, now.month), True)
+                    db_run("INSERT INTO stu_registrazioni (p_id,t_id,giorno,mese,anno,stato,op_firma,timestamp) VALUES (?,?,?,?,?,?,?,?)",
+                           (p_id, t_id, now.day, now.month, now.year, "R", operatore, now.strftime("%H:%M")), True)
+                    st.rerun()
+
+        with cols[4]:
+            if reg:
+                lbl = "✅ ASSUNTO" if reg['stato'] == "A" else "❌ RIFIUTATO"
+                st.button(lbl, key=f"st_{t_id}", help=f"Operatore: {reg['op']}\nOra: {reg['ora']}", use_container_width=True)
+            else:
+                st.write("-")
+
 def render_stu_cartacea(p_id):
     terapie = db_run("SELECT farmaco, dose, mat, pom, nott, bis FROM terapie WHERE p_id=?", (p_id,))
     t_mattina = [t for t in terapie if t[2] == 1]
@@ -288,9 +351,9 @@ elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     for pid, nome in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
         with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"):
-            m_t1, m_t2 = st.tabs(["📑 DIARIO", "💊 S.T.U. CARTACEA"])
+            m_t1, m_t2 = st.tabs(["📑 DIARIO", "💊 S.T.U. OPERATIVA"])
             with m_t1: render_postits(pid)
-            with m_t2: render_stu_cartacea(pid)
+            with m_t2: render_stu_operativa_interattiva(pid, u['ruolo'], firma_op)
 
 elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
@@ -331,7 +394,7 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("SALVA CONSEGNA MEDICA"):
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True)
                         st.rerun()
-            with t4: render_stu_cartacea(p_id)
+            with t4: render_stu_operativa_interattiva(p_id, ruolo_corr, firma_op)
 
         elif ruolo_corr == "Infermiere":
             t1, t2, t3, t4 = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📑 S.T.U."])
@@ -359,7 +422,7 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("SALVA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
                         st.rerun()
-            with t4: render_stu_cartacea(p_id)
+            with t4: render_stu_operativa_interattiva(p_id, ruolo_corr, firma_op)
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST/VALUTAZIONE"])
