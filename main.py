@@ -332,7 +332,7 @@ elif nav == "📅 Agenda Dinamica":
             try:
                 g_int = int(d_ev.split("-")[2])
                 if g_int not in mappa_ev: mappa_ev[g_int] = []
-                prefix = "🚗" if t_ev == "Uscita Esterna" else "🏥"
+                prefix = "🚗" if t_ev == "Uscita Esterna" else "🏠"
                 mezzo_txt = f" ({m_ev})" if m_ev != "Nessuno" else ""
                 mappa_ev[g_int].append(f"<b>{h_ev}</b> {prefix} {p_n}{mezzo_txt}")
             except: pass
@@ -358,33 +358,48 @@ elif nav == "📅 Agenda Dinamica":
         cal_html += "</tbody></table>"
         st.markdown(cal_html, unsafe_allow_html=True)
 
+        # --- NOTA / REPORT SOTTO IL CALENDARIO ---
+        st.markdown("### 📝 Report Appuntamenti del Mese")
+        if evs_mese:
+            df_report = pd.DataFrame(evs_mese, columns=["Data", "Paziente", "Ora", "Tipo", "Mezzo"])
+            st.dataframe(df_report, use_container_width=True, hide_index=True)
+        else:
+            st.info("Nessun appuntamento programmato per questo mese.")
+
     with col_ins:
         st.subheader("➕ Nuovo Appuntamento")
         with st.form("add_app_cal"):
             p_l = db_run("SELECT id, nome FROM pazienti")
-            ps = st.selectbox("Paziente", [p[1] for p in p_l])
-            tipo_e = st.selectbox("Tipo Evento", ["Uscita Esterna", "Visita Interna (Parenti)", "Perizia", "CSM", "SERD"])
+            # Selezione Multipla Pazienti
+            ps_sel = st.multiselect("Seleziona Paziente/i", [p[1] for p in p_l])
+            tipo_e = st.selectbox("Tipo Evento", ["Uscita Esterna", "Appuntamento Interno"])
             dat = st.date_input("Giorno")
             ora = st.time_input("Ora")
             
             mezzo_usato = "Nessuno"
             if tipo_e == "Uscita Esterna":
-                mezzo_usato = st.selectbox("Macchina", ["Mitsubishi", "Fiat Qubo"])
+                mezzo_usato = st.selectbox("Macchina", ["Mitsubishi", "Fiat Qubo", "Nessuno"])
                 check_mezzi = db_run("SELECT mezzo FROM appuntamenti WHERE data=? AND ora=? AND stato='PROGRAMMATO'", (str(dat), str(ora)[:5]))
-                mezzi_occupati = [m[0] for m in check_mezzi]
+                mezzi_occupati = [m[0] for m in check_mezzi if m[0] != "Nessuno"]
                 if len(mezzi_occupati) >= 2: st.error("⚠️ ENTRAMBE LE MACCHINE IMPEGNATE!")
-                elif mezzo_usato in mezzi_occupati: st.warning(f"⚠️ {mezzo_usato} occupato!")
             
             accomp = st.text_input("Accompagnatore")
             not_a = st.text_area("Note / Causale")
             
             if st.form_submit_button("REGISTRA"):
-                pid = [p[0] for p in p_l if p[1]==ps][0]
-                db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", 
-                       (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                       (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a} con {accomp} (Mezzo: {mezzo_usato})", u['ruolo'], firma_op), True)
-                st.rerun()
+                if not ps_sel:
+                    st.error("Seleziona almeno un paziente!")
+                else:
+                    for nome_p in ps_sel:
+                        pid = [p[0] for p in p_l if p[1]==nome_p][0]
+                        # Inserimento in Appuntamenti
+                        db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", 
+                               (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
+                        # Log Eventi
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a} con {accomp} (Mezzo: {mezzo_usato})", u['ruolo'], firma_op), True)
+                    st.success(f"Registrati {len(ps_sel)} appuntamenti!")
+                    st.rerun()
         
         st.divider()
         st.subheader("📋 Lista Attivi")
