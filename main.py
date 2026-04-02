@@ -106,7 +106,6 @@ def db_run(query, params=(), commit=False):
     with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
         cur = conn.cursor()
         try:
-            # Init schema if not exists
             cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE)")
             cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, figura_professionale TEXT)")
@@ -130,27 +129,19 @@ def db_run(query, params=(), commit=False):
             st.error(f"Errore DB: {e}")
             return []
 
-def render_postits(p_id=None, limit=50, filter_role=None):
-    # Logica di Filtro Multilivello richiesta (Innesto)
-    st.markdown("#### Filtra per Figura Professionale")
+def render_postits(p_id, limit=50):
+    # Innesto Filtro con Key Univoca per evitare errore DuplicateElementId
     ruoli_disp = ["Tutti", "Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"]
-    scelta_ruolo = st.multiselect("Mostra solo:", ruoli_disp, default="Tutti")
+    scelta_ruolo = st.multiselect("Filtra per Figura Professionale", ruoli_disp, default="Tutti", key=f"filt_{p_id}")
 
-    query = "SELECT data, ruolo, op, nota FROM eventi WHERE 1=1"
-    params = []
-    if p_id: query += " AND id=?"; params.append(p_id)
+    query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
+    params = [p_id]
     
-    # Applicazione filtro dinamico
     if "Tutti" not in scelta_ruolo and scelta_ruolo:
         query += f" AND ruolo IN ({','.join(['?']*len(scelta_ruolo))})"
         params.extend(scelta_ruolo)
 
     res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
-    
-    if not res:
-        st.info("Nessuna nota trovata per questo filtro.")
-        return
-
     for d, r, o, nt in res:
         role_map = {"Psichiatra":"psichiatra", "Infermiere":"infermiere", "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", "Assistente Sociale":"sociale", "OPSI":"opsi"}
         cls = f"role-{role_map.get(r, 'oss')}"
@@ -234,7 +225,7 @@ if nav == "🗺️ Mappa Posti Letto":
             st.markdown("</div></div>", unsafe_allow_html=True)
     with st.expander("Sposta Paziente"):
         p_list = db_run("SELECT id, nome FROM pazienti")
-        sel_p = st.selectbox("Paziente", [p[1] for p in p_list], index=None)
+        sel_p = st.selectbox("Paziente", [p[1] for p in p_l if p[1]==sel_p][0] if 'p_l' in locals() else [p[1] for p in p_list], index=None)
         if sel_p:
             pid = [p[0] for p in p_list if p[1]==sel_p][0]
             posti_liberi = [f"{sid}-L{l}" for sid, si in mappa.items() for l, po in si['letti'].items() if not po]
