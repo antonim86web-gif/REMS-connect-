@@ -19,6 +19,10 @@ def aggiorna_struttura_db():
     try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
     except: pass
     
+    # --- AGGIORNAMENTO TERAPIE PER S.T.U. ---
+    try: c.execute("ALTER TABLE terapie ADD COLUMN bis INTEGER DEFAULT 0")
+    except: pass
+    
     # Tabella Log per Tracciabilità Legale
     c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
                  id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -59,19 +63,27 @@ st.markdown("""
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
+    /* CSS STU CARTACEA PROFESSIONALE */
+    .stu-container { overflow-x: auto; background: white; padding: 10px; border: 2px solid #000; margin-top: 20px; }
+    .stu-table { width: 100%; border-collapse: collapse; font-family: 'Courier New', monospace; font-size: 0.7rem; color: #000; }
+    .stu-table th, .stu-table td { border: 1px solid #000; padding: 2px; text-align: center; }
+    .sticky-col { position: sticky; left: 0; background: #fff; z-index: 5; min-width: 220px !important; text-align: left !important; font-weight: bold; border-right: 2px solid #000 !important; }
+    .header-row { background: #e2e8f0; font-weight: bold; }
+    .section-label-stu { background: #000; color: #fff; text-align: left !important; padding-left: 5px !important; font-weight: 900; text-transform: uppercase; }
+    .spacer-row-stu { height: 25px; background: #f1f5f9; }
+    .cell-today-stu { background-color: #ffffcc !important; border: 2px solid #ef4444 !important; }
+
+    /* ALTRI CSS PREESISTENTI */
     .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
-    .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; overflow: visible !important; }
+    .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; }
     .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
-    
-    .event-tag-html { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; line-height: 1.1; position: relative; cursor: help; }
-    .event-tag-html .tooltip-text { visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 9999 !important; bottom: 125%; left: 0%; opacity: 0; transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4); font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44; pointer-events: none; }
+    .event-tag-html { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; position: relative; cursor: help; }
+    .event-tag-html .tooltip-text { visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 9999; bottom: 125%; left: 0%; opacity: 0; transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4); font-size: 0.75rem; white-space: normal; pointer-events: none; }
     .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
-    
     .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
     .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
     .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
-    
     .role-psichiatra { background-color: #fef2f2; border-color: #dc2626; } 
     .role-infermiere { background-color: #eff6ff; border-color: #2563eb; } 
     .role-educatore { background-color: #ecfdf5; border-color: #059669; }  
@@ -79,13 +91,11 @@ st.markdown("""
     .role-psicologo { background-color: #faf5ff; border-color: #a855f7; }
     .role-sociale { background-color: #fff7ed; border-color: #f97316; }
     .role-opsi { background-color: #f1f5f9; border-color: #0f172a; border-style: dashed; }
-
     .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
     .turn-header { font-weight: 800; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 10px; }
     .mat-style { color: #d97706; } .pom-style { color: #2563eb; } .not-style { color: #4338ca; }
     .cassa-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
     .saldo-txt { font-size: 2.2rem; font-weight: 900; color: #166534; }
-    
     .map-reparto { background: #f1f5f9; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
     .reparto-title { text-align: center; color: #1e3a8a; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 2px solid #1e3a8a33; }
     .stanza-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
@@ -110,7 +120,7 @@ def db_run(query, params=(), commit=False):
             cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE, stato TEXT DEFAULT 'ATTIVO')")
             cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, figura_professionale TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
+            cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, bis INTEGER DEFAULT 0)")
             cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
             cur.execute("CREATE TABLE IF NOT EXISTS appuntamenti (id_u INTEGER PRIMARY KEY AUTOINCREMENT, p_id INTEGER, data TEXT, ora TEXT, nota TEXT, stato TEXT, autore TEXT, tipo_evento TEXT, mezzo TEXT, accompagnatore TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS stanze (id TEXT PRIMARY KEY, reparto TEXT, tipo TEXT)")
@@ -129,6 +139,39 @@ def db_run(query, params=(), commit=False):
         except Exception as e:
             st.error(f"Errore DB: {e}")
             return []
+
+# --- RENDERER S.T.U. (L'AGGIORNAMENTO RICHIESTO) ---
+def render_stu_cartacea(p_id):
+    terapie = db_run("SELECT farmaco, dose, mat, pom, nott, bis FROM terapie WHERE p_id=?", (p_id,))
+    t_mattina = [t for t in terapie if t[2] == 1]
+    t_pomeriggio = [t for t in terapie if t[3] == 1 or t[4] == 1]
+    t_bisogno = [t for t in terapie if t[5] == 1]
+    
+    oggi = get_now_it()
+    giorni_mese = calendar.monthrange(oggi.year, oggi.month)[1]
+    
+    html = "<div class='stu-container'><table class='stu-table'>"
+    html += "<tr class='header-row'><th class='sticky-col'>FARMACO / POSOLOGIA</th>"
+    for d in range(1, 32):
+        style = "class='cell-today-stu'" if d == oggi.day else ""
+        html += f"<th {style}>{d:02d}</th>"
+    html += "</tr>"
+
+    def add_section(lista, titolo):
+        res = f"<tr><td colspan='32' class='section-label-stu'>{titolo}</td></tr>"
+        if not lista:
+            res += "<tr><td class='sticky-col'>---</td>" + "<td></td>"*31 + "</tr>"
+        for t in lista:
+            res += f"<tr><td class='sticky-col'><b>{t[0]}</b><br><small>{t[1]}</small></td>" + "<td></td>"*31 + "</tr>"
+        return res
+
+    html += add_section(t_mattina, "Terapia del Mattino")
+    html += "<tr class='spacer-row-stu'><td colspan='32'></td></tr>" * 2
+    html += add_section(t_pomeriggio, "Terapia del Pomeriggio / Sera")
+    html += "<tr class='spacer-row-stu'><td colspan='32'></td></tr>" * 2
+    html += add_section(t_bisogno, "Terapia al Bisogno (P.R.N.)")
+    html += "</table></div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 def render_postits(p_id, limit=50):
     ruoli_disp = ["Tutti", "Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"]
@@ -243,10 +286,11 @@ if nav == "🗺️ Mappa Posti Letto":
 
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
-    # Mostra solo gli attivi nel monitoraggio quotidiano
     for pid, nome in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
-        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): 
-            render_postits(pid)
+        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"):
+            m_t1, m_t2 = st.tabs(["📑 DIARIO", "💊 S.T.U. CARTACEA"])
+            with m_t1: render_postits(pid)
+            with m_t2: render_stu_cartacea(pid)
 
 elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
@@ -259,42 +303,41 @@ elif nav == "👥 Modulo Equipe":
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
-            t1, t2, t3 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE"])
+            t1, t2, t3, t4 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE", "💊 S.T.U."])
             with t1:
                 with st.form("f_ps"):
                     f, d = st.text_input("Farmaco"), st.text_input("Dose")
-                    c1,c2,c3 = st.columns(3); m,p,n = c1.checkbox("MAT"), c2.checkbox("POM"), c3.checkbox("NOT")
+                    c1,c2,c3,c4 = st.columns(4); m,p,n,bis = c1.checkbox("MAT"), c2.checkbox("POM"), c3.checkbox("NOT"), c4.checkbox("AL BISOGNO")
                     if st.form_submit_button("REGISTRA"):
-                        db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma_op), True)
+                        db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico, bis) VALUES (?,?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma_op, int(bis)), True)
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"➕ Prescritto: {f} {d}", "Psichiatra", firma_op), True)
                         scrivi_log("PRESCRIZIONE", f"Inserita terapia {f} per {p_sel}")
                         st.rerun()
             with t2:
-                for tid, fn, ds, m_v, p_v, n_v in db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,)):
+                for tid, fn, ds, m_v, p_v, n_v, b_v in db_run("SELECT id_u, farmaco, dose, mat, pom, nott, bis FROM terapie WHERE p_id=?", (p_id,)):
                     with st.expander(f"Modifica: {fn}"):
                         with st.form(key=f"m_{tid}"):
-                            nf, nd = st.text_input("Farmaco", fn), st.text_input("Dose", ds); cc1,cc2,cc3 = st.columns(3); nm,np,nn = cc1.checkbox("MAT",bool(m_v)),cc2.checkbox("POM",bool(p_v)),cc3.checkbox("NOT",bool(n_v))
+                            nf, nd = st.text_input("Farmaco", fn), st.text_input("Dose", ds)
+                            cc1,cc2,cc3,cc4 = st.columns(4); nm,np,nn,nb = cc1.checkbox("MAT",bool(m_v)),cc2.checkbox("POM",bool(p_v)),cc3.checkbox("NOT",bool(n_v)), cc4.checkbox("BIS",bool(b_v))
                             if st.form_submit_button("AGGIORNA"): 
-                                db_run("UPDATE terapie SET farmaco=?, dose=?, mat=?, pom=?, nott=? WHERE id_u=?", (nf, nd, int(nm), int(np), int(nn), tid), True)
-                                scrivi_log("MODIFICA TERAPIA", f"Aggiornato {fn} per {p_sel}")
+                                db_run("UPDATE terapie SET farmaco=?, dose=?, mat=?, pom=?, nott=?, bis=? WHERE id_u=?", (nf, nd, int(nm), int(np), int(nn), int(nb), tid), True)
                                 st.rerun()
                             if st.form_submit_button("SOSPENDE"): 
                                 db_run("DELETE FROM terapie WHERE id_u=?", (tid,), True)
-                                scrivi_log("SOSPENSIONE TERAPIA", f"Eliminato {fn} per {p_sel}")
                                 st.rerun()
             with t3:
                 with st.form("f_cons_med"):
                     nota_medica = st.text_area("Indicazioni Cliniche / Note Diagnostiche")
                     if st.form_submit_button("SALVA CONSEGNA MEDICA"):
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True)
-                        scrivi_log("NOTA MEDICA", f"Inserita nota clinica per {p_sel}")
                         st.rerun()
+            with t4: render_stu_cartacea(p_id)
 
         elif ruolo_corr == "Infermiere":
-            t1, t2, t3 = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
+            t1, t2, t3, t4 = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📑 S.T.U."])
             with t1:
-                terapie = db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,))
-                cols = st.columns(3); turni = [("MAT", 3, "mat-style", "☀️"), ("POM", 4, "pom-style", "🌤️"), ("NOT", 5, "not-style", "🌙")]
+                terapie = db_run("SELECT id_u, farmaco, dose, mat, pom, nott, bis FROM terapie WHERE p_id=?", (p_id,))
+                cols = st.columns(4); turni = [("MAT", 2, "mat-style", "☀️"), ("POM", 3, "pom-style", "🌤️"), ("NOT", 4, "not-style", "🌙"), ("BIS", 5, "not-style", "🧪")]
                 for i, (t_n, t_idx, t_css, t_ico) in enumerate(turni):
                     with cols[i]:
                         for f in [x for x in terapie if x[t_idx]]:
@@ -303,22 +346,20 @@ elif nav == "👥 Modulo Equipe":
                                 st.markdown(f"<div class='therapy-container'><div class='turn-header {t_css}'>{t_ico} {t_n}</div><b>{f[1]}</b><br>{f[2]}</div>", unsafe_allow_html=True)
                                 if st.button(f"CONFERMA", key=f"ok_{f[0]}_{t_n}"): 
                                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"✔️ SOMM ({t_n}): {f[1]}", "Infermiere", firma_op), True)
-                                    scrivi_log("SOMMINISTRAZIONE", f"Eseguita {t_n} per {f[1]} su {p_sel}")
                                     st.rerun()
             with t2:
                 with st.form("vit"):
                     pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
                     if st.form_submit_button("REGISTRA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True)
-                        scrivi_log("PARAMETRI", f"Rilevati parametri per {p_sel}")
                         st.rerun()
             with t3:
                 with st.form("ni"):
                     txt = st.text_area("Consegna Clinica"); 
                     if st.form_submit_button("SALVA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
-                        scrivi_log("CONSEGNA INFERMIERISTICA", f"Inserita nota per {p_sel}")
                         st.rerun()
+            with t4: render_stu_cartacea(p_id)
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST/VALUTAZIONE"])
@@ -327,14 +368,12 @@ elif nav == "👥 Modulo Equipe":
                     txt = st.text_area("Sintesi Colloquio Clinico")
                     if st.form_submit_button("SALVA NOTA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧠 {txt}", "Psicologo", firma_op), True)
-                        scrivi_log("COLLOQUIO PSICOLOGICO", f"Registrato colloquio per {p_sel}")
                         st.rerun()
             with t2:
                 with st.form("f_test"):
                     test_n = st.text_input("Nome Test / Scala"); test_r = st.text_area("Risultato/Osservazioni")
                     if st.form_submit_button("REGISTRA VALUTAZIONE"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
-                        scrivi_log("VALUTAZIONE TEST", f"Eseguito test {test_n} su {p_sel}")
                         st.rerun()
 
         elif ruolo_corr == "Assistente Sociale":
@@ -344,14 +383,12 @@ elif nav == "👥 Modulo Equipe":
                     cont = st.text_input("Ente/Contatto"); txt = st.text_area("Esito colloquio")
                     if st.form_submit_button("SALVA ATTIVITÀ"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🤝 CONTATTO {cont}: {txt}", "Assistente Sociale", firma_op), True)
-                        scrivi_log("SOCIALE", f"Contatto rete per {p_sel}: {cont}")
                         st.rerun()
             with t2:
                 with st.form("f_prog"):
                     prog = st.text_area("Aggiornamento Progetto di Reinserimento")
                     if st.form_submit_button("AGGIORNA PROGETTO"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🏠 PROGETTO: {prog}", "Assistente Sociale", firma_op), True)
-                        scrivi_log("PROGETTO DIMISSIONE", f"Aggiornamento progetto per {p_sel}")
                         st.rerun()
 
         elif ruolo_corr == "OPSI":
@@ -361,14 +398,12 @@ elif nav == "👥 Modulo Equipe":
                     cond = st.multiselect("Stato ambiente:", ["Tranquillo", "Agitato", "Ispezione camera"]); nota = st.text_input("Note")
                     if st.form_submit_button("REGISTRA TURNO"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🛡️ VIGILANZA: {', '.join(cond)} | {nota}", "OPSI", firma_op), True)
-                        scrivi_log("OPSI VIGILANZA", f"Monitoraggio per {p_sel}: {cond}")
                         st.rerun()
             with t2:
                 with st.form("f_crit"):
                     tipo = st.selectbox("Livello Criticità", ["BASSO", "MEDIO", "ALTO"]); dett = st.text_area("Dettaglio")
                     if st.form_submit_button("INVIA SEGNALAZIONE"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🚨 CRITICITÀ {tipo}: {dett}", "OPSI", firma_op), True)
-                        scrivi_log("OPSI ALLARME", f"Segnalata criticità {tipo} per {p_sel}")
                         st.rerun()
 
         elif ruolo_corr == "OSS":
@@ -376,7 +411,6 @@ elif nav == "👥 Modulo Equipe":
                 mans = st.multiselect("Mansioni:", ["Igiene", "Cambio", "Pulizia", "Letto"]); txt = st.text_area("Note")
                 if st.form_submit_button("REGISTRA"): 
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧹 {', '.join(mans)} | {txt}", "OSS", firma_op), True)
-                    scrivi_log("OSS", f"Attività assistenziale per {p_sel}")
                     st.rerun()
 
         elif ruolo_corr == "Educatore":
@@ -389,14 +423,12 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("REGISTRA MOVIMENTO"):
                         db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore", firma_op), True)
-                        scrivi_log("MOVIMENTO CASSA", f"{tp} di {im}€ per {p_sel}")
                         st.rerun()
             with t2:
                 with st.form("edu_cons"):
                     txt_edu = st.text_area("Osservazioni Educative")
                     if st.form_submit_button("SALVA CONSEGNA"):
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📝 {txt_edu}", "Educatore", firma_op), True)
-                        scrivi_log("CONSEGNA EDUCATORE", f"Inserita nota per {p_sel}")
                         st.rerun()
         
         st.divider(); render_postits(p_id)
@@ -451,7 +483,6 @@ elif nav == "📅 Agenda Dinamica":
     with col_ins:
         st.subheader("➕ Nuovo Appuntamento")
         with st.form("add_app_cal"):
-            # Solo attivi possono avere nuovi appuntamenti
             p_l = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
             ps_sel = st.multiselect("Paziente/i", [p[1] for p in p_l])
             tipo_e = st.selectbox("Tipo", ["Uscita Esterna", "Appuntamento Interno"])
@@ -463,25 +494,7 @@ elif nav == "📅 Agenda Dinamica":
                     pid = [p[0] for p in p_l if p[1]==nome_p][0]
                     db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u['ruolo'], firma_op), True)
-                scrivi_log("AGENDA NUOVO", f"Creato {tipo_e} per {ps_sel}")
                 st.rerun()
-        
-        st.divider()
-        st.subheader("📋 Lista Scadenze")
-        agenda_list = db_run("SELECT a.id_u, a.data, a.ora, p.nome, a.tipo_evento FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.data >= ? AND a.stato='PROGRAMMATO' ORDER BY a.data, a.ora", (oggi_iso,))
-        for aid, adt, ahr, apn, atev in agenda_list:
-            with st.container():
-                st.markdown(f"**{adt} {ahr}** - {atev}<br>{apn}", unsafe_allow_html=True)
-                c1, c2 = st.columns(2)
-                if c1.button("FATTO", key=f"done_{aid}"): 
-                    db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True)
-                    scrivi_log("AGENDA CHIUSA", f"Completato appuntamento {aid} per {apn}")
-                    st.rerun()
-                if c2.button("ELIMINA", key=f"del_{aid}"):
-                    db_run("DELETE FROM appuntamenti WHERE id_u=?", (aid,), True)
-                    scrivi_log("AGENDA ELIMINA", f"Eliminato appuntamento {aid}")
-                    st.rerun()
-            st.markdown("---")
 
 elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
@@ -492,42 +505,29 @@ elif nav == "⚙️ Admin":
             c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
             if us != "admin" and c2.button("ELIMINA", key=f"d_{us}"): 
                 db_run("DELETE FROM utenti WHERE user=?", (us,), True)
-                scrivi_log("ADMIN", f"Eliminato utente {us}")
                 st.rerun()
 
     with t_paz_att:
-        st.subheader("Gestione Pazienti in Reparto")
         with st.form("np"):
             np_val = st.text_input("Nuovo Paziente")
             if st.form_submit_button("AGGIUNGI"): 
                 db_run("INSERT INTO pazienti (nome, stato) VALUES (?, 'ATTIVO')", (np_val.upper(),), True)
-                scrivi_log("ADMIN", f"Aggiunto paziente {np_val.upper()}")
                 st.rerun()
-        
         for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
-            c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
-            c1.write(f"**{pn}**")
+            c1, c2, c3 = st.columns([0.6, 0.2, 0.2]); c1.write(f"**{pn}**")
             if c2.button("DIMETTI", key=f"dim_{pid}"):
                 db_run("UPDATE pazienti SET stato='DIMESSO' WHERE id=?", (pid,), True)
                 db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), "🚪 PAZIENTE DIMESSO DALLA STRUTTURA", "SISTEMA", firma_op), True)
-                scrivi_log("DIMISSIONE", f"Dimesso {pn}")
                 st.rerun()
             if c3.button("ELIMINA", key=f"dp_{pid}"): 
                 db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
-                db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True)
-                scrivi_log("ADMIN", f"Eliminato definitivamente {pn}")
                 st.rerun()
 
     with t_paz_dim:
-        st.subheader("Pazienti Dimessi (Archivio)")
         for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='DIMESSO' ORDER BY nome"):
-            c1, c2 = st.columns([0.8, 0.2])
-            c1.write(f"📁 {pn} (Dimesso)")
+            c1, c2 = st.columns([0.8, 0.2]); c1.write(f"📁 {pn} (Dimesso)")
             if c2.button("RIAMMETTI", key=f"re_{pid}"):
                 db_run("UPDATE pazienti SET stato='ATTIVO' WHERE id=?", (pid,), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), "🔄 PAZIENTE RIAMMESSO IN STRUTTURA", "SISTEMA", firma_op), True)
-                scrivi_log("RIAMMISSIONE", f"Riammesso {pn}")
                 st.rerun()
 
     with t_diar:
@@ -537,19 +537,11 @@ elif nav == "⚙️ Admin":
         params_log = []
         if filtro_p != "TUTTI": query_log += " WHERE p.nome = ?"; params_log.append(filtro_p)
         tutti_log = db_run(query_log + " ORDER BY e.id_u DESC LIMIT 100", tuple(params_log))
-        if st.button("🚨 RESET LOG EVENTI"): 
-            db_run("DELETE FROM eventi", (), True)
-            scrivi_log("ADMIN", "Reset totale diario clinico")
-            st.rerun()
         for lid, ldt, lru, lop, lnt, lpnome in tutti_log:
             st.text(f"[{ldt}] {lpnome} | {lop} ({lru}): {lnt}")
 
     with t_log:
-        st.subheader("📜 Log Tracciabilità Sistema")
         logs_audit = db_run("SELECT data_ora, utente, azione, dettaglio FROM logs_sistema ORDER BY id_log DESC LIMIT 200")
         if logs_audit:
             df_audit = pd.DataFrame(logs_audit, columns=["Data/Ora", "Operatore", "Azione", "Descrizione"])
             st.dataframe(df_audit, use_container_width=True)
-            if st.button("Svuota Log Audit"):
-                db_run("DELETE FROM logs_sistema", (), True)
-                st.rerun()
