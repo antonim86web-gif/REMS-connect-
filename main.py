@@ -7,7 +7,7 @@ import calendar
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
-return datetime.now(timezone.utc) + timedelta(hours=2)
+    return datetime.now(timezone.utc) + timedelta(hours=2)
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9 (INTEGRALE) ---
 st.set_page_config(page_title="REMS Connect ELITE PRO v28.9", layout="wide", page_icon="🏥")
