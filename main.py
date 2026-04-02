@@ -1,4 +1,17 @@
 import sqlite3
+
+def aggiorna_database_emergenza():
+    conn = sqlite3.connect('rems_final_v12.db')
+    c = conn.cursor()
+    try:
+        # Questo comando aggiunge la colonna mancante se non esiste
+        c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
+        conn.commit()
+        print("Colonna tipo_evento aggiunta con successo!")
+    except sqlite3.OperationalError:
+        # Se la colonna esiste già, non fa nulla e non dà errore
+        print("La colonna esiste già, tutto ok.")
+    conn.close()
 import streamlit as st
 from datetime import datetime, timedelta, timezone
 import hashlib
