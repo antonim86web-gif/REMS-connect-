@@ -1,5 +1,124 @@
 import sqlite3
+import streamlit as stimport sqlite3
 import streamlit as st
+import calendar
+from datetime import datetime
+
+# --- 1. FIX DATABASE (Esegui questo blocco per sicurezza) ---
+def check_db_integrity():
+    with sqlite3.connect("rems_final_v12.db") as conn:
+        cursor = conn.cursor()
+        # Assicuriamoci che is_prn esista in terapie
+        try: cursor.execute("ALTER TABLE terapie ADD COLUMN is_prn INTEGER DEFAULT 0")
+        except: pass
+        # Assicuriamoci che esito esista in eventi
+        try: cursor.execute("ALTER TABLE eventi ADD COLUMN esito TEXT")
+        except: pass
+        conn.commit()
+
+check_db_integrity()
+
+# --- 2. FUNZIONE DI RENDERING (CORRETTA) ---
+def genera_griglia_mensile(p_id, farmaci, turno_target, titolo):
+    # Filtro i farmaci per il turno richiesto
+    if turno_target == "TAB":
+        f_turno = [f for f in farmaci if len(f) > 6 and f[6] == 1]
+    else:
+        mappa = {"MAT": 3, "POM": 4, "NOT": 5}
+        idx = mappa[turno_target]
+        f_turno = [f for f in farmaci if len(f) > idx and f[idx] == 1]
+
+    if not f_turno:
+        return # Se non ci sono farmaci, non scrive nulla (neanche il titolo)
+
+    st.markdown(f"#### {titolo}")
+    
+    # CSS per evitare lo schermo bianco e forzare lo scroll
+    st.markdown("""
+        <style>
+            .scroll-wrapper { overflow-x: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 20px; }
+            .m-table { border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 11px; }
+            .m-table th, .m-table td { border: 1px solid #ddd; padding: 6px; text-align: center; min-width: 32px; }
+            .f-col { position: sticky; left: 0; background: #f9f9f9; z-index: 2; min-width: 120px !important; text-align: left !important; }
+            .current-day { background-color: #fff9c4 !important; font-weight: bold; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Calcolo giorni del mese corrente
+    oggi = datetime.now()
+    giorni_nel_mese = calendar.monthrange(oggi.year, oggi.month)[1]
+    
+    # Costruzione HTML della tabella
+    header = "".join([f"<th class='{'current-day' if d == oggi.day else ''}'>{d}</th>" for d in range(1, giorni_nel_mese + 1)])
+    html = f"<div class='scroll-wrapper'><table class='m-table'><thead><tr><th class='f-col'>Farmaco</th>{header}</tr></thead><tbody>"
+    
+    for f in f_turno:
+        id_f, nome_f = f[0], f[1]
+        righe_giorni = ""
+        
+        # Recupero TUTTE le firme del mese per questo farmaco in un colpo solo (ottimizzazione)
+        mese_str = oggi.strftime("%m/%Y")
+        firme = db_run("SELECT data, esito FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
+                       (p_id, f"%{turno_target}: {nome_f}%", f"%/{mese_str}%"))
+        
+        # Trasformo in dizionario {giorno: esito}
+        firme_dict = {}
+        for data_f, esito_f in firme:
+            try: 
+                gg = int(data_f.split("/")[0])
+                firme_dict[gg] = esito_f
+            except: continue
+
+        for d in range(1, giorni_nel_mese + 1):
+            esito = firme_dict.get(d, "")
+            color = "green" if esito == "A" else "red"
+            cell_class = "current-day" if d == oggi.day else ""
+            righe_giorni += f"<td class='{cell_class}' style='color:{color}; font-weight:bold;'>{esito}</td>"
+        
+        html += f"<tr><td class='f-col'>{nome_f}</td>{righe_giorni}</tr>"
+    
+    html += "</tbody></table></div>"
+    st.markdown(html, unsafe_allow_html=True)
+
+    # --- BOTTONI DI FIRMA (Solo per oggi) ---
+    st.caption(f"Firma per oggi ({oggi.strftime('%d/%m')})")
+    cols = st.columns(len(f_turno))
+    for i, f in enumerate(f_turno):
+        with cols[i]:
+            # Controlla se oggi è già firmato
+            if oggi.day in firme_dict:
+                st.success(f"{f[1]}: {firme_dict[oggi.day]}")
+            else:
+                c_a, c_r = st.columns(2)
+                if c_a.button("A", key=f"btnA_{f[0]}_{turno_target}"):
+                    registra_firma(p_id, f[1], turno_target, "A")
+                if c_r.button("R", key=f"btnR_{f[0]}_{turno_target}"):
+                    registra_firma(p_id, f[1], turno_target, "R")
+
+def registra_firma(p_id, farmaco, turno, esito):
+    ora = datetime.now().strftime("%d/%m/%Y %H:%M")
+    nota = f"✔️ SOMM ({turno}): {farmaco}"
+    # firma_op deve essere definita nella tua sessione
+    op = st.session_state.user_session['uid'] if 'user_session' in st.session_state else "Operatore"
+    db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+           (p_id, ora, nota, "Infermiere", op, esito), True)
+    st.rerun()
+
+# --- NEL TUO CODICE PRINCIPALE ---
+# Assicurati che 'farmaci' contenga (id, nome, dose, mat, pom, nott, is_prn)
+farmaci = db_run("SELECT id_u, farmaco, dose, mat, pom, nott, is_prn FROM terapie WHERE p_id=?", (p_id,))
+
+if farmaci:
+    genera_griglia_mensile(p_id, farmaci, "MAT", "☀️ MATTINO")
+    st.write("---")
+    genera_griglia_mensile(p_id, farmaci, "POM", "⛅ POMERIGGIO")
+    st.write("---")
+    genera_griglia_mensile(p_id, farmaci, "NOT", "🌙 NOTTE")
+    st.write("---")
+    genera_griglia_mensile(p_id, farmaci, "TAB", "🆘 TAB (Al Bisogno)")
+else:
+    st.warning("Nessuna terapia trovata per questo paziente.")
+
 from datetime import datetime, timedelta, timezone
 import calendar
 
