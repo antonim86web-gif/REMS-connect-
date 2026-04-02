@@ -25,10 +25,41 @@ st.markdown("""
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
-    .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .cal-table { 
+        width:100%; 
+        border-collapse: collapse; 
+        table-layout: fixed; 
+        background: white; 
+        border-radius: 12px; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    }
     .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
-    .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; }
+    .cal-table td { 
+        border: 1px solid #e2e8f0; 
+        vertical-align: top; 
+        height: 150px; 
+        padding: 5px; 
+        position: relative; 
+        overflow: visible !important; /* Forza la visibilità fuori dalla cella */
+    }
     .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
+    
+    .event-tag-html { 
+        font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; 
+        border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; 
+        line-height: 1.1; position: relative; cursor: help; 
+    }
+    .event-tag-html .tooltip-text {
+        visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff;
+        text-align: left; border-radius: 8px; padding: 12px; position: absolute;
+        z-index: 9999 !important; /* Porta in primissimo piano */
+        bottom: 125%; left: 0%; 
+        opacity: 0;
+        transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44;
+        pointer-events: none;
+    }
+    .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
     
     .event-tag-html { 
         font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; 
