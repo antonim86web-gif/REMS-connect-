@@ -5,17 +5,21 @@ import hashlib
 import pandas as pd
 import calendar
 
-# --- FUNZIONE AGGIORNAMENTO DB (PER COLONNE NUOVE E LOG) ---
+# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
     conn = sqlite3.connect('rems_final_v12.db')
     c = conn.cursor()
-    try:
-        c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
+    # Colonne per eventi
+    try: c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
     except: pass
-    try:
-        c.execute("ALTER TABLE eventi ADD COLUMN figura_professionale TEXT")
+    try: c.execute("ALTER TABLE eventi ADD COLUMN figura_professionale TEXT")
     except: pass
-    # Implementazione Tabella Log per Tracciabilità Legale
+    
+    # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
+    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
+    except: pass
+    
+    # Tabella Log per Tracciabilità Legale
     c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
                  id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
                  data_ora TEXT, 
@@ -31,7 +35,7 @@ aggiorna_struttura_db()
 def get_now_it():
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
-# --- FUNZIONE SCRITTURA LOG (IMPLEMENTAZIONE) ---
+# --- FUNZIONE SCRITTURA LOG ---
 def scrivi_log(azione, dettaglio):
     user_log = st.session_state.user_session['uid'] if st.session_state.user_session else "SISTEMA"
     with sqlite3.connect('rems_final_v12.db') as conn:
@@ -39,8 +43,8 @@ def scrivi_log(azione, dettaglio):
                      (get_now_it().strftime("%d/%m/%Y %H:%M:%S"), user_log, azione, dettaglio))
         conn.commit()
 
-# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9 (INTEGRALE) ---
-st.set_page_config(page_title="REMS Connect ELITE PRO v28.9", layout="wide", page_icon="🏥")
+# --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
+st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", page_icon="🏥")
 
 st.markdown("""
 <style>
@@ -55,27 +59,13 @@ st.markdown("""
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
-    .cal-table { 
-        width:100%; border-collapse: collapse; table-layout: fixed; background: white; 
-        border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-    }
+    .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
     .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; overflow: visible !important; }
     .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
     
-    .event-tag-html { 
-        font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; 
-        border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; 
-        line-height: 1.1; position: relative; cursor: help; 
-    }
-    .event-tag-html .tooltip-text {
-        visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff;
-        text-align: left; border-radius: 8px; padding: 12px; position: absolute;
-        z-index: 9999 !important; bottom: 125%; left: 0%; opacity: 0;
-        transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44;
-        pointer-events: none;
-    }
+    .event-tag-html { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; line-height: 1.1; position: relative; cursor: help; }
+    .event-tag-html .tooltip-text { visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 9999 !important; bottom: 125%; left: 0%; opacity: 0; transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4); font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44; pointer-events: none; }
     .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
     
     .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
@@ -118,7 +108,7 @@ def db_run(query, params=(), commit=False):
         cur = conn.cursor()
         try:
             cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE)")
+            cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE, stato TEXT DEFAULT 'ATTIVO')")
             cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, figura_professionale TEXT)")
             cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
             cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
@@ -215,7 +205,7 @@ st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>W
 if nav == "🗺️ Mappa Posti Letto":
     st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
     stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
-    paz_db = db_run("SELECT p.id, p.nome, a.stanza_id, a.letto FROM pazienti p LEFT JOIN assegnazioni a ON p.id = a.p_id")
+    paz_db = db_run("SELECT p.id, p.nome, a.stanza_id, a.letto FROM pazienti p LEFT JOIN assegnazioni a ON p.id = a.p_id WHERE p.stato='ATTIVO'")
     mappa = {s[0]: {'rep': s[1], 'tipo': s[2], 'letti': {1: None, 2: None}} for s in stanze_db}
     for pid, pnome, sid, letto in paz_db:
         if sid in mappa: mappa[sid]['letti'][letto] = {'id': pid, 'nome': pnome}
@@ -235,7 +225,7 @@ if nav == "🗺️ Mappa Posti Letto":
             st.markdown("</div></div>", unsafe_allow_html=True)
 
     with st.expander("Sposta Paziente"):
-        p_list = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        p_list = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
         sel_p = st.selectbox("Paziente", [p[1] for p in p_list], index=None)
         if sel_p:
             pid_sel = [p[0] for p in p_list if p[1]==sel_p][0]
@@ -253,7 +243,8 @@ if nav == "🗺️ Mappa Posti Letto":
 
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
-    for pid, nome in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
+    # Mostra solo gli attivi nel monitoraggio quotidiano
+    for pid, nome in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
         with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): 
             render_postits(pid)
 
@@ -261,7 +252,7 @@ elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
     ruolo_corr = u['ruolo']
     if u['ruolo'] == "Admin": ruolo_corr = st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
-    p_lista = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+    p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
     if p_lista:
         p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
@@ -460,7 +451,8 @@ elif nav == "📅 Agenda Dinamica":
     with col_ins:
         st.subheader("➕ Nuovo Appuntamento")
         with st.form("add_app_cal"):
-            p_l = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+            # Solo attivi possono avere nuovi appuntamenti
+            p_l = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
             ps_sel = st.multiselect("Paziente/i", [p[1] for p in p_l])
             tipo_e = st.selectbox("Tipo", ["Uscita Esterna", "Appuntamento Interno"])
             dat, ora = st.date_input("Giorno"), st.time_input("Ora")
@@ -493,29 +485,52 @@ elif nav == "📅 Agenda Dinamica":
 
 elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
-    tab1, tab2, tab3, tab4 = st.tabs(["UTENTI", "PAZIENTI", "DIARIO EVENTI", "📜 LOG SISTEMA"])
-    with tab1:
+    t_ut, t_paz_att, t_paz_dim, t_diar, t_log = st.tabs(["UTENTI", "PAZIENTI ATTIVI", "ARCHIVIO DIMESSI", "DIARIO EVENTI", "📜 LOG SISTEMA"])
+    
+    with t_ut:
         for us, un, uc, uq in db_run("SELECT user, nome, cognome, qualifica FROM utenti"):
             c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
             if us != "admin" and c2.button("ELIMINA", key=f"d_{us}"): 
                 db_run("DELETE FROM utenti WHERE user=?", (us,), True)
                 scrivi_log("ADMIN", f"Eliminato utente {us}")
                 st.rerun()
-    with tab2:
+
+    with t_paz_att:
+        st.subheader("Gestione Pazienti in Reparto")
         with st.form("np"):
             np_val = st.text_input("Nuovo Paziente")
             if st.form_submit_button("AGGIUNGI"): 
-                db_run("INSERT INTO pazienti (nome) VALUES (?)", (np_val.upper(),), True)
+                db_run("INSERT INTO pazienti (nome, stato) VALUES (?, 'ATTIVO')", (np_val.upper(),), True)
                 scrivi_log("ADMIN", f"Aggiunto paziente {np_val.upper()}")
                 st.rerun()
-        for pid, pn in db_run("SELECT id, nome FROM pazienti ORDER BY nome"):
-            c1, c2 = st.columns([0.8, 0.2]); c1.write(pn)
-            if c2.button("ELIMINA", key=f"dp_{pid}"): 
+        
+        for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
+            c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
+            c1.write(f"**{pn}**")
+            if c2.button("DIMETTI", key=f"dim_{pid}"):
+                db_run("UPDATE pazienti SET stato='DIMESSO' WHERE id=?", (pid,), True)
+                db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), "🚪 PAZIENTE DIMESSO DALLA STRUTTURA", "SISTEMA", firma_op), True)
+                scrivi_log("DIMISSIONE", f"Dimesso {pn}")
+                st.rerun()
+            if c3.button("ELIMINA", key=f"dp_{pid}"): 
                 db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
                 db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True)
-                scrivi_log("ADMIN", f"Eliminato paziente {pn}")
+                scrivi_log("ADMIN", f"Eliminato definitivamente {pn}")
                 st.rerun()
-    with tab3:
+
+    with t_paz_dim:
+        st.subheader("Pazienti Dimessi (Archivio)")
+        for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='DIMESSO' ORDER BY nome"):
+            c1, c2 = st.columns([0.8, 0.2])
+            c1.write(f"📁 {pn} (Dimesso)")
+            if c2.button("RIAMMETTI", key=f"re_{pid}"):
+                db_run("UPDATE pazienti SET stato='ATTIVO' WHERE id=?", (pid,), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), "🔄 PAZIENTE RIAMMESSO IN STRUTTURA", "SISTEMA", firma_op), True)
+                scrivi_log("RIAMMISSIONE", f"Riammesso {pn}")
+                st.rerun()
+
+    with t_diar:
         lista_p = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
         filtro_p = st.selectbox("Filtra per Paziente:", ["TUTTI"] + [p[1] for p in lista_p])
         query_log = "SELECT e.id_u, e.data, e.ruolo, e.op, e.nota, p.nome FROM eventi e JOIN pazienti p ON e.id = p.id"
@@ -528,7 +543,8 @@ elif nav == "⚙️ Admin":
             st.rerun()
         for lid, ldt, lru, lop, lnt, lpnome in tutti_log:
             st.text(f"[{ldt}] {lpnome} | {lop} ({lru}): {lnt}")
-    with tab4:
+
+    with t_log:
         st.subheader("📜 Log Tracciabilità Sistema")
         logs_audit = db_run("SELECT data_ora, utente, azione, dettaglio FROM logs_sistema ORDER BY id_log DESC LIMIT 200")
         if logs_audit:
