@@ -284,23 +284,28 @@ elif nav == "👥 Modulo Equipe":
                 with st.form("f_crit"):
                     tipo = st.selectbox("Livello Criticità", ["BASSO", "MEDIO", "ALTO"]); dett = st.text_area("Dettaglio")
                     if st.form_submit_button("INVIA SEGNALAZIONE"): db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🚨 CRITICITÀ {tipo}: {dett}", "OPSI", firma_op), True); st.rerun()
-        # --- AGGIUNTA TAB CONSEGNE MEDICHE PER PSICHIATRA ---elif ruolo_corr == "Psichiatra":
-    t1, t2, t3 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE"])
-    
-    # ... (tieni il codice di t1 e t2 come sono già nel tuo script) ...
-
-    with t3:
-        with st.form("f_cons_med"):
-            nota_medica = st.text_area("Indicazioni Cliniche / Note Diagnostiche")
-            if st.form_submit_button("SALVA CONSEGNA MEDICA"):
-                if nota_medica:
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                           (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True)
-                    st.success("Nota medica registrata.")
-                    st.rerun()
-                else:
-                    st.warning("Inserisci un testo per salvare.")
-
+                elif ruolo_corr == "Psichiatra":
+            t1, t2, t3 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE"])
+            with t1:
+                with st.form("f_ps"):
+                    f, d = st.text_input("Farmaco"), st.text_input("Dose")
+                    c1,c2,c3 = st.columns(3); m,p,n = c1.checkbox("MAT"), c2.checkbox("POM"), c3.checkbox("NOT")
+                    if st.form_submit_button("REGISTRA"):
+                        db_run("INSERT INTO terapie (p_id, farmaco, dose, mat, pom, nott, medico) VALUES (?,?,?,?,?,?,?)", (p_id, f, d, int(m), int(p), int(n), firma_op), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"➕ Prescritto: {f} {d}", "Psichiatra", firma_op), True); st.rerun()
+            with t2:
+                for tid, fn, ds, m_v, p_v, n_v in db_run("SELECT id_u, farmaco, dose, mat, pom, nott FROM terapie WHERE p_id=?", (p_id,)):
+                    with st.expander(f"Modifica: {fn}"):
+                        with st.form(key=f"m_{tid}"):
+                            nf, nd = st.text_input("Farmaco", fn), st.text_input("Dose", ds); cc1,cc2,cc3 = st.columns(3); nm,np,nn = cc1.checkbox("MAT",bool(m_v)),cc2.checkbox("POM",bool(p_v)),cc3.checkbox("NOT",bool(n_v))
+                            if st.form_submit_button("AGGIORNA"): db_run("UPDATE terapie SET farmaco=?, dose=?, mat=?, pom=?, nott=? WHERE id_u=?", (nf, nd, int(nm), int(np), int(nn), tid), True); st.rerun()
+                            if st.form_submit_button("SOSPENDE"): db_run("DELETE FROM terapie WHERE id_u=?", (tid,), True); st.rerun()
+            with t3:
+                with st.form("f_cons_med"):
+                    nota_medica = st.text_area("Indicazioni Cliniche / Note Diagnostiche")
+                    if st.form_submit_button("SALVA CONSEGNA MEDICA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True); st.rerun()
+                    
         elif ruolo_corr == "Infermiere":
             t1, t2, t3 = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
             with t1:
