@@ -65,7 +65,7 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione_ia(p_id, p_nome, giorni=10):
+def genera_relazione_ia(p_id, p_nome, giorni=30):
     # Questa riga DEVE essere rientrata di 4 spazi rispetto a "def"
     eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=?", (p_id,))
     
