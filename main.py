@@ -89,7 +89,10 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     {testo_per_ia}
     """
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+                # Forza l'uso del modello flash sulla versione stabile dell'API
+        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        
         
 
         response = model.generate_content(prompt)
