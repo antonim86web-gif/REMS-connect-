@@ -6,9 +6,9 @@ import pandas as pd
 import calendar
 import google.generativeai as genai
 
-# --- CONFIGURAZIONE IA (AIzaSyD3Zij4YGcFSQpkxqxG4Y_hI4VGsK3ahcM) ---
+# --- CONFIGURAZIONE IA (AI) ---
 # Ottienila su: https://aistudio.google.com/app/apikey
-genai.configure(api_key="AIzaSyD3Zij4YGcFSQpkxqxG4Y_hI4VGsK3ahcM")
+genai.configure(api_key=" AIzaSyD3Zij4YGcFSQpkxqxG4Y_hI4VGsK3ahcM ")
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
     conn = sqlite3.connect('rems_final_v12.db')
