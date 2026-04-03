@@ -8,7 +8,13 @@ import google.generativeai as genai
 
 # --- CONFIGURAZIONE IA (INSERISCI QUI LA TUA API KEY) ---
 # Ottienila su: https://aistudio.google.com/app/apikey
-genai.configure(api_key="LA_TUA_API_KEY_QUI")
+# Recupera la chiave dai Secrets di Streamlit che abbiamo appena impostato
+import os
+try:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+except:
+    st.error("Chiave API non configurata nei Secrets di Streamlit!")
+
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
