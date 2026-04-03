@@ -4,15 +4,15 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import pandas as pd
 import calendar
+
+import streamlit as st
 import google.generativeai as genai
 
-# Forza la configurazione senza usare v1beta
+# Configurazione corretta e semplice
 genai.configure(
     api_key=st.secrets["GEMINI_API_KEY"],
-    transport='rest',
-    client_options={'api_version': 'v1'}
+    transport='rest'
 )
-
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
@@ -90,9 +90,9 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     {testo_per_ia}
     """
     try:
-                # Forza l'uso del modello flash sulla versione stabile dell'API
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
+                # Assicurati che ci sia 'v1' nel nome del modello se il 404 persiste
+model = genai.GenerativeModel('models/gemini-1.5-flash')
+
 
         return response.text
     except Exception as e:
