@@ -62,12 +62,11 @@ def scrivi_log(azione, dettaglio):
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_nome, giorni=30):
+    # Questa riga DEVE essere rientrata di 4 spazi rispetto a "def"
+    eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=?", (p_id,))
     
-    # Recupera le ultime 100 note, a prescindere da quanti giorni fa sono state scritte
-eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
-
     if not eventi:
-        return "Dati insufficienti nei diari per generare una relazione."
+        return "⚠️ Nessuna nota trovata nel diario per questo paziente."
 
     testo_per_ia = f"PAZIENTE: {p_nome}\nPERIODO ANALISI: Ultimi {giorni} giorni\n\nDIARI CLINICI REGISTRATI:\n"
     for d, r, o, nt in eventi:
