@@ -1,6 +1,8 @@
-sqlite3e3t streamlit as st
-import google.generativeai as genai  # <--- QUESTA RIGA MANCA O È SBAGLIATA
+import streamlit as st
+import google.generativeai as genai
 import sqlite3
+import pandas as pd
+
 # ... altre tue importazioni ...
 
 # Configurazione (usa la chiave di AI Studio della foto 22649)
