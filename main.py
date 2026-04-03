@@ -1,9 +1,9 @@
-import sqlite3
+import
 import streamlit as st
 from datetime import datetime, timedelta, timezone
 import hashlib
 import pandas as pd
-import calendar
+import calenda
 import io
 
 # --- CONFIGURAZIONE DI SISTEMA ELITE PRO ---
