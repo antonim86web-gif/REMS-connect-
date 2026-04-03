@@ -10,6 +10,7 @@ import google.generativeai as genai
 # Ottienila su: https://aistudio.google.com/app/apikey
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
+
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
     conn = sqlite3.connect('rems_final_v12.db')
