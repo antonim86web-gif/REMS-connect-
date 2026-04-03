@@ -60,23 +60,24 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione_ia(nome_paziente, dati_inseriti):
+def genera_relazione_ia(p_id, p_sel, g_rel):
+    # Organizziamo i dati in un testo leggibile per l'IA
+    dati_per_ia = f"ID Paziente: {p_id}\nNominativo: {p_sel}\nDati Clinici/Note: {g_rel}"
+    
     prompt = f"""
     Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
     Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
     
-    Nome Paziente: {nome_paziente}
-    Dati Clinici: {dati_inseriti}
+    {dati_per_ia}
     
-    Scrivi una relazione strutturata, formale e dettagliata.
+    Scrivi una relazione strutturata, formale e dettagliata, adatta a un contesto sanitario giudiziario.
     """
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        return f"Errore nell'elaborazione: {str(e)}"
-        
+        return f"Errore nell'elaborazione IA: {str(e)}"
         
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
