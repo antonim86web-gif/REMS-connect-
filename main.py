@@ -11,9 +11,15 @@ import google.generativeai as genai
 # Recupera la chiave dai Secrets di Streamlit che abbiamo appena impostato
 import os
 try:
+    # --- CONFIGURAZIONE IA SICURA ---
+import os
+if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+else:
+    st.error("⚠️ Chiave API non trovata nei Secrets di Streamlit!")
+
 except:
-    st.error("Chiave API configurata nei Secrets di Streamlit!")
+    st.error("Chiave API non configurata nei Secrets di Streamlit!")
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
