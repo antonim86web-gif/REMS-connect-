@@ -70,21 +70,15 @@ def genera_relazione(prompt):
     except Exception as e:
         return f"Errore Groq: {str(e)}"
 
-    Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
-    Analizza i diari clinici seguenti e redigi una RELAZIONE CLINICA INTEGRATA formale.
-    
-    STRUTTURA RICHIESTA:
-    1. QUADRO PSICHIATRICO: Sintetizza le note del Medico/Psichiatra.
-    2. ADERENZA TERAPEUTICA E PARAMETRI: Valuta la compliance ai farmaci e i dati vitali (note Infermiere).
-    3. AREA EDUCATIVA E OSSERVATIVA: Sintetizza le note di OSS, Educatori e Psicologi.
-    4. CONCLUSIONI CLINICHE: Indica stabilità o eventuali criticità rilevate.
-
-    Usa un linguaggio tecnico, professionale e asciutto. Non inventare fatti non presenti nei dati.
-    
-    DATI DA ANALIZZARE:
-    {testo_per_ia}
-    """
-    
+f"""
+        prompt = f"""
+        Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
+        Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
+        
+        Nome Paziente: {nome_paziente}
+        Dati Clinici: {dati_inseriti}
+        
+        Scrivi una relazione strutturata, formale e dettagliata, adatta a un contesto sanitario giudiziario.
     try:
             # Usa il percorso completo 'models/...'
             model = genai.GenerativeModel('models/gemini-1.5-flash')
