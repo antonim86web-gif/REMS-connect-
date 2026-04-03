@@ -65,7 +65,7 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione_ia(p_id, p_nome, giorni=30):
+def genera_relazione_ia(p_id, p_nome, giorni=10):
     # Questa riga DEVE essere rientrata di 4 spazi rispetto a "def"
     eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=?", (p_id,))
     
@@ -93,7 +93,8 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     """
     try:
             # Qui deve esserci lo spazio (rientro) a sinistra!
-            model = genai.GenerativeModel('models/gemini-1.5-flash')
+            model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
+
             response = model.generate_content(prompt)
             return response.text
                 
