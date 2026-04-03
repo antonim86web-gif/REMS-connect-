@@ -13,7 +13,7 @@ import os
 try:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 except:
-    st.error("Chiave API non configurata nei Secrets di Streamlit!")
+    st.error("Chiave API configurata nei Secrets di Streamlit!")
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
