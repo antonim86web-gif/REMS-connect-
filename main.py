@@ -70,7 +70,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u ASC", (p_id,))
     
     if not eventi:
-        return "Dati insufficienti nei diari per generare una relazione."
+        return "Dati insufficienti nei diari per generare una relazionerà."
 
     testo_per_ia = f"PAZIENTE: {p_nome}\nPERIODO ANALISI: Ultimi {giorni} giorni\n\nDIARI CLINICI REGISTRATI:\n"
     for d, r, o, nt in eventi:
@@ -92,7 +92,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     {testo_per_ia}
     """
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
