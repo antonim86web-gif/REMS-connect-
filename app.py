@@ -1,15 +1,10 @@
+import streamlit as st
+import google.generativeai as genai  # <--- QUESTA RIGA MANCA O È SBAGLIATA
 import sqlite3
-import streamlit as st
-from datetime import datetime, timedelta, timezone
-import hashlib
-import pandas as pd
-import calendar
-import streamlit as st
-from groq import Groq
+# ... altre tue importazioni ...
 
-# Configurazione Groq
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
+# Configurazione (usa la chiave di AI Studio della foto 22649)
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
