@@ -70,7 +70,7 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def def genera_relazione_ia(p_id, p_nome, giorni=30):
+def  genera_relazione_ia(p_id, p_nome, giorni=30):
     eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u ASC", (p_id,))
     
     if not eventi:
