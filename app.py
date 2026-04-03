@@ -1,4 +1,4 @@
-import streamlit as st
+sqlite3e3t streamlit as st
 import google.generativeai as genai  # <--- QUESTA RIGA MANCA O È SBAGLIATA
 import sqlite3
 # ... altre tue importazioni ...
@@ -56,23 +56,25 @@ def scrivi_log(azione, dettaglio):
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_sel, g_rel):
-    # Organizziamo i dati in un testo leggibile per l'IA
-    dati_per_ia = f"ID Paziente: {p_id}\nNominativo: {p_sel}\nDati Clinici/Note: {g_rel}"
+    # Prepariamo i dati per l'IA
+    dati_clinici = f"Paziente: {p_sel} (ID: {p_id})\nNote cliniche recenti: {g_rel}"
     
     prompt = f"""
     Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
     Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
     
-    {dati_per_ia}
+    {dati_clinici}
     
-    Scrivi una relazione strutturata, formale e dettagliata, adatta a un contesto sanitario giudiziario.
+    Scrivi una relazione strutturata, formale e dettagliata.
     """
     try:
+        # Ora 'genai' funzionerà perché l'abbiamo importato sopra
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Errore nell'elaborazione IA: {str(e)}"
+
         
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
@@ -85,7 +87,7 @@ st.markdown("""
     .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
     .user-logged { color: #00ff00 !important; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
     .sidebar-footer { color: #ffffff !important; font-size: 0.8rem; text-align: center; margin-top: 20px; opacity: 0.8; }
-    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
+    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: solidolid #ffffff22; }
     .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
     
     .ai-box { background: #f8fafc; border: 2px solid #a855f7; border-radius: 15px; padding: 25px; margin-top: 10px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2); }
