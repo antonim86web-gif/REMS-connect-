@@ -88,13 +88,13 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     DATI DA ANALIZZARE:
     {testo_per_ia}
     """
-    try:
-            # Qui deve esserci lo spazio (rientro) a sinistra!
-            model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
-
+    
+           try:
+            # Usa il percorso completo 'models/...'
+            model = genai.GenerativeModel('models/gemini-1.5-flash')
             response = model.generate_content(prompt)
             return response.text
-                
+             
         
     except Exception as e:
         return f"Errore nell'elaborazione IA: {str(e)}"
