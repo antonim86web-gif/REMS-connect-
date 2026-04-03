@@ -1,11 +1,11 @@
 import streamlit as st
-from groq import Groq
 import sqlite3
 import pandas as pd
+from datetime import datetime, timedelta, timezone # <--- MANCAVA QUESTA!
+from groq import Groq
 
-# Configurazione Groq (Assicurati che nei Secrets il nome sia GROQ_API_KEY)
+# Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
