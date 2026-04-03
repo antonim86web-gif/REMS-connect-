@@ -91,7 +91,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     """
     try:
          # Assicurati che ci sia 'v1' nel nome del modello se il 404 persiste
-model = genai.GenerativeModel('models/gemini-1.5-flash')
+      model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 
         return response.text
