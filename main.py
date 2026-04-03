@@ -8,8 +8,7 @@ import google.generativeai as genai
 
 # --- CONFIGURAZIONE IA (INSERISCI QUI LA TUA API KEY) ---
 # Ottienila su: https://aistudio.google.com/app/apikey
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"], transport='rest')
 
 
 
@@ -90,7 +89,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     """
     try:
                 # Forza l'uso del modello flash sulla versione stabile dell'API
-        model = genai.GenerativeModel('gemini-1.0-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         response = model.generate_content(prompt)
         
         
