@@ -60,34 +60,23 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione(prompt):
+def genera_relazione(nome_paziente, dati_inseriti):
+    prompt = f"""
+    Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
+    Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
+    
+    Nome Paziente: {nome_paziente}
+    Dati Clinici: {dati_inseriti}
+    
+    Scrivi una relazione strutturata, formale e dettagliata.
+    """
     try:
-        chat_completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": prompt}],
-            model="llama-3.3-70b-versatile",
-        )
-        return chat_completion.choices[0].message.content
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
     except Exception as e:
-        return f"Errore Groq: {str(e)}"
-
-f"""
-prompt = f"""
-        Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
-        Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
+        return f"Errore nell'elaborazione: {str(e)}"
         
-        Nome Paziente: {nome_paziente}
-        Dati Clinici: {dati_inseriti}
-        
-        Scrivi una relazione strutturata, formale e dettagliata, adatta a un contesto sanitario giudiziario.
-    try:
-            # Usa il percorso completo 'models/...'
-            model = genai.GenerativeModel('models/gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            return response.text
-             
-        
-    except Exception as e:
-        return f"Errore nell'elaborazione IA: {str(e)}"
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
 st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", page_icon="🏥")
