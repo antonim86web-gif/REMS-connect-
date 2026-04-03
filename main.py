@@ -70,16 +70,26 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione_ia(p_id, p_nome, giorni=30):
-    # Recupero dati storici dal DB
+def def genera_relazione_ia(p_id, p_nome, giorni=30):
     eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u ASC", (p_id,))
     
     if not eventi:
-        return "Dati insufficienti nei diari per generare una relazionerà."
+        return "Dati insufficienti nei diari per generare una relazione."
 
     testo_per_ia = f"PAZIENTE: {p_nome}\nPERIODO ANALISI: Ultimi {giorni} giorni\n\nDIARI CLINICI REGISTRATI:\n"
     for d, r, o, nt in eventi:
         testo_per_ia += f"[{d}] {r} ({o}): {nt}\n"
+
+    prompt = f"Analizza clinicamente questi diari per il paziente {p_nome}: {testo_per_ia}"
+    
+    try:
+        # USA QUESTO NOME MODELLO (senza -latest e senza models/)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Errore nell'elaborazione IA: {str(e)}"
+
 
     prompt = f"""
     Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
