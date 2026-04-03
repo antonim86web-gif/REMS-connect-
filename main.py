@@ -62,9 +62,10 @@ def scrivi_log(azione, dettaglio):
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_nome, giorni=30):
-    # Recupero dati storici dal DB
-    eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u ASC", (p_id,))
     
+    # Recupera le ultime 100 note, a prescindere da quanti giorni fa sono state scritte
+eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
+
     if not eventi:
         return "Dati insufficienti nei diari per generare una relazione."
 
