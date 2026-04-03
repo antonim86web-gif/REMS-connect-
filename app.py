@@ -89,12 +89,13 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     DATI DA ANALIZZARE:
     {testo_per_ia}
     """
-    try:
-         # Assicurati che ci sia 'v1' nel nome del modello se il 404 persiste
-      model = genai.GenerativeModel('models/gemini-1.5-flash')
-
-
-        return response.text
+            try:
+            # Qui deve esserci lo spazio (rientro) a sinistra!
+            model = genai.GenerativeModel('models/gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            return response.text
+                
+        
     except Exception as e:
         return f"Errore nell'elaborazione IA: {str(e)}"
 
