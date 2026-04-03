@@ -60,7 +60,7 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione(nome_paziente, dati_inseriti):
+def genera_relazione_ia(nome_paziente, dati_inseriti):
     prompt = f"""
     Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
     Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
@@ -76,6 +76,7 @@ def genera_relazione(nome_paziente, dati_inseriti):
         return response.text
     except Exception as e:
         return f"Errore nell'elaborazione: {str(e)}"
+        
         
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
