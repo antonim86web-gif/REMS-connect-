@@ -8,7 +8,7 @@ import google.generativeai as genai
 
 # --- CONFIGURAZIONE IA (INSERISCI QUI LA TUA API KEY) ---
 # Ottienila su: https://aistudio.google.com/app/apikey
-genai.configure(api_key="LA_TUA_API_KEY_QUI")
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
@@ -86,7 +86,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     {testo_per_ia}
     """
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-1.5-flash') o se fallisce ancora model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
