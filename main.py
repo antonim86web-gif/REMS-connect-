@@ -299,7 +299,65 @@ elif nav == "👥 Modulo Equipe":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True)
                         st.rerun()
 
-        elif ruolo_corr == "Infermiere":
+        el        elif ruolo_corr == "Infermiere":
+            t1, t2, t3 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
+            with t1:
+                turno_attivo = st.selectbox("Seleziona Turno di Lavoro", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+                
+                # Mappatura corretta delle colonne DB rispetto alla selezione
+                mappa_col = {"8:13 (Mattina)": 8, "16:20 (Pomeriggio)": 9, "Al bisogno": 10}
+                idx_colonna = mappa_col[turno_attivo]
+                
+                terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+                
+                for f in terapie_keep:
+                    # Controlliamo se il farmaco è previsto per il turno selezionato
+                    # f[3] è mat_nuovo, f[4] è pom_nuovo, f[5] è al_bisogno
+                    if (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or \
+                       (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or \
+                       (turno_attivo == "Al bisogno" and f[5] == 1):
+                        
+                        st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
+                        
+                        # Recupero firme storiche filtrate per farmaco e turno specifico
+                        # Cerchiamo nel campo nota sia il nome del farmaco che il turno per evitare smarcamenti duplicati
+                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
+                                       (p_id, f"%✔️ {f[1]}%", f"%({turno_attivo})%", f"%/{get_now_it().strftime('%m/%Y')}%"))
+                        
+                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
+
+                        # Griglia Visuale
+                        h = "<div class='scroll-giorni'>"
+                        gg_m = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
+                        for d in range(1, gg_m + 1):
+                            info = f_map.get(d)
+                            cl = "quadratino q-oggi" if d == get_now_it().day else "quadratino"
+                            es, col, bg = (info['e'], "green", "#dcfce7") if info else ("-", "#888", "white")
+                            if es == "R": col, bg = "red", "#fee2e2"
+                            h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
+                        h += "</div>"
+                        st.markdown(h, unsafe_allow_html=True)
+
+                        # Tasti Smarcamento con Key univoca (ID_Farmaco + Turno)
+                        with st.popover(f"Smarca {f[1]} - {turno_attivo}"):
+                            c1, c2 = st.columns(2)
+                            # Usiamo f[0] (id_u della terapia) per rendere la key del bottone unica
+                            if c1.button("✅ ASSUNTO", key=f"btn_A_{f[0]}_{turno_attivo.replace(' ', '')}"):
+                                dt = get_now_it().strftime("%d/%m/%Y %H:%M")
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, dt, f"✔️ {f[1]} ({turno_attivo})", "Infermiere", firma_op, "A"), True)
+                                scrivi_log("KEEP", f"Assunto {f[1]} ({turno_attivo}) per {p_sel}")
+                                st.rerun()
+                                
+                            if c2.button("❌ RIFIUTATO", key=f"btn_R_{f[0]}_{turno_attivo.replace(' ', '')}"):
+                                dt = get_now_it().strftime("%d/%m/%Y %H:%M")
+                                # Nota: inseriamo il turno anche nel rifiuto per il filtro futuro
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, dt, f"❌ RIFIUTO {f[1]} ({turno_attivo})", "Infermiere", firma_op, "R"), True)
+                                scrivi_log("KEEP", f"Rifiuto {f[1]} ({turno_attivo}) per {p_sel}")
+                                st.rerun()
+                        st.divider()
+                    elif ruolo_corr == "Infermiere":
             t1, t2, t3 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
             with t1:
                 turno_attivo = st.selectbox("Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
