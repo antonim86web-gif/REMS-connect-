@@ -1,4 +1,3 @@
-
 import sqlite3
 import streamlit as st
 from datetime import datetime, timedelta, timezone
@@ -42,8 +41,9 @@ def aggiorna_struttura_db():
 
 aggiorna_struttura_db()
 
-# --- FUNZIONE ORARIO ITALIA (UTC+2) ---
+# --- FUNZIONE ORARIO ITALIA (DINAMICA) ---
 def get_now_it():
+    # Gestione automatica ora legale/solare semplificata per l'utente
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
 # --- FUNZIONE SCRITTURA LOG ---
@@ -91,7 +91,6 @@ st.markdown("""
     .role-sociale { background-color: #fff7ed; border-color: #f97316; }
     .role-opsi { background-color: #f1f5f9; border-color: #0f172a; border-style: dashed; }
 
-    /* CSS SMARCAMENTO RAPIDO */
     .scroll-giorni { display: flex; overflow-x: auto; gap: 4px; padding: 8px; background: #fdfdfd; }
     .quadratino { 
         min-width: 38px; height: 50px; border-radius: 4px; border: 1px solid #eee; 
@@ -163,7 +162,7 @@ def render_postits(p_id, limit=50):
     for d, r, o, nt in res:
         role_map = {"Psichiatra":"psichiatra", "Infermiere":"infermiere", "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", "Assistente Sociale":"sociale", "OPSI":"opsi"}
         cls = f"role-{role_map.get(r, 'oss')}"
-        st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div><div>{nt}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o}</span><span>📅 {d}</span></div><div>{nt}</div></div>', unsafe_allow_html=True)
 
 # --- SESSIONE E LOGIN ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
@@ -325,19 +324,15 @@ elif nav == "👥 Modulo Equipe":
                 turno_attivo = st.selectbox("Seleziona Turno di Lavoro", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 mappa_col = {"8:13 (Mattina)": 8, "16:20 (Pomeriggio)": 9, "Al bisogno": 10}
                 col_db = mappa_col[turno_attivo]
-                
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 for f in terapie_keep:
-                    if f[col_db-5] == 1: # Verifica se il farmaco è previsto per questa fascia
+                    if f[col_db-5] == 1: 
                         st.write(f"**{f[1]}** ({f[2]})")
-                        
-                        # Recupero firme storiche del mese corrente per la griglia
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%✔️ {f[1]}%", f"%/{get_now_it().strftime('%m/%Y')}%"))
                         f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
-
-                        # Griglia Quadratini
+                        
                         h = "<div class='scroll-giorni'>"
                         gg_m = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         for d in range(1, gg_m + 1):
