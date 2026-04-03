@@ -1,11 +1,13 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from datetime import datetime, timedelta, timezone # <--- MANCAVA QUESTA!
-from groq import Groq
+import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
+from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
+from groq import Groq # <--- Per l'IA di Groq
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
