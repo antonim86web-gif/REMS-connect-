@@ -8,7 +8,8 @@ import google.generativeai as genai
 
 # --- CONFIGURAZIONE IA (INSERISCI QUI LA TUA API KEY) ---
 # Ottienila su: https://aistudio.google.com/app/apikey
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"], transport='rest')
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
 
 
 
