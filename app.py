@@ -57,24 +57,18 @@ def scrivi_log(azione, dettaglio):
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_sel, g_rel):
-    # Prepariamo i dati per l'IA
-    dati_clinici = f"Paziente: {p_sel} (ID: {p_id})\nNote cliniche recenti: {g_rel}"
-    
-    prompt = f"""
-    Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
-    Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
-    
-    {dati_clinici}
-    
-    Scrivi una relazione strutturata, formale e dettagliata.
-    """
     try:
-        # Ora 'genai' funzionerà perché l'abbiamo importato sopra
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        return response.text
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Sei un esperto clinico REMS. Genera relazioni formali."},
+                {"role": "user", "content": f"ID: {p_id}, Paziente: {p_sel}, Note: {g_rel}"}
+            ],
+        )
+        return completion.choices[0].message.content
     except Exception as e:
-        return f"Errore nell'elaborazione IA: {str(e)}"
+        return f"Errore Groq: {str(e)}"
+        
 
         
 
