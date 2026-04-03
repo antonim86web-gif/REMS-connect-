@@ -90,10 +90,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
                 # Forza l'uso del modello flash sulla versione stabile dell'API
         model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
-        
-        
 
-        response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Errore nell'elaborazione IA: {str(e)}"
