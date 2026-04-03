@@ -5,12 +5,10 @@ import hashlib
 import pandas as pd
 import calendar
 import streamlit as st
-import streamlit as st
-import google.generativeai as genai
+from groq import Groq
 
-# Configurazione standard che NON deve puntare a v1beta
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-
+# Configurazione Groq
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
@@ -62,18 +60,16 @@ def scrivi_log(azione, dettaglio):
         conn.commit()
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
-def genera_relazione_ia(p_id, p_nome, giorni=30):
-    # Questa riga DEVE essere rientrata di 4 spazi rispetto a "def"
-    eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=?", (p_id,))
-    
-    if not eventi:
-        return "⚠️ Nessuna nota trovata nel diario per questo paziente."
+def genera_relazione(prompt):
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama-3.3-70b-versatile",
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        return f"Errore Groq: {str(e)}"
 
-    testo_per_ia = f"PAZIENTE: {p_nome}\nPERIODO ANALISI: Ultimi {giorni} giorni\n\nDIARI CLINICI REGISTRATI:\n"
-    for d, r, o, nt in eventi:
-        testo_per_ia += f"[{d}] {r} ({o}): {nt}\n"
-
-    prompt = f"""
     Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
     Analizza i diari clinici seguenti e redigi una RELAZIONE CLINICA INTEGRATA formale.
     
