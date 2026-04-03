@@ -4,15 +4,17 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import pandas as pd
 import calendar
-
 import streamlit as st
 import google.generativeai as genai
+from google.generativeai.types import RequestOptions
 
-# Configurazione corretta e semplice
+# Configurazione forzata sulla versione 1 stabile
 genai.configure(
     api_key=st.secrets["GEMINI_API_KEY"],
-    transport='rest'
+    transport='rest',
+    client_options=RequestOptions(api_version='v1')
 )
+
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
