@@ -6,17 +6,16 @@ import pandas as pd
 import calendar
 import google.generativeai as genai
 
-# --- CONFIGURAZIONE IA (INSERISCI QUI LA TUA API KEY) ---
-# Ottienila su: https://aistudio.google.com/app/apikey
-# Recupera la chiave dai Secrets di Streamlit che abbiamo appena impostato
+
+# --- CONFIGURAZIONE IA SICURA ---
 import os
 try:
-    # --- CONFIGURAZIONE IA SICURA ---
-import os
-if "GOOGLE_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-else:
-    st.error("⚠️ Chiave API non trovata nei Secrets di Streamlit!")
+    if "GOOGLE_API_KEY" in st.secrets:
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    else:
+        st.warning("⚠️ Chiave API non configurata nei Secrets di Streamlit.")
+except Exception as e:
+    st.error(f"Errore configurazione IA: {e}")
 
 except:
     st.error("Chiave API non configurata nei Secrets di Streamlit!")
