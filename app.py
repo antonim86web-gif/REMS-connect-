@@ -89,7 +89,7 @@ def genera_relazione_ia(p_id, p_nome, giorni=30):
     {testo_per_ia}
     """
     
-           try:
+    try:
             # Usa il percorso completo 'models/...'
             model = genai.GenerativeModel('models/gemini-1.5-flash')
             response = model.generate_content(prompt)
