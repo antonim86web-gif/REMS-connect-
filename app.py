@@ -5,15 +5,12 @@ import hashlib
 import pandas as pd
 import calendar
 import streamlit as st
+import streamlit as st
 import google.generativeai as genai
-from google.generativeai.types import RequestOptions
 
-# Configurazione forzata sulla versione 1 stabile
-genai.configure(
-    api_key=st.secrets["GEMINI_API_KEY"],
-    transport='rest',
-    client_options=RequestOptions(api_version='v1')
-)
+# Configurazione standard che NON deve puntare a v1beta
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
