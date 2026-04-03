@@ -71,7 +71,7 @@ def genera_relazione(prompt):
         return f"Errore Groq: {str(e)}"
 
 f"""
-        prompt = f"""
+prompt = f"""
         Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
         Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
         
