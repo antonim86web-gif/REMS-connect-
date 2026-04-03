@@ -1,12 +1,11 @@
 import streamlit as st
-import google.generativeai as genai
+from groq import Groq
 import sqlite3
 import pandas as pd
 
-# ... altre tue importazioni ...
+# Configurazione Groq (Assicurati che nei Secrets il nome sia GROQ_API_KEY)
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# Configurazione (usa la chiave di AI Studio della foto 22649)
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
