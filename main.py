@@ -4,7 +4,11 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import pandas as pd
 import calendar
+import google.generativeai as genai
 
+# --- CONFIGURAZIONE IA (AIzaSyD3Zij4YGcFSQpkxqxG4Y_hI4VGsK3ahcM) ---
+# Ottienila su: https://aistudio.google.com/app/apikey
+genai.configure(api_key="AIzaSyD3Zij4YGcFSQpkxqxG4Y_hI4VGsK3ahcM")
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
     conn = sqlite3.connect('rems_final_v12.db')
@@ -53,6 +57,40 @@ def scrivi_log(azione, dettaglio):
                      (get_now_it().strftime("%d/%m/%Y %H:%M:%S"), user_log, azione, dettaglio))
         conn.commit()
 
+# --- FUNZIONE GENERATORE RELAZIONE IA ---
+def genera_relazione_ia(p_id, p_nome, giorni=30):
+    # Recupero dati storici dal DB
+    eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u ASC", (p_id,))
+    
+    if not eventi:
+        return "Dati insufficienti nei diari per generare una relazione."
+
+    testo_per_ia = f"PAZIENTE: {p_nome}\nPERIODO ANALISI: Ultimi {giorni} giorni\n\nDIARI CLINICI REGISTRATI:\n"
+    for d, r, o, nt in eventi:
+        testo_per_ia += f"[{d}] {r} ({o}): {nt}\n"
+
+    prompt = f"""
+    Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
+    Analizza i diari clinici seguenti e redigi una RELAZIONE CLINICA INTEGRATA formale.
+    
+    STRUTTURA RICHIESTA:
+    1. QUADRO PSICHIATRICO: Sintetizza le note del Medico/Psichiatra.
+    2. ADERENZA TERAPEUTICA E PARAMETRI: Valuta la compliance ai farmaci e i dati vitali (note Infermiere).
+    3. AREA EDUCATIVA E OSSERVATIVA: Sintetizza le note di OSS, Educatori e Psicologi.
+    4. CONCLUSIONI CLINICHE: Indica stabilità o eventuali criticità rilevate.
+
+    Usa un linguaggio tecnico, professionale e asciutto. Non inventare fatti non presenti nei dati.
+    
+    DATI DA ANALIZZARE:
+    {testo_per_ia}
+    """
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Errore nell'elaborazione IA: {str(e)}"
+
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
 st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", page_icon="🏥")
 
@@ -66,6 +104,7 @@ st.markdown("""
     .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
     .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
     
+    .ai-box { background: #f8fafc; border: 2px solid #a855f7; border-radius: 15px; padding: 25px; margin-top: 10px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2); }
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
 
@@ -219,7 +258,6 @@ if st.sidebar.button("LOGOUT"):
 st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
 # --- LOGICA NAVIGAZIONE ---
-
 if nav == "🗺️ Mappa Posti Letto":
     st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
     stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
@@ -275,7 +313,7 @@ elif nav == "👥 Modulo Equipe":
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
-            t1, t2, t3 = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE"])
+            t1, t2, t3, t_ai = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE", "🤖 RELAZIONE IA"])
             with t1:
                 with st.form("f_ps"):
                     f, d = st.text_input("Farmaco"), st.text_input("Dose")
@@ -306,9 +344,20 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("SALVA CONSEGNA"):
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True)
                         st.rerun()
+            with t_ai:
+                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
+                st.subheader("🪄 Analisi Clinica IA")
+                g_rel = st.slider("Analizza ultimi (giorni):", 7, 180, 30, key="slider_ps")
+                if st.button("GENERA RELAZIONE PERIODICA"):
+                    with st.spinner("L'intelligenza artificiale sta analizzando i diari..."):
+                        res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
+                        st.markdown("---")
+                        st.markdown(res_ai)
+                        st.download_button("Scarica Relazione", res_ai, file_name=f"Relazione_{p_sel}.txt")
+                st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
-            t1, t2, t3 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
+            t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
             with t1:
                 turno_attivo = st.selectbox("Seleziona Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -353,6 +402,15 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("SALVA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
                         st.rerun()
+            with t_ai:
+                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
+                st.subheader("🪄 Analisi Clinica IA")
+                g_rel = st.slider("Analizza ultimi (giorni):", 7, 180, 30, key="slider_inf")
+                if st.button("GENERA RELAZIONE PERIODICA", key="btn_inf_ia"):
+                    with st.spinner("Analisi in corso..."):
+                        res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
+                        st.markdown(res_ai)
+                st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
