@@ -299,7 +299,7 @@ elif nav == "👥 Modulo Equipe":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🩺 MED: {nota_medica}", "Psichiatra", firma_op), True)
                         st.rerun()
 
-        el        elif ruolo_corr == "Infermiere":
+                 elif ruolo_corr == "Infermiere":
             t1, t2, t3 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE"])
             with t1:
                 turno_attivo = st.selectbox("Seleziona Turno di Lavoro", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
