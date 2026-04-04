@@ -1,5 +1,4 @@
-
-  import streamlit as st
+import streamlit as st
 
 # 1. IL MOTORE GRAFICO "ELITE DEEP NIGHT"
 st.markdown("""
