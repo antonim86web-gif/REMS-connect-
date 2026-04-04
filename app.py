@@ -38,7 +38,7 @@ if scelta_grafica == "Nuovo Minimal":
         .tile-icon { font-size: 40px; margin-bottom: 10px; }
         .tile-text { font-weight: 600; font-size: 16px; }
     </style>
-    """, unsafe_allow_html=True)
+     """, unsafe_allow_html=True)
 
     st.title("🖥️ Pannello di Controllo")
     
