@@ -16,7 +16,7 @@ st.markdown("""
         box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
     }
 
-    /* 2. KILLER PALLINI E INPUT NASCOSTI */
+    /* 2. KILLER PALLINI */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
@@ -27,7 +27,7 @@ st.markdown("""
     div[role="radiogroup"] label {
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 15px 20px !important;
+        padding: 18px 20px !important;
         border-radius: 12px !important;
         margin-bottom: 15px !important;
         display: flex !important;
@@ -36,38 +36,41 @@ st.markdown("""
         transition: all 0.3s ease !important;
     }
 
-    /* 4. IL RISOLUTORE: FORZA TESTO BIANCO SU TUTTO */
+    /* 4. IL COLPO DI GRAZIA: FORZA BIANCO SU TUTTI I LIVELLI */
     div[role="radiogroup"] label *, 
     div[role="radiogroup"] label div, 
-    div[role="radiogroup"] label p {
-        color: #FFFFFF !important; /* BIANCO PURO */
-        font-size: 18px !important; /* GRANDE */
-        font-weight: 700 !important;
+    div[role="radiogroup"] label p,
+    div[data-testid="stWidgetLabel"] p,
+    span[data-testid="stMarkdownContainer"] p {
+        color: #FFFFFF !important; /* BIANCO GHIACCIO */
+        font-size: 19px !important; /* GRANDE E LEGGIBILE */
+        font-weight: 800 !important;
         text-align: left !important;
-        text-decoration: none !important;
+        opacity: 1 !important;
+        -webkit-text-fill-color: #FFFFFF !important; /* Forza per browser Webkit */
     }
 
-    /* 5. TASTO ATTIVO (FLOATING ELITE) */
+    /* 5. TASTO ATTIVO (FLOATING) */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(52, 152, 219, 0.3) !important;
+        background: rgba(52, 152, 219, 0.35) !important;
         border-color: #3498db !important;
-        transform: translateY(-8px) !important; /* Effetto Floating */
-        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.4) !important;
+        transform: translateY(-8px) !important;
+        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.5) !important;
     }
 
     /* 6. EFFETTO HOVER */
     div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.1) !important;
-        border-color: rgba(52, 152, 219, 0.5) !important;
+        background: rgba(255,255,255,0.15) !important;
+        border-color: #3498db !important;
     }
 
-    /* RESET SPAZIATURE PER ALLINEAMENTO PERFETTO */
-    div[role="radiogroup"] {
-        gap: 0px !important;
+    /* RIMUOVI MARGINI CHE NASCONDONO IL TESTO */
+    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+        padding: 0px !important;
+        margin: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
-
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
