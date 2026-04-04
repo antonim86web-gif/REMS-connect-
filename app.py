@@ -1,34 +1,24 @@
 # PRIMA questa riga (la n. 1)
 import streamlit as st
-scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
 
-if scelta_grafica == "Nuovo Minimal":
-    # 2. Se scegli Minimal, applica questo stile pulito
-    st.markdown("""
-    <style>
-        .stApp { background-color: #f0f2f6; }
-        .stButton>button { 
-            width: 100%; 
-            height: 70px; 
-            border-radius: 15px; 
-            font-size: 20px !important;
-            border: 2px solid #007bff;
-        }
-        h1 { color: #1e3a8a; text-align: center; }
-    </style>
-    """, unsafe_allow_html=True)
-    st.title("📱 REMS Connect - Semplice")
-    # Qui metterai la versione semplificata che scriveremo insieme
-else:
-    # 3. Qui lasci tutto il tuo codice attuale (quello vecchio)
-    st.title("🏥 REMS Connect - Standard")
-    # ... tutto il tuo codice di adesso ...
 
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
-from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
-from groq import Groq # <--- Per l'IA di Groq
+from datetime import datetime, timedelta
+# 1. Scelta grafica
+scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
+
+if scelta_grafica == "Nuovo Minimal":
+    st.title("📱 REMS Semplice")
+    # ... (il resto del blocco minimal) ...
+    st.stop()
+
+else:
+    # 2. Versione Classica (Tutto spostato a destra di 4 spazi)
+    st.title("🏥 REMS Connect - Standard")
+    # QUI INCOLLA IL RESTO DEL CODICE ORIGINALE 
+    # Assicurati che ogni riga inizi con 4 spazi vuoti!
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
