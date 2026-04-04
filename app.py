@@ -1,65 +1,73 @@
 import streamlit as st
 
+# 1. CSS DEFINITIVO: OMBRE E STILE ELITE
 st.markdown("""
     <style>
-    /* 1. SIDEBAR DEEP NIGHT */
+    /* Ripristiniamo l'ombra potente sulla Sidebar */
     [data-testid="stSidebar"] {
         background-color: #1a252f !important;
         background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5) !important; /* L'ombra che volevi */
+        border-right: none !important;
     }
 
-    /* 2. TRASFORMIAMO I BOTTONI VERDI IN VOCI DI MENU ELEGANTI */
+    /* Stilizziamo i bottoni per farli sembrare voci di menu con ombra interna */
     div.stButton > button {
-        background-color: transparent !important; /* Rimuove il verde */
-        color: #ecf0f1 !important; /* Testo bianco sporco */
-        border: 1px solid rgba(255,255,255,0.1) !important; /* Bordo quasi invisibile */
-        text-align: left !important;
-        justify-content: flex-start !important;
+        background-color: rgba(255,255,255,0.03) !important;
+        color: white !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 10px !important;
         width: 100% !important;
-        height: 45px !important;
-        font-size: 16px !important;
-        font-weight: 400 !important;
-        margin-bottom: 5px !important;
+        text-align: left !important;
+        padding: 10px 15px !important;
         transition: all 0.3s ease !important;
     }
 
-    /* 3. EFFETTO SELEZIONE (Azzurro WebSConnect) */
-    div.stButton > button:hover, div.stButton > button:active, div.stButton > button:focus {
-        background-color: rgba(52, 152, 219, 0.2) !important; /* Sfondo azzurro trasparente */
-        border-left: 5px solid #3498db !important; /* Barra laterale azzurra */
-        color: white !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+    /* Effetto quando clicchi (Azzurro WebSConnect) */
+    div.stButton > button:hover {
+        border-color: #3498db !important;
+        background-color: rgba(52, 152, 219, 0.2) !important;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3) !important;
     }
 
-    /* 4. IL TASTO LOGOUT (Lo teniamo verde ma più sobrio) */
-    /* Usiamo un selettore specifico per l'ultimo bottone o quello con testo LOGOUT */
-    div.stButton > button:has(div:contains("LOGOUT")) {
-        background-color: #2ecc71 !important;
-        border: none !important;
-        justify-content: center !important;
-        font-weight: bold !important;
-        margin-top: 30px !important;
-    }
-
-    /* 5. PULIZIA TESTI SIDEBAR */
-    [data-testid="stSidebar"] .stMarkdown p {
-        color: #bdc3c7 !important;
-        font-size: 14px;
-        letter-spacing: 1px;
-    }
-    
-    /* Intestazione Rems-connect */
-    .sidebar-header {
-        color: white;
-        font-size: 22px;
-        font-weight: 800;
-        text-align: center;
-        padding-bottom: 20px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        margin-bottom: 20px;
+    /* Fix per il testo bianco sui banner blu (così non è più nero) */
+    h1, h2, .stMarkdown p {
+        color: #2c3e50; /* Testo scuro su fondo bianco della pagina */
     }
     </style>
 """, unsafe_allow_html=True)
+
+# 2. FIX ERRORE DI NAVIGAZIONE (Logica Python)
+# Inizializziamo la pagina se non esiste, così l'errore scompare
+if 'page' not in st.session_state:
+    st.session_state.page = 'Monitoraggio'
+
+with st.sidebar:
+    st.markdown("### REMS WebSConnect")
+    st.markdown("<p style='color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
+    st.write("NAVIGAZIONE")
+    
+    # Ad ogni click cambiamo lo stato della pagina
+    if st.button("📊 Monitoraggio"):
+        st.session_state.page = 'Monitoraggio'
+    if st.button("👥 Modulo Equipe"):
+        st.session_state.page = 'Equipe'
+    if st.button("📅 Agenda Dinamica"):
+        st.session_state.page = 'Agenda'
+    if st.button("🗺️ Mappa Posti Letto"):
+        st.session_state.page = 'Mappa'
+    if st.button("⚙️ Admin"):
+        st.session_state.page = 'Admin'
+
+# 3. MOSTRA IL CONTENUTO IN BASE ALLA PAGINA SELEZIONATA
+if st.session_state.page == 'Monitoraggio':
+    st.title("Dashboard Monitoraggio")
+    # Qui metti il tuo codice del monitoraggio
+elif st.session_state.page == 'Equipe':
+    st.title("Modulo Operativo Equipe")
+    # Qui metti il codice dell'equipe
+# ... e così via per le altre pagine
+
 
 # LOGICA SIDEBAR
 with st.sidebar:
