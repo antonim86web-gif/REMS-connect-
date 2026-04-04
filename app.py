@@ -10,34 +10,35 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SFONDO PAGINA: Nero Profondo */
+    /* 1. SFONDO PAGINA: Grigio Ardesia Profondo (Il "particolare" che cercavi) */
     .stApp {
-        background-color: #0b0f14 !important;
+        background-color: #1e293b !important; /* Grigio-Blu professionale */
+        color: #f1f5f9 !important; /* Testo generale Bianco Ghiaccio */
     }
 
-    /* 2. SIDEBAR CON OMBRA AZZURRO ELETTRICO LATERALE */
+    /* 2. SIDEBAR DARK KNIGHT: Nera Pura con Neon Line */
     [data-testid="stSidebar"] {
         background-color: #000000 !important;
-        border-right: 1px solid #00d4ff !important;
-        /* Ombra che si proietta sullo sfondo a destra */
-        box-shadow: 10px 0 30px rgba(0, 212, 255, 0.3) !important;
+        border-right: 2px solid #00d4ff !important; /* Linea Azzurro Elettrico */
+        /* Ombra laterale neon coerente col colore */
+        box-shadow: 10px 0 30px rgba(0, 212, 255, 0.4) !important;
     }
 
-    /* 3. RIMOZIONE ELEMENTI DEFAULT */
-    [data-testid="stMarker"], 
-    [data-baseweb="radio"] div:first-child,
+    /* 3. PULIZIA TOTALE ELEMENTI DEFAULT */
+    [data-testid="stMarker"], [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 4. BOTTONI MENU (TOTALMENTE TRASPARENTI) */
+    /* 4. BOTTONI MENU (CRISTALLINI E TRASPARENTI) */
     div[role="radiogroup"] label {
         background: transparent !important; /* Trasparenza totale */
-        border: 1px solid rgba(0, 212, 255, 0.2) !important;
+        border: 1px solid rgba(0, 212, 255, 0.15) !important;
         padding: 16px 20px !important;
         border-radius: 12px !important;
         margin-bottom: 15px !important;
         display: flex !important;
+        align-items: center !important;
         width: 100% !important;
         cursor: pointer !important;
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
@@ -45,37 +46,44 @@ st.markdown("""
         z-index: 1 !important;
     }
 
-    /* 5. SCRITTA AZZURRO ELETTRICO - FORZATA IN PRIMO PIANO */
+    /* 5. SCRITTE AZZURRO ELETTRICO - FORZATE SOPRA E CLICCABILI */
     div[role="radiogroup"] label p {
-        color: #00d4ff !important;
+        color: #00d4ff !important; /* Azzurro Elettrico Acceso */
         font-size: 19px !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
+        letter-spacing: 1px !important;
         margin: 0px !important;
-        /* Forza la scritta sopra ogni possibile copertura */
-        position: relative !important;
-        z-index: 9999 !important;
-        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5) !important;
+        /* Istruzioni critiche per visibilità e funzionamento clic */
+        z-index: 9999 !important; 
+        pointer-events: none !important; /* Il clic passa attraverso il testo */
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.3) !important;
     }
 
-    /* 6. STATO ATTIVO: FLOATING + OMBRA NEON */
+    /* 6. STATO ATTIVO: FLOATING NEON */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(0, 212, 255, 0.1) !important; /* Solo un velo di colore */
+        background: rgba(0, 212, 255, 0.1) !important; /* Velo di colore */
         border-color: #00d4ff !important;
-        transform: translateY(-10px) !important;
-        box-shadow: 0 15px 25px rgba(0, 212, 255, 0.4) !important;
+        transform: translateY(-10px) !important; /* Floating potente */
+        box-shadow: 0 15px 30px rgba(0, 212, 255, 0.4) !important;
     }
 
     div[role="radiogroup"] label:has(input:checked) p {
-        color: #ffffff !important; /* Bianco puro quando selezionato */
+        color: #ffffff !important; /* Bianco quando attivo */
         text-shadow: 0 0 20px #00d4ff !important;
     }
 
-    /* 7. TASTO LOGOUT: UNIFORMATO AL FLOATING */
+    /* Effetto Hover (Passaggio Mouse) */
+    div[role="radiogroup"] label:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        transform: translateY(-3px) !important;
+    }
+
+    /* 7. TASTO LOGOUT: UNIFORMATO AL FLOATING CON BORDO SPESSO */
     .stButton > button {
         background: transparent !important;
         color: #00d4ff !important;
-        border: 2px solid #00d4ff !important;
+        border: 2px solid #00d4ff !important; /* Bordo più visibile */
         border-radius: 12px !important;
         width: 100% !important;
         height: 55px !important;
@@ -83,7 +91,7 @@ st.markdown("""
         font-size: 18px !important;
         text-transform: uppercase !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 0 10px rgba(0, 212, 255, 0.2) !important;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.2) !important;
     }
 
     .stButton > button:hover {
@@ -93,18 +101,34 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* 8. COERENZA TABELLE E TESTI */
+    /* 8. RISOLUZIONE VISIBILITÀ SCRITTE NELLA PAGINA (CONTENUTI) */
+    /* Testi principali (es. nomi pazienti, dati clinici, L1: Libero) */
+    .stMarkdown p, .stText, [data-testid="stMarkdownContainer"] p {
+        color: #f1f5f9 !important; /* Bianco Ghiaccio nitido */
+        font-weight: 600 !important;
+        font-size: 18px !important;
+    }
+
+    /* Titoli dei Reparti e dei Moduli (Azzurro Elettrico) */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #00d4ff !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        margin-top: 25px !important;
+    }
+
+    /* Tabelle (Coerenza Dark-Slate) */
     [data-testid="stTable"] {
-        background-color: #161b22 !important;
-        color: #e5e7eb !important;
+        background-color: #26364f !important; /* Più chiaro dello sfondo per staccare */
+        border: 1px solid #30363d !important;
+        border-radius: 10px !important;
+        color: #f1f5f9 !important;
     }
     
     th {
-        color: #00d4ff !important;
-    }
-
-    .stMarkdown p, .stMarkdown h1, .stMarkdown h2 {
-        color: #f1f5f9 !important;
+        color: #00d4ff !important; /* Intestazioni tabella Azzurre */
+        font-weight: 800 !important;
     }
 </style>
 """, unsafe_allow_html=True)
