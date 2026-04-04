@@ -1,88 +1,88 @@
+
 import streamlit as st
 
-# 1. CSS STRUTTURALE: OMBRE, FLOATING E DARK MODE
+# 1. SETUP PAGINA (Deve essere la prima istruzione)
+st.set_page_config(page_title="REMS WebSConnect", layout="wide")
+
+# 2. CSS DEFINITIVO E PULITO (Solo l'indispensabile per l'eleganza)
 st.markdown("""
     <style>
-    /* Ripristiniamo le freccette per il mobile */
-    header { visibility: visible !important; background: transparent !important; }
-
-    /* Sidebar con Ombra Esterna potente per distacco */
+    /* Sfondo Sidebar Deep Night */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #111827 0%, #000000 100%) !important;
-        box-shadow: 12px 0 35px rgba(0,0,0,0.7) !important;
-        border-right: 1px solid rgba(255,255,255,0.05) !important;
+        background-color: #111827 !important;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5) !important;
+    }
+    
+    /* Pulizia Sidebar: Nasconde i widget radio originali che creano i pallini */
+    [data-testid="stSidebar"] .stRadio > label { display: none; }
+    [data-testid="stSidebar"] [role="radiogroup"] {
+        padding-top: 10px;
     }
 
-    /* Bottoni Floating con Ombra Interna */
-    div.stButton > button {
-        width: 100% !important;
-        background-color: rgba(255,255,255,0.03) !important;
-        color: #e5e7eb !important;
+    /* Stilizzazione delle voci di menu (Radio trasformato in Menu Elite) */
+    div.row-widget.stRadio > div[role="radiogroup"] > label {
+        background-color: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 12px !important;
         padding: 12px 20px !important;
-        text-align: left !important;
-        font-weight: 500 !important;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+        border-radius: 10px !important;
+        color: #bdc3c7 !important;
+        margin-bottom: 8px !important;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        width: 100% !important;
     }
 
-    /* Effetto Hover "Glow" Azzurro */
-    div.stButton > button:hover {
-        background-color: rgba(52, 152, 219, 0.15) !important;
+    /* Voce Selezionata (Azzurro WebSConnect con ombra interna) */
+    div.row-widget.stRadio > div[role="radiogroup"] > label[data-baseweb="radio"] > div:first-child {
+        display: none !important; /* Rimuove fisicamente il pallino rosso/bianco */
+    }
+    
+    div.row-widget.stRadio > div[role="radiogroup"] > label:has(input:checked) {
+        background-color: rgba(52, 152, 219, 0.2) !important;
         border-color: #3498db !important;
-        color: #3498db !important;
-        transform: translateY(-2px) !important; /* Effetto Floating */
-        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3) !important;
+        color: white !important;
+        box-shadow: inset 0 0 10px rgba(52, 152, 219, 0.2) !important;
     }
 
-    /* Nascondiamo DEFINITIVAMENTE il vecchio radio e i pallini */
-    [data-testid="stSidebar"] [role="radiogroup"], 
-    [data-testid="stSidebar"] .st-ae, .st-af, .st-ag {
-        display: none !important;
+    /* Header Dashboard */
+    .main-title {
+        color: #2c3e50;
+        font-size: 32px;
+        font-weight: 800;
+        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. LOGICA DI NAVIGAZIONE (Stato della Pagina)
-if 'menu_paziente' not in st.session_state:
-    st.session_state.menu_paziente = "Monitoraggio"
-
-# 3. SIDEBAR PULITA (Senza Radio, solo Bottoni)
+# 3. SIDEBAR: NAVIGAZIONE PULITA
 with st.sidebar:
-    st.markdown("<h2 style='color:white; letter-spacing:1px;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#2ecc71; font-weight:bold;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:white;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
     st.write("---")
     
-    # Navigazione a Bottoni con Key Uniche per evitare DuplicateElementId
-    if st.button("📊  Monitoraggio Dati", key="nav_mon"):
-        st.session_state.menu_paziente = "Monitoraggio"
+    # Usiamo un unico widget Radio, ma il CSS sopra lo trasforma in un menu a bottoni
+    menu = st.radio(
+        "NAVIGAZIONE",
+        ["📊 Monitoraggio Dati", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto", "⚙️ Admin"],
+        label_visibility="collapsed"
+    )
     
-    if st.button("👥  Modulo Equipe", key="nav_equ"):
-        st.session_state.menu_paziente = "Equipe"
-        
-    if st.button("📅  Agenda Dinamica", key="nav_age"):
-        st.session_state.menu_paziente = "Agenda"
-        
-    if st.button("🗺️  Mappa Posti Letto", key="nav_map"):
-        st.session_state.menu_paziente = "Mappa"
-
     st.write("---")
-    st.button("🔓 LOGOUT", key="nav_logout")
+    st.write(f"**Antony** \nWebmaster Elite")
 
-# 4. RENDERING DELLA PAGINA IN BASE ALLA SELEZIONE
-if st.session_state.menu_paziente == "Monitoraggio":
-    st.markdown("<h1>Dashboard Monitoraggio</h1>", unsafe_allow_html=True)
-    # qui va il tuo codice del Diario Clinico
+# 4. LOGICA DASHBOARD (Visualizza i dati in base alla scelta)
+if "Monitoraggio" in menu:
+    st.markdown('<div class="main-title">Dashboard Monitoraggio</div>', unsafe_allow_html=True)
+    # Qui inserisci il tuo Diario Clinico
     st.button("DIARIO CLINICO GENERALE", use_container_width=True)
+    with st.expander("📂 SCHEDA PAZIENTE: PIPPO ROSSI"):
+        st.write("Dettagli clinici...")
 
-elif st.session_state.menu_paziente == "Equipe":
-    st.markdown("<h1>Modulo Operativo Equipe</h1>", unsafe_allow_html=True)
-    # qui va il codice dell'equipe
-
-
-
-
+elif "Equipe" in menu:
+    st.markdown('<div class="main-title">Modulo Operativo Equipe</div>', unsafe_allow_html=True)
+    # Qui inserisci i selettori Psichiatra/Paziente
+    st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere"])
+    
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
