@@ -68,6 +68,54 @@ def genera_relazione_ia(p_id, p_sel, g_rel):
             ],
         )
         return completion.choices[0].message.content
+        
+def genera_handover_intelligente(p_id, p_sel):
+    ora_attuale = get_now_it().hour
+    if 7 <= ora_attuale < 14:
+        ore_indietro = 10
+        turno_prec = "NOTTE (21:00 - 07:00)"
+    elif 14 <= ora_attuale < 21:
+        ore_indietro = 7
+        turno_prec = "MATTINA (07:00 - 14:00)"
+    else:
+        ore_indietro = 7
+        turno_prec = "POMERIGGIO (14:00 - 21:00)"
+
+    inizio_turno_prec = (get_now_it() - timedelta(hours=ore_indietro)).strftime("%d/%m/%Y %H:%M")
+    note = db_run("SELECT ruolo, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u ASC", (p_id, inizio_turno_prec))
+    
+    if not note:
+        return f"Nessuna nota registrata nel turno precedente ({turno_prec})."
+
+    contesto = "\n".join([f"[{r}] {o}: {n}" for r, o, n in note])
+    
+    try:
+        res = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": f"Sei un coordinatore REMS. Analizza il turno {turno_prec}. Estrai: Criticità, Terapia e Stato Emotivo. Sii telegrafico."},
+                {"role": "user", "content": f"Paziente {p_sel}. Note:\n{contesto}"}
+            ]
+        )
+        return f"### ⚡ BRIEFING TURNO PRECEDENTE: {turno_prec}\n\n{res.choices[0].message.content}"
+    except Exception as e:
+        return f"Errore IA: {str(e)}"
+
+
+    contesto = "\n".join([f"[{r}] {o}: {n}" for r, o, n in note])
+    
+    try:
+        res = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": f"Sei un coordinatore REMS. Analizza il turno {turno_prec}. Estrai: Criticità, Terapia e Stato Emotivo. Sii telegrafico."},
+                {"role": "user", "content": f"Paziente {p_sel}. Note:\n{contesto}"}
+            ]
+        )
+        return f"### ⚡ BRIEFING TURNO PRECEDENTE: {turno_prec}\n\n{res.choices[0].message.content}"
+    except Exception as e:
+        return f"Errore IA: {str(e)}"
+        
     except Exception as e:
         return f"Errore Groq: {str(e)}"
         
@@ -273,34 +321,4 @@ if nav == "🗺️ Mappa Posti Letto":
             mot = st.text_input("Motivo Trasferimento")
             if st.button("ESEGUI TRASFERIMENTO") and mot:
                 dsid, dl = dest.split("-L")
-                db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid_sel,), True)
-                db_run("INSERT INTO assegnazioni (p_id, stanza_id, letto, data_ass) VALUES (?,?,?,?)", (pid_sel, dsid, int(dl), get_now_it().strftime("%Y-%m-%d")), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid_sel, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 TRASFERIMENTO: Spostato in {dsid} Letto {dl}. Motivo: {mot}", u['ruolo'], firma_op), True)
-                st.rerun()
-
-elif nav == "📊 Monitoraggio":
-    st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
-    for pid, nome in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
-        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): 
-            render_postits(pid)
-
-elif nav == "👥 Modulo Equipe":
-    st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
-    ruolo_corr = u['ruolo']
-    if u['ruolo'] == "Admin": ruolo_corr = st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
-    p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
-    
-    if p_lista:
-        p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
-        p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
-        now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
-
-        if ruolo_corr == "Psichiatra":
-            t1, t2, t3, t_ai = st.tabs(["➕ Nuova Prescrizione", "📝 Gestione Terapie", "🩺 CONSEGNE MEDICHE", "🤖 RELAZIONE IA"])
-            with t1:
-                with st.form("f_ps"):
-                    f, d = st.text_input("Farmaco"), st.text_input("Dose")
-                    st.write("**Fasce Orarie**")
-                    c1,c2,c3 = st.columns(3)
-                    m, p, b = c1.checkbox("8:13 (Mattina)"), c2.checkbox("16:20 (Pomeriggio)"), c3.checkbox("Al bisogno")
-                 
+                db_run("DELETE F
