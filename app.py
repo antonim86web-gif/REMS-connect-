@@ -1,28 +1,69 @@
-# PRIMA questa riga (la n. 1)
 import streamlit as st
-
-
 import sqlite3
 import pandas as pd
-import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
+import hashlib 
 from datetime import datetime, timedelta
 # 1. Scelta grafica
 scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
 
 if scelta_grafica == "Nuovo Minimal":
-    st.title("📱 REMS Semplice")
-    # ... (il resto del blocco minimal) ...
+    # 🎨 CSS per lo stile Pannello di Controllo Pastello
+    st.markdown("""
+    <style>
+        .stApp { background-color: #f8f9fa; } /* Sfondo quasi bianco, riposante */
+        
+        /* Stile delle Piastrelle (Tiles) */
+        .tile-card {
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            height: 160px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+        .tile-card:hover { transform: translateY(-3px); }
+        
+        /* Colori Pastello Specifici */
+        .bg-blue { background-color: #e3f2fd; color: #1e88e5; }   /* Terapie */
+        .bg-green { background-color: #e8f5e9; color: #43a047; }  /* Parametri */
+        .bg-purple { background-color: #f3e5f5; color: #8e24aa; } /* Registro */
+        .bg-orange { background-color: #fff3e0; color: #fb8c00; } /* Sintesi IA */
+        
+        .tile-icon { font-size: 40px; margin-bottom: 10px; }
+        .tile-text { font-weight: 600; font-size: 16px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.title("🖥️ Pannello di Controllo")
+    
+    # Griglia di comando (3 colonne su PC, si impilano su Telefono)
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown('<div class="tile-card bg-blue"><div class="tile-icon">💊</div><div class="tile-text">Gestione<br>Terapie</div></div>', unsafe_allow_html=True)
+        if st.button("Vai a Farmaci", key="btn_farm", use_container_width=True):
+            st.session_state.page = "terapie"
+
+    with col2:
+        st.markdown('<div class="tile-card bg-green"><div class="tile-icon">🩺</div><div class="tile-text">Monitoraggio<br>Parametri</div></div>', unsafe_allow_html=True)
+        if st.button("Vai a Vitali", key="btn_vit", use_container_width=True):
+            st.session_state.page = "parametri"
+
+    with col3:
+        st.markdown('<div class="tile-card bg-purple"><div class="tile-icon">👤</div><div class="tile-text">Registro<br>Pazienti Bra</div></div>', unsafe_allow_html=True)
+        if st.button("Vai ad Anagrafica", key="btn_reg", use_container_width=True):
+            st.session_state.page = "pazienti"
+
+    # Sintesi IA in orizzontale (stile Banner)
+    st.markdown('<div class="tile-card bg-orange" style="height: auto; width: 100%;"><div class="tile-icon">✨</div><div class="tile-text">Sintesi IA - Cambio Turno</div><p style="font-size: 14px; color: #555;">Il paziente è tranquillo. Riposo regolare. Nessun evento critico segnalato nelle ultime 8 ore.</p></div>', unsafe_allow_html=True)
+
     st.stop()
-
-else:
-    # 2. Versione Classica (Tutto spostato a destra di 4 spazi)
-    st.title("🏥 REMS Connect - Standard")
-    # QUI INCOLLA IL RESTO DEL CODICE ORIGINALE 
-    # Assicurati che ogni riga inizi con 4 spazi vuoti!
-
-# Configurazione Groq
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
