@@ -10,67 +10,76 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SIDEBAR DEEP NIGHT */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
-        box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
+    /* 1. SFONDO TOTALE DELLA PAGINA (Addio bianco fastidioso) */
+    .stApp {
+        background-color: #05070a !important;
+        color: #e2e8f0 !important;
     }
 
-    /* 2. KILLER PALLINI */
+    /* 2. SIDEBAR DEEP NIGHT */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #020617 0%, #000000 100%) !important;
+        border-right: 1px solid #1e293b !important;
+    }
+
+    /* 3. KILLER PALLINI */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 3. CARD MENU */
+    /* 4. CARD MENU SIDEBAR */
     div[role="radiogroup"] label {
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 18px 20px !important;
-        border-radius: 12px !important;
-        margin-bottom: 15px !important;
+        background: #111827 !important; /* Grigio molto scuro */
+        border: 1px solid #1e293b !important;
+        padding: 15px 20px !important;
+        border-radius: 10px !important;
+        margin-bottom: 12px !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
         transition: all 0.3s ease !important;
     }
 
-    /* 4. IL COLPO DI GRAZIA: FORZA BIANCO SU TUTTI I LIVELLI */
-    div[role="radiogroup"] label *, 
-    div[role="radiogroup"] label div, 
-    div[role="radiogroup"] label p,
-    div[data-testid="stWidgetLabel"] p,
-    span[data-testid="stMarkdownContainer"] p {
-        color: #FFFFFF !important; /* BIANCO GHIACCIO */
-        font-size: 19px !important; /* GRANDE E LEGGIBILE */
+    /* 5. RISOLUZIONE SCRITTE BOTTONI (Colori accesi per vederli sempre) */
+    div[role="radiogroup"] label p {
+        color: #38bdf8 !important; /* Ciano brillante per le scritte */
+        font-size: 18px !important;
         font-weight: 800 !important;
-        text-align: left !important;
-        opacity: 1 !important;
-        -webkit-text-fill-color: #FFFFFF !important; /* Forza per browser Webkit */
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
     }
 
-    /* 5. TASTO ATTIVO (FLOATING) */
+    /* 6. TASTO ATTIVO (IL TUO FLOATING) */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(52, 152, 219, 0.35) !important;
-        border-color: #3498db !important;
+        background: #1e293b !important;
+        border-color: #38bdf8 !important;
         transform: translateY(-8px) !important;
-        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.5) !important;
+        box-shadow: 0 10px 20px rgba(56, 189, 248, 0.3) !important;
     }
 
-    /* 6. EFFETTO HOVER */
-    div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.15) !important;
-        border-color: #3498db !important;
+    /* Quando il tasto è attivo, la scritta diventa Giallo Neon */
+    div[role="radiogroup"] label:has(input:checked) p {
+        color: #fbbf24 !important; /* Giallo Oro/Neon */
     }
 
-    /* RIMUOVI MARGINI CHE NASCONDONO IL TESTO */
-    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
-        padding: 0px !important;
-        margin: 0px !important;
+    /* 7. RESET MODULI (Per adattarsi alla Dark Knight) */
+    .stExpander, div[data-testid="stExpander"] {
+        background-color: #0f172a !important;
+        border: 1px solid #1e293b !important;
+        color: white !important;
+    }
+    
+    /* Input di testo e aree bianche */
+    input, textarea, .stSelectbox div {
+        background-color: #1e293b !important;
+        color: white !important;
+        border: 1px solid #334155 !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
