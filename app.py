@@ -3,68 +3,71 @@ import streamlit as st
 st.markdown(
     """
     <style>
-    /* 1. SIDEBAR DARK MIDNIGHT (Esattamente come il rendering) */
+    /* 1. SFONDO SIDEBAR DEEP NIGHT */
     [data-testid="stSidebar"] {
-        background-color: #1a252f !important;
-        background-image: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%) !important;
-        box-shadow: 10px 0 25px rgba(0,0,0,0.4) !important;
+        background-color: #0e1117 !important; /* Ancora più scuro per risaltare */
+        background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
+        box-shadow: 8px 0 20px rgba(0,0,0,0.5) !important;
     }
 
-    /* 2. RIMUOVIAMO DEFINITIVAMENTE I PALLINI (ROSSI E BIANCHI) */
-    /* Nascondiamo il cerchietto esterno e il pallino interno */
-    div[data-testid="stMarkdownContainer"] [data-testid="stMarker"],
-    div[role="radiogroup"] [data-testid="stMarker"],
-    div[role="radiogroup"] input[type="radio"] {
+    /* 2. KILLER DEI PALLINI (ROSSI E BIANCHI) - ATTACCO TOTALE */
+    /* Nasconde i pallini, i cerchietti e i contenitori dei marker */
+    [data-testid="stMarker"], 
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] [data-testid="stMarkdownContainer"]::before,
+    [data-testid="stSidebar"] .stRadio input {
         display: none !important;
-        width: 0px !important;
-        height: 0px !important;
+        visibility: hidden !important;
+        width: 0 !important;
     }
-
-    /* 3. SISTEMIAMO LA NAVIGAZIONE (Effetto Click) */
-    /* Togliamo lo sfondo di default a tutti */
+    
+    /* Rimuove lo spazio vuoto lasciato dai pallini */
     [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 12px 15px !important;
-        margin-bottom: 4px !important;
-        border-radius: 8px !important;
+        padding-left: 0px !important;
+    }
+
+    /* 3. EFFETTO SELEZIONE "REMS STYLE" (Solo dove clicchi) */
+    /* Reset di base per tutti i tasti */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
+        background: transparent !important;
+        border-radius: 10px !important;
+        margin: 5px 10px !important;
+        padding: 12px !important;
         transition: all 0.3s ease !important;
-        display: flex !important;
-        align-items: center !important;
+        border: 1px solid transparent !important;
     }
 
-    /* SOLO quello selezionato deve avere lo sfondo azzurro del rendering */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input[checked=""]) {
+    /* EFFETTO QUANDO SELEZIONATO */
+    /* Streamlit aggiunge un background grigio chiaro di default, lo sovrascriviamo */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: rgba(52, 152, 219, 0.2) !important; /* Azzurro trasparente */
-        border-left: 4px solid #3498db !important; /* Barra laterale come nel rendering */
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
-    }
-    
-    /* Effetto Hover (Passaggio mouse) */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
-        background-color: rgba(255,255,255,0.1) !important;
+        border: 1px solid #3498db !important; /* Bordo azzurro sottile */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
     }
 
-    /* 4. CONTRASTO TESTI NELLA SIDEBAR */
-    [data-testid="stSidebar"] * {
-        color: #ecf0f1 !important; /* Bianco sporco, più riposante */
+    /* 4. CONTRASTO TESTI E ICONE */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label span {
+        color: #ecf0f1 !important;
+        font-size: 17px !important;
         font-weight: 500 !important;
+        margin-left: 5px !important;
     }
 
-    /* 5. FIX BANNER BLU (Testo Bianco) */
-    /* Forza il testo bianco per tutti i titoli nel corpo pagina */
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        color: #2c3e50 !important; /* Titoli neri su bianco */
-    }
-    
-    /* Se il banner è un contenitore blu, forziamo il bianco all'interno */
-    div[data-testid="stVerticalBlock"] > div:has(h1) h1 {
+    /* Forza il bianco sulle scritte nella sidebar */
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2 {
         color: white !important;
+    }
+
+    /* 5. FIX PER IL TITOLO "MODULO OPERATIVO" (SCRITTA BIANCA) */
+    /* Cerca tutti i titoli nel corpo pagina e li rende leggibili se sono su sfondo scuro */
+    h1, h2 {
+        color: white !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
     }
     </style>
     """, 
     unsafe_allow_html=True
 )
+
 
 
 
