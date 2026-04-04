@@ -378,7 +378,7 @@ elif nav == "👥 Modulo Equipe":
            t1, t2, t3, t_ai, t_flash = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA", "⚡ FLASH HANDOVER"])
 
 # ... (tieni il codice di t1, t2, t3 e t_ai come sono) ...
-        with t2:
+            with t2:
         st.subheader("💊 Terapie in Corso")
         terapie = db_run("SELECT id_t, farmaco, dose, orari, active FROM terapie WHERE id=?", (p_id,))
         for f in terapie:
@@ -407,52 +407,15 @@ elif nav == "👥 Modulo Equipe":
 
     with t_flash:
         st.subheader("🚀 Briefing Cambio Turno")
-        st.info("L'IA analizza il turno precedente (Mattina, Pomeriggio o Notte) in base all'ora attuale.")
+        st.info("L'IA analizza il turno precedente in base all'ora attuale.")
         if st.button("GENERA BRIEFING ORA", key=f"flash_{p_id}"):
             with st.spinner("Analisi in corso..."):
                 testo_briefing = genera_handover_intelligente(p_id, p_sel)
                 st.markdown(testo_briefing)
 
-    # Qui inizia la sezione dei diari specialistici (Tuo vecchio codice riga 432)
     st.markdown("---")
     st.subheader("📋 Diari Specialistici")
-    ruolo_corr = st.session_state.ruolo
-    if ruolo_corr == "Medico":
-        st.write("Sezione Medico")
-    elif ruolo_corr == "Psicologo":
-        st.write("Sezione Psicologo")
 
-
-
-    # Fine sezione Terapie - Inizio Sezione Parametri (Tab Successivo)
-    with t3:
-        st.subheader("💓 Parametri Vitali")
-        parametri = db_run("SELECT data, op, pa, fc, sat, temp, glic FROM parametri WHERE id=? ORDER BY id_u DESC LIMIT 5", (p_id,))
-        if parametri:
-            for p in parametri:
-                with st.expander(f"Rilevazione del {p[0]} (Op: {p[1]})"):
-                    c1, c2, c3 = st.columns(3)
-                    c1.metric("P.A.", p[2])
-                    c1.metric("F.C.", p[3])
-                    c2.metric("Sat O2", p[4])
-                    c2.metric("Temp", f"{p[5]}°C")
-                    c3.metric("Glicemia", p[6])
-        else:
-            st.info("Nessun parametro rilevato nelle ultime ore.")
-
-    # Tab per il nuovo Briefing Intelligente
-    with t_flash:
-        st.markdown("<div class='ai-box' style='border-color: #f59e0b;'>", unsafe_allow_html=True)
-        st.subheader("🚀 Briefing Rapido Cambio Turno")
-        st.write("Sintesi automatica del turno precedente (Mattina/Pomeriggio/Notte).")
-        
-        if st.button("GENERA BRIEFING ISTANTANEO", key=f"btn_flash_{p_id}"):
-            with st.spinner("Analisi in corso..."):
-                briefing = genera_handover_intelligente(p_id, p_sel)
-                st.markdown("---")
-                st.markdown(briefing)
-                scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
-        st.markdown("</div>", unsafe_allow_html=True)
 
 
 
