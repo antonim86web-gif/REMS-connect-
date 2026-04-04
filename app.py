@@ -391,50 +391,51 @@ with t_flash:
             st.markdown(briefing)
             scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
     st.markdown("</div>", unsafe_allow_html=True)
-         
-    if mostra:st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
-                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
-                                       (p_id, f"%{f[1]}%", f"%({turno_attivo})%", f"%/{get_now_it().strftime('%m/%Y')}%"))
-                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
-                        h = "<div class='scroll-giorni'>"
-                        for d in range(1, calendar.monthrange(get_now_it().year, get_now_it().month)[1] + 1):
-                            info = f_map.get(d)
-                            cl = "quadratino q-oggi" if d == get_now_it().day else "quadratino"
-                            es, col, bg = (info['e'], "green", "#dcfce7") if info else ("-", "#888", "white")
-                            if es == "R": col, bg = "red", "#fee2e2"
-                            h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
-                        st.markdown(h + "</div>", unsafe_allow_html=True)
-                        with st.popover(f"Smarca {f[1]}"):
-                            c1, c2 = st.columns(2)
-                            k_id = f"{f[0]}_{turno_attivo.replace(':', '').replace(' ', '')}"
-                            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"✔️ {f[1]} ({turno_attivo})", "Infermiere", firma_op, "A"), True)
-                                st.rerun()
-                            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ RIFIUTO {f[1]} ({turno_attivo})", "Infermiere", firma_op, "R"), True)
-                                st.rerun()
-                        st.divider()
-            with t2:
-                with st.form("vit"):
-                    pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
-                    if st.form_submit_button("REGISTRA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True)
-                        st.rerun()
-            with t3:
-                with st.form("ni"):
-                    txt = st.text_area("Consegna Clinica")
-                    if st.form_submit_button("SALVA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
-                        st.rerun()
-            with t_ai:
-                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
-                st.subheader("🪄 Analisi Clinica IA")
-                g_rel = st.slider("Analizza ultimi (giorni):", 7, 180, 30, key="slider_inf")
-                if st.button("GENERA RELAZIONE PERIODICA", key="btn_inf_ia"):
-                    with st.spinner("Analisi in corso..."):
-                        res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
-                        st.markdown(res_ai)
-                st.markdown("</div>", unsafe_allow_html=True)
+    
+        if mostra:
+            st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.write(f"**Dosaggio:** {f[3]}")
+                st.write(f"**Orari:** {f[4]}")
+            with col2:
+                if st.button("SEGNA SOMMINISTRATO", key=f"somm_{f[0]}_{p_id}"):
+                    db_run("INSERT INTO eventi (id, ruolo, op, nota, data) VALUES (?,?,?,?,?)",
+                           (p_id, st.session_state.ruolo, st.session_state.utente, 
+                            f"Somministrato: {f[1]} {f[3]}", get_now_it().strftime("%d/%m/%Y %H:%M")))
+                    st.success("Registrato!")
+            st.markdown("---")
+
+    # Fine sezione Terapie - Inizio Sezione Parametri (Tab Successivo)
+    with t3:
+        st.subheader("💓 Parametri Vitali")
+        parametri = db_run("SELECT data, op, pa, fc, sat, temp, glic FROM parametri WHERE id=? ORDER BY id_u DESC LIMIT 5", (p_id,))
+        if parametri:
+            for p in parametri:
+                with st.expander(f"Rilevazione del {p[0]} (Op: {p[1]})"):
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("P.A.", p[2])
+                    c1.metric("F.C.", p[3])
+                    c2.metric("Sat O2", p[4])
+                    c2.metric("Temp", f"{p[5]}°C")
+                    c3.metric("Glicemia", p[6])
+        else:
+            st.info("Nessun parametro rilevato nelle ultime ore.")
+
+    # Tab per il nuovo Briefing Intelligente
+    with t_flash:
+        st.markdown("<div class='ai-box' style='border-color: #f59e0b;'>", unsafe_allow_html=True)
+        st.subheader("🚀 Briefing Rapido Cambio Turno")
+        st.write("Sintesi automatica del turno precedente (Mattina/Pomeriggio/Notte).")
+        
+        if st.button("GENERA BRIEFING ISTANTANEO", key=f"btn_flash_{p_id}"):
+            with st.spinner("Analisi in corso..."):
+                briefing = genera_handover_intelligente(p_id, p_sel)
+                st.markdown("---")
+                st.markdown(briefing)
+                scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
