@@ -1,118 +1,73 @@
 import streamlit as st
 
-# 1. CSS DEFINITIVO: OMBRE E STILE ELITE
+# 1. CSS POTENZIATO: OMBRA ESTERNA E STILE PULITO
 st.markdown("""
     <style>
-    /* Ripristiniamo l'ombra potente sulla Sidebar */
+    /* Ripristina l'ombra forte che distacca la sidebar dal fondo */
     [data-testid="stSidebar"] {
         background-color: #1a252f !important;
         background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
-        box-shadow: 10px 0 30px rgba(0,0,0,0.5) !important; /* L'ombra che volevi */
+        box-shadow: 10px 0 25px rgba(0,0,0,0.5) !important; /* L'ombra è tornata */
         border-right: none !important;
     }
 
-    /* Stilizziamo i bottoni per farli sembrare voci di menu con ombra interna */
+    /* Bottoni menu: trasparenti, eleganti e senza pallini */
     div.stButton > button {
-        background-color: rgba(255,255,255,0.03) !important;
-        color: white !important;
+        background-color: rgba(255,255,255,0.02) !important;
+        color: #ecf0f1 !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         width: 100% !important;
         text-align: left !important;
         padding: 10px 15px !important;
+        margin-bottom: 2px !important;
         transition: all 0.3s ease !important;
     }
 
-    /* Effetto quando clicchi (Azzurro WebSConnect) */
+    /* Effetto selezione (Azzurro WebSConnect) */
     div.stButton > button:hover {
         border-color: #3498db !important;
         background-color: rgba(52, 152, 219, 0.2) !important;
-        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3) !important;
+        color: white !important;
     }
 
-    /* Fix per il testo bianco sui banner blu (così non è più nero) */
-    h1, h2, .stMarkdown p {
-        color: #2c3e50; /* Testo scuro su fondo bianco della pagina */
-    }
+    /* Nascondi header standard di Streamlit per pulizia */
+    header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-# 2. FIX ERRORE DI NAVIGAZIONE (Logica Python)
-# Inizializziamo la pagina se non esiste, così l'errore scompare
+# 2. LOGICA DI NAVIGAZIONE (Risolve DuplicateElementId)
 if 'page' not in st.session_state:
     st.session_state.page = 'Monitoraggio'
 
 with st.sidebar:
-    st.markdown("### REMS WebSConnect")
-    st.markdown("<p style='color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:white; margin-bottom:0;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#2ecc71; margin-top:0;'>● SUPER USER</p>", unsafe_allow_html=True)
+    st.write("---")
     st.write("NAVIGAZIONE")
     
-    # Ad ogni click cambiamo lo stato della pagina
-    if st.button("📊 Monitoraggio"):
+    # Usiamo 'key' uniche per evitare l'errore DuplicateElementId
+    if st.button("📊 Monitoraggio", key="btn_mon"):
         st.session_state.page = 'Monitoraggio'
-    if st.button("👥 Modulo Equipe"):
+    if st.button("👥 Modulo Equipe", key="btn_equ"):
         st.session_state.page = 'Equipe'
-    if st.button("📅 Agenda Dinamica"):
+    if st.button("📅 Agenda Dinamica", key="btn_age"):
         st.session_state.page = 'Agenda'
-    if st.button("🗺️ Mappa Posti Letto"):
+    if st.button("🗺️ Mappa Posti Letto", key="btn_map"):
         st.session_state.page = 'Mappa'
-    if st.button("⚙️ Admin"):
+    if st.button("⚙️ Admin", key="btn_adm"):
         st.session_state.page = 'Admin'
 
-# 3. MOSTRA IL CONTENUTO IN BASE ALLA PAGINA SELEZIONATA
+# 3. GESTIONE DEI CONTENUTI (Risolve il problema della scritta Dashboard)
+st.write("") # Spazio per compensare l'header nascosto
+
 if st.session_state.page == 'Monitoraggio':
-    st.title("Dashboard Monitoraggio")
-    # Qui metti il tuo codice del monitoraggio
+    st.markdown("<h1 style='color:#2c3e50;'>Dashboard Monitoraggio</h1>", unsafe_allow_html=True)
+    # Inserisci qui il contenuto del monitoraggio
+    
 elif st.session_state.page == 'Equipe':
-    st.title("Modulo Operativo Equipe")
-    # Qui metti il codice dell'equipe
-# ... e così via per le altre pagine
-
-
-# LOGICA SIDEBAR
-with st.sidebar:
-    st.markdown('<div class="sidebar-header">REMS WebSConnect</div>', unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
-    
-    st.write("NAVIGAZIONE")
-    
-    # Usiamo i bottoni ma il CSS sopra li renderà "voci di menu"
-    st.button("📊 Monitoraggio")
-    st.button("👥 Modulo Equipe")
-    st.button("📅 Agenda Dinamica")
-    st.button("🗺️ Mappa Posti Letto")
-    st.button("⚙️ Admin")
-    
-    st.button("LOGOUT")
-    
-    st.markdown(f"---")
-    st.markdown(f"**Antony** \nWebmaster  \nver. 28.9 Elite")
-    
-
-# 2. LOGICA DI NAVIGAZIONE CON BOTTONI (Senza pallini!)
-with st.sidebar:
-    st.markdown("# Rems-connect")
-    st.markdown("● SUPER USER", help="Stato Attivo")
-    st.write("---")
-    st.write("NAVIGAZIONE")
-    
-    if st.button("📊 Monitoraggio"):
-        st.session_state.page = "Monitoraggio"
-    if st.button("👥 Modulo Equipe"):
-        st.session_state.page = "Equipe"
-    if st.button("📅 Agenda Dinamica"):
-        st.session_state.page = "Agenda"
-    if st.button("🗺️ Mappa Posti Letto"):
-        st.session_state.page = "Mappa"
-    if st.button("⚙️ Admin"):
-        st.session_state.page = "Admin"
-    
-    st.write("---")
-    if st.button("LOGOUT"):
-        st.write("Uscita...")
-    
-    st.write(f"**Antony**\nWebmaster\nver. 28.9 Elite")
-    
+    st.markdown("<h1 style='color:#2c3e50;'>Modulo Operativo Equipe</h1>", unsafe_allow_html=True)
+    # Inserisci qui il contenuto dell'equipe
 
 
 
