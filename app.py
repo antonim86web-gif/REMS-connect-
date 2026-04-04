@@ -1,82 +1,63 @@
 import streamlit as st
 
-# INIEZIONE CSS PER EFFETTO IDENTICO AL RENDERING
 st.markdown(
     """
     <style>
-    /* 1. SFONDO GLOBALE GRIGIO CHIARO PROFESSIONALE */
-    .stApp {
-        background-color: #f8f9fa !important;
+    /* 1. SISTEMIAMO IL BANNER BLU (Contrasto Scritta) */
+    /* Cerchiamo il div che contiene quel testo e forziamo il bianco */
+    div[data-testid="stVerticalBlock"] > div:has(h1), 
+    .stMarkdown h1, .stMarkdown h2 {
+        color: white !important; /* Forza la scritta bianca sul blu */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* La rende ancora più leggibile */
     }
 
-    /* 2. SIDEBAR BLU NOTTE PROFONDO (Esattamente come l'immagine) */
-    [data-testid="stSidebar"] {
-        background-color: #1a252f !important;
-        background-image: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%) !important;
-        box-shadow: 10px 0 30px rgba(0,0,0,0.3) !important;
-        border-right: 1px solid rgba(255,255,255,0.05) !important;
-    }
-
-    /* 3. EFFETTO "FLOATING CARD" (Ombre identiche al rendering) */
-    /* Applichiamo l'ombra a ogni container di dati */
-    div[data-testid="stVerticalBlock"] > div:has(div.stMetric), 
-    div[data-testid="stVerticalBlock"] > div:has(div.stDataFrame),
-    .stMetric, .stTable, .stDataFrame {
-        background-color: white !important;
-        padding: 20px !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
-        border: 1px solid rgba(0,0,0,0.03) !important;
-        margin-bottom: 25px !important;
-    }
-
-    /* 4. BOTTONI AZZURRO 'WEBSCONNECT' (Effetto sollevamento) */
-    .stButton > button {
-        background-color: #3498db !important;
-        color: white !important;
-        font-weight: bold !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 10px 24px !important;
-        box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3) !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .stButton > button:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4) !important;
-        background-color: #2980b9 !important;
-    }
-
-    /* 5. TITOLO SIDEBAR (REMS WebSConnect) */
-    [data-testid="stSidebarNav"]::before {
-        content: "REMS WebSConnect";
-        padding-left: 20px;
-        padding-top: 20px;
-        font-size: 22px;
-        font-weight: bold;
-        color: white;
-        display: block;
-        margin-bottom: 20px;
-    }
-
-    /* 6. PULIZIA TESTI */
-    [data-testid="stSidebar"] * {
-        color: #bdc3c7 !important;
+    /* 2. SIDEBAR: Trasformiamo la navigazione (Rimuoviamo i pallini) */
+    [data-testid="stSidebarNav"] {
+        background-color: transparent !important;
     }
     
-    h1, h2, h3 {
-        color: #2c3e50 !important;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    /* Nascondiamo i pallini radio originali se stai usando st.radio nella sidebar */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
+        background-color: rgba(255,255,255,0.05) !important;
+        margin-bottom: 5px !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+        color: white !important;
+        border: none !important;
+    }
+    
+    /* Rimuoviamo il cerchietto bianco/rosso della selezione */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] [data-testid="stMarkdownContainer"] p {
+        color: white !important;
+        font-weight: 500 !important;
+    }
+    
+    div[data-testid="stMarker"] {
+        display: none !important; /* Questo elimina il pallino rosso/bianco */
+    }
+
+    /* 3. EFFETTO SELEZIONE (Highlight blu come nel rendering) */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-baseweb="radio"] {
+        background: transparent !important;
+    }
+    
+    /* Se un elemento è selezionato, diamogli lo sfondo azzurro del rendering */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input[checked]) {
+        background-color: #3498db !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+    }
+
+    /* 4. LOGOUT (Lo facciamo risaltare) */
+    .stButton > button {
+        width: 100% !important;
+        background-color: #2ecc71 !important;
+        border: none !important;
+        color: white !important;
     }
     </style>
     """, 
     unsafe_allow_html=True
 )
-
-# Esempio di titolo come nel rendering
-st.markdown('<h1 style="margin-top:-50px;">Dashboard Admin</h1>', unsafe_allow_html=True)
-
 
 
 import sqlite3
