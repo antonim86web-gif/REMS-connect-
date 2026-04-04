@@ -68,6 +68,39 @@ def genera_relazione_ia(p_id, p_sel, g_rel):
             ],
         )
         return completion.choices[0].message.content
+        def genera_handover_intelligente(p_id, p_sel):
+    ora_attuale = get_now_it().hour
+    # Rotazione turni REMS: 7h (M) - 7h (P) - 10h (N)
+    if 7 <= ora_attuale < 14:
+        ore_indietro = 10  # Analizza la Notte precedente
+        turno_prec = "NOTTE (21:00 - 07:00)"
+    elif 14 <= ora_attuale < 21:
+        ore_indietro = 7   # Analizza la Mattina precedente
+        turno_prec = "MATTINA (07:00 - 14:00)"
+    else:
+        ore_indietro = 7   # Analizza il Pomeriggio precedente
+        turno_prec = "POMERIGGIO (14:00 - 21:00)"
+
+    inizio_turno_prec = (get_now_it() - timedelta(hours=ore_indietro)).strftime("%d/%m/%Y %H:%M")
+    note = db_run("SELECT ruolo, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u ASC", (p_id, inizio_turno_prec))
+    
+    if not note:
+        return f"Nessuna nota registrata nel turno precedente ({turno_prec})."
+
+    contesto = "\n".join([f"[{r}] {o}: {n}" for r, o, n in note])
+    
+    try:
+        res = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": f"Sei un coordinatore REMS. Analizza il turno {turno_prec}. Estrai: Criticità, Terapia e Stato Emotivo. Sii telegrafico."},
+                {"role": "user", "content": f"Paziente {p_sel}. Note:\n{contesto}"}
+            ]
+        )
+        return f"### ⚡ BRIEFING TURNO PRECEDENTE: {turno_prec}\n\n{res.choices[0].message.content}"
+    except Exception as e:
+        return f"Errore IA: {str(e)}"
+        
     except Exception as e:
         return f"Errore Groq: {str(e)}"
         
@@ -340,16 +373,24 @@ elif nav == "👥 Modulo Equipe":
                 st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
-            t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
-            with t1:
-                turno_attivo = st.selectbox("Seleziona Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
-                terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-                for f in terapie_keep:
-                    mostra = False
-                    if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
-                    elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
-                    elif turno_attivo == "Al bisogno" and f[5] == 1: mostra = True
-                    
+            
+           t1, t2, t3, t_ai, t_flash = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA", "⚡ FLASH HANDOVER"])
+
+# ... (tieni il codice di t1, t2, t3 e t_ai come sono) ...
+
+with t_flash:
+    st.markdown("<div class='ai-box' style='border-color: #f59e0b;'>", unsafe_allow_html=True)
+    st.subheader("🚀 Briefing Rapido Cambio Turno")
+    st.write(f"Analisi automatica basata sui turni reali (7/7/10 ore).")
+    
+    if st.button("GENERA BRIEFING ISTANTANEO", key=f"btn_flash_{p_id}"):
+        with st.spinner("Sintetizzando il turno precedente..."):
+            briefing = genera_handover_intelligente(p_id, p_sel)
+            st.markdown("---")
+            st.markdown(briefing)
+            scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
+    st.markdown("</div>", unsafe_allow_html=True)
+         
                     if mostra:
                         st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
