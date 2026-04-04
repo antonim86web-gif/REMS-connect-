@@ -1,87 +1,81 @@
-
 import streamlit as st
 
-# 1. SETUP PAGINA (Deve essere la prima istruzione)
-st.set_page_config(page_title="REMS WebSConnect", layout="wide")
-
-# 2. CSS DEFINITIVO E PULITO (Solo l'indispensabile per l'eleganza)
+# 1. IL KILLER DEI PALLINI E IL PADRONE DEL FLOATING
 st.markdown("""
     <style>
-    /* Sfondo Sidebar Deep Night */
+    /* SIDEBAR DEEP NIGHT CON OMBRA POTENTE */
     [data-testid="stSidebar"] {
-        background-color: #111827 !important;
-        box-shadow: 5px 0 15px rgba(0,0,0,0.5) !important;
-    }
-    
-    /* Pulizia Sidebar: Nasconde i widget radio originali che creano i pallini */
-    [data-testid="stSidebar"] .stRadio > label { display: none; }
-    [data-testid="stSidebar"] [role="radiogroup"] {
-        padding-top: 10px;
+        background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
+        box-shadow: 15px 0 35px rgba(0,0,0,0.8) !important;
     }
 
-    /* Stilizzazione delle voci di menu (Radio trasformato in Menu Elite) */
-    div.row-widget.stRadio > div[role="radiogroup"] > label {
-        background-color: rgba(255,255,255,0.05) !important;
+    /* ELIMINAZIONE TOTALE E DEFINITIVA DI TUTTI I PALLINI (RADIO E MARKER) */
+    [data-testid="stMarker"], 
+    [data-baseweb="radio"] div:first-child,
+    input[type="radio"] + div {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* TRASFORMAZIONE RADIO IN MENU FLOATING ELITE */
+    div[role="radiogroup"] label {
+        background: rgba(255,255,255,0.03) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 12px 20px !important;
-        border-radius: 10px !important;
-        color: #bdc3c7 !important;
-        margin-bottom: 8px !important;
-        transition: all 0.3s ease !important;
-        display: flex !important;
-        width: 100% !important;
+        padding: 15px 20px !important;
+        border-radius: 12px !important;
+        margin-bottom: 10px !important;
+        color: #94a3b8 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+        cursor: pointer !important;
     }
 
-    /* Voce Selezionata (Azzurro WebSConnect con ombra interna) */
-    div.row-widget.stRadio > div[role="radiogroup"] > label[data-baseweb="radio"] > div:first-child {
-        display: none !important; /* Rimuove fisicamente il pallino rosso/bianco */
-    }
-    
-    div.row-widget.stRadio > div[role="radiogroup"] > label:has(input:checked) {
-        background-color: rgba(52, 152, 219, 0.2) !important;
+    /* EFFETTO FLOATING QUANDO SELEZIONATO */
+    div[role="radiogroup"] label:has(input:checked) {
+        background: rgba(52, 152, 219, 0.2) !important;
         border-color: #3498db !important;
         color: white !important;
-        box-shadow: inset 0 0 10px rgba(52, 152, 219, 0.2) !important;
+        transform: translateY(-4px) scale(1.02) !important; /* FLOATING VERO */
+        box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3) !important;
     }
 
-    /* Header Dashboard */
-    .main-title {
-        color: #2c3e50;
-        font-size: 32px;
-        font-weight: 800;
-        margin-bottom: 20px;
+    /* EFFETTO HOVER */
+    div[role="radiogroup"] label:hover {
+        background: rgba(255,255,255,0.08) !important;
+        color: white !important;
+    }
+
+    /* SCRITTE SIDEBAR */
+    [data-testid="stSidebar"] h2, [data-testid="stSidebar"] p {
+        color: white !important;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. SIDEBAR: NAVIGAZIONE PULITA
+# 2. NAVIGAZIONE PULITA
 with st.sidebar:
-    st.markdown("<h2 style='color:white;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
+    st.markdown("## REMS WebSConnect")
+    st.markdown("<p style='color:#2ecc71;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
     st.write("---")
     
-    # Usiamo un unico widget Radio, ma il CSS sopra lo trasforma in un menu a bottoni
-    menu = st.radio(
+    # Unico widget radio: il CSS farà tutto il lavoro sporco
+    scelta = st.radio(
         "NAVIGAZIONE",
-        ["📊 Monitoraggio Dati", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto", "⚙️ Admin"],
+        ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"],
         label_visibility="collapsed"
     )
     
     st.write("---")
-    st.write(f"**Antony** \nWebmaster Elite")
+    st.markdown("**Antony Webmaster** \n*Elite Edition 28.9*")
 
-# 4. LOGICA DASHBOARD (Visualizza i dati in base alla scelta)
-if "Monitoraggio" in menu:
-    st.markdown('<div class="main-title">Dashboard Monitoraggio</div>', unsafe_allow_html=True)
-    # Qui inserisci il tuo Diario Clinico
+# 3. CONTENUTO DASHBOARD
+if "Monitoraggio" in scelta:
+    st.title("Dashboard Monitoraggio")
     st.button("DIARIO CLINICO GENERALE", use_container_width=True)
-    with st.expander("📂 SCHEDA PAZIENTE: PIPPO ROSSI"):
-        st.write("Dettagli clinici...")
-
-elif "Equipe" in menu:
-    st.markdown('<div class="main-title">Modulo Operativo Equipe</div>', unsafe_allow_html=True)
-    # Qui inserisci i selettori Psichiatra/Paziente
-    st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere"])
+elif "Equipe" in scelta:
+    st.title("Modulo Equipe")
+    
     
 import sqlite3
 import pandas as pd
