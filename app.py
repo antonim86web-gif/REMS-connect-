@@ -10,28 +10,28 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SFONDO PAGINA: Grigio-Blu Notte (per non essere nero su nero) */
+    /* 1. SFONDO PAGINA: Nero Grafite (Sostituisce il bianco e si sposa con l'azzurro) */
     .stApp {
-        background-color: #111827 !important;
+        background-color: #0b0f14 !important;
     }
 
-    /* 2. SIDEBAR DARK: Nera pura per far risaltare l'Azzurro Elettrico */
+    /* 2. SIDEBAR DARK KNIGHT: Nero Puro */
     [data-testid="stSidebar"] {
         background-color: #000000 !important;
-        border-right: 1px solid #1e293b !important;
+        border-right: 1px solid #00d4ff33 !important;
     }
 
-    /* 3. KILLER PALLINI E RADIO DEFAULT */
+    /* 3. RIMOZIONE ELEMENTI DEFAULT */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 4. BOTTONI MENU (FLOATING) */
+    /* 4. BOTTONI MENU FLOATING */
     div[role="radiogroup"] label {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(56, 189, 248, 0.2) !important;
+        background: rgba(0, 212, 255, 0.05) !important;
+        border: 1px solid rgba(0, 212, 255, 0.1) !important;
         padding: 16px 20px !important;
         border-radius: 12px !important;
         margin-bottom: 15px !important;
@@ -41,33 +41,32 @@ st.markdown("""
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
-    /* 5. SCRITTA AZZURRO ELETTRICO (Leggibilità Totale) */
+    /* 5. SCRITTE AZZURRO ELETTRICO */
     div[role="radiogroup"] label p {
-        color: #00d4ff !important; /* AZZURRO ELETTRICO ACCESO */
+        color: #00d4ff !important;
         font-size: 19px !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
-        letter-spacing: 1px !important;
         margin: 0px !important;
-        text-shadow: 0 0 5px rgba(0, 212, 255, 0.2) !important;
+        text-shadow: 0 0 8px rgba(0, 212, 255, 0.4) !important;
     }
 
-    /* 6. STATO ATTIVO: FLOATING POTENTE CON OMBRA AZZURRA */
+    /* 6. STATO ATTIVO: FLOATING + OMBRA AZZURRO ELETTRICO */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(0, 212, 255, 0.1) !important;
+        background: rgba(0, 212, 255, 0.15) !important;
         border-color: #00d4ff !important;
-        transform: translateY(-10px) scale(1.02) !important;
-        box-shadow: 0 15px 30px rgba(0, 212, 255, 0.3) !important; /* OMBRA DELLO STESSO COLORE */
+        transform: translateY(-10px) !important;
+        box-shadow: 0 15px 25px rgba(0, 212, 255, 0.4) !important; /* Ombra coerente col colore */
     }
 
     div[role="radiogroup"] label:has(input:checked) p {
-        color: #ffffff !important; /* Il testo diventa Bianco quando attivo per risaltare */
+        color: #ffffff !important;
         text-shadow: 0 0 15px #00d4ff !important;
     }
 
-    /* 7. BOTTONE LOGOUT: STESSO EFFETTO FLOATING */
+    /* 7. TASTO LOGOUT: UNIFORMATO AL FLOATING */
     .stButton > button {
-        background: rgba(255, 255, 255, 0.03) !important;
+        background: rgba(0, 212, 255, 0.05) !important;
         color: #00d4ff !important;
         border: 1px solid #00d4ff !important;
         border-radius: 12px !important;
@@ -75,20 +74,32 @@ st.markdown("""
         height: 55px !important;
         font-weight: 800 !important;
         font-size: 18px !important;
-        transition: all 0.3s ease !important;
         text-transform: uppercase !important;
+        transition: all 0.3s ease !important;
     }
 
     .stButton > button:hover {
         transform: translateY(-8px) !important;
         background: rgba(0, 212, 255, 0.2) !important;
-        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3) !important;
-        color: white !important;
+        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.4) !important; /* Stessa ombra azzurra */
+        color: #ffffff !important;
     }
 
-    /* SISTEMAZIONE PER IL TESTO DEI MODULI */
-    .stMarkdown h1, .stMarkdown h2, p {
+    /* 8. COERENZA TABELLE E APPUNTAMENTI (Dark Mode Leggibile) */
+    [data-testid="stTable"] {
+        background-color: #161b22 !important;
+        border-radius: 10px !important;
         color: #e5e7eb !important;
+    }
+    
+    th {
+        background-color: #1e293b !important;
+        color: #00d4ff !important; /* Header tabella azzurro */
+    }
+
+    /* Colore generale testi per non farli sparire nel nero */
+    .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #f1f5f9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
