@@ -383,7 +383,7 @@ elif nav == "👥 Modulo Equipe":
 
         st.divider()
         render_postits(p_id)
-            with t2:
+           with t2:
                 with st.form("vit"):
                     pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
                     if st.form_submit_button("REGISTRA"): 
