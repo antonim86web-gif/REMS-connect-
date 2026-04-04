@@ -1,9 +1,11 @@
-import streamlit as st
 import sqlite3
+import streamlit as st
+from datetime import datetime, timedelta, timezone
+import hashlib
 import pandas as pd
-import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
-from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
-from groq import Groq # <--- Per l'IA di Groq
+import calendar
+import streamlit as st
+from groq import Groq
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -59,53 +61,23 @@ def scrivi_log(azione, dettaglio):
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_sel, g_rel):
-    try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "Sei un esperto clinico REMS. Genera relazioni formali."},
-                {"role": "user", "content": f"ID: {p_id}, Paziente: {p_sel}, Note: {g_rel}"}
-            ],
-        )
-        return completion.choices[0].message.content
-    except Exception as e:
-        return f"Errore Groq: {str(e)}"
-
-def genera_handover_intelligente(p_id, p_sel):
-    ora_attuale = get_now_it().hour
-    # Rotazione turni REMS: 7h (M) - 7h (P) - 10h (N)
-    if 7 <= ora_attuale < 14:
-        ore_indietro = 10  # Analizza la Notte precedente
-        turno_prec = "NOTTE (21:00 - 07:00)"
-    elif 14 <= ora_attuale < 21:
-        ore_indietro = 7   # Analizza la Mattina precedente
-        turno_prec = "MATTINA (07:00 - 14:00)"
-    else:
-        ore_indietro = 7   # Analizza il Pomeriggio precedente
-        turno_prec = "POMERIGGIO (14:00 - 21:00)"
-
-    inizio_turno_prec = (get_now_it() - timedelta(hours=ore_indietro)).strftime("%d/%m/%Y %H:%M")
-    note = db_run("SELECT ruolo, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u ASC", (p_id, inizio_turno_prec))
+    # Organizziamo i dati in un testo leggibile per l'IA
+    dati_per_ia = f"ID Paziente: {p_id}\nNominativo: {p_sel}\nDati Clinici/Note: {g_rel}"
     
-    if not note:
-        return f"Nessuna nota registrata nel turno precedente ({turno_prec})."
-
-    contesto = "\n".join([f"[{r}] {o}: {n}" for r, o, n in note])
+    prompt = f"""
+    Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
+    Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
     
+    {dati_per_ia}
+    
+    Scrivi una relazione strutturata, formale e dettagliata, adatta a un contesto sanitario giudiziario.
+    """
     try:
-        res = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": f"Sei un coordinatore clinico REMS. Analizza il turno {turno_prec}. Sii telegrafico."},
-                {"role": "user", "content": f"Paziente {p_sel}. Note:\n{contesto}"}
-            ]
-        )
-        return f"### ⚡ BRIEFING TURNO PRECEDENTE: {turno_prec}\n\n{res.choices[0].message.content}"
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
     except Exception as e:
-        return f"Errore IA: {str(e)}"
-
-        
-
+        return f"Errore nell'elaborazione IA: {str(e)}"
         
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
@@ -118,7 +90,7 @@ st.markdown("""
     .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
     .user-logged { color: #00ff00 !important; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
     .sidebar-footer { color: #ffffff !important; font-size: 0.8rem; text-align: center; margin-top: 20px; opacity: 0.8; }
-    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: solidolid #ffffff22; }
+    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
     .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
     
     .ai-box { background: #f8fafc; border: 2px solid #a855f7; border-radius: 15px; padding: 25px; margin-top: 10px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2); }
@@ -374,47 +346,60 @@ elif nav == "👥 Modulo Equipe":
                 st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
-            
-           t1, t2, t3, t_ai, t_flash = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA", "⚡ FLASH HANDOVER"])
-
-# ... (tieni il codice di t1, t2, t3 e t_ai come sono) ...
-    with t2:
-        st.subheader("💊 Terapie in Corso")
-        terapie = db_run("SELECT id_t, farmaco, dose, orari, active FROM terapie WHERE id=?", (p_id,))
-        for f in terapie:
-            mostra = True
-            if f[4] == 0:
-                mostra = st.checkbox(f"Sospesa: {f[1]}", key=f"sos_{f[0]}_{p_id}")
-            if mostra:
-                st.markdown(f"### 💊 {f[1]}")
-                st.write(f"**Dose:** {f[2]} | **Orari:** {f[3]}")
-                if st.button("SEGNA SOMMINISTRATO", key=f"btn_s_{f[0]}_{p_id}"):
-                    db_run("INSERT INTO eventi (id, ruolo, op, nota, data) VALUES (?,?,?,?,?)",
-                           (p_id, st.session_state.ruolo, st.session_state.utente, 
-                            f"Somm: {f[1]} {f[2]}", get_now_it().strftime("%d/%m/%Y %H:%M")))
-                    st.success("Registrato")
-                st.markdown("---")
-
-    with t3:
-        st.subheader("🩺 Parametri Vitali")
-        p_dati = db_run("SELECT data, op, pa, fc, sat, temp, glic FROM parametri WHERE id=? ORDER BY id_u DESC LIMIT 5", (p_id,))
-        if p_dati:
-            for p in p_dati:
-                with st.expander(f"Rilevazione del {p[0]}"):
-                    st.write(f"**Op:** {p[1]} | **PA:** {p[2]} | **FC:** {p[3]} | **Sat:** {p[4]}% | **T:** {p[5]}°C | **Glic:** {p[6]}")
-        else:
-            st.info("Nessun parametro registrato.")
-
-    with t_flash:
-        st.subheader("🚀 Briefing Cambio Turno")
-        st.info("L'IA analizza il turno precedente in base all'ora attuale.")
-        if st.button("GENERA BRIEFING ORA", key=f"flash_{p_id}"):
-            with st.spinner("Analisi in corso..."):
-                testo_briefing = genera_handover_intelligente(p_id, p_sel)
-                st.markdown(testo_briefing)
-
-    st.markdown("---")
-    st.subheader("📋 Diari Specialistici")
+            t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
+            with t1:
+                turno_attivo = st.selectbox("Seleziona Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+                terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+                for f in terapie_keep:
+                    mostra = False
+                    if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
+                    elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
+                    elif turno_attivo == "Al bisogno" and f[5] == 1: mostra = True
+                    
+                    if mostra:
+                        st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
+                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
+                                       (p_id, f"%{f[1]}%", f"%({turno_attivo})%", f"%/{get_now_it().strftime('%m/%Y')}%"))
+                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
+                        h = "<div class='scroll-giorni'>"
+                        for d in range(1, calendar.monthrange(get_now_it().year, get_now_it().month)[1] + 1):
+                            info = f_map.get(d)
+                            cl = "quadratino q-oggi" if d == get_now_it().day else "quadratino"
+                            es, col, bg = (info['e'], "green", "#dcfce7") if info else ("-", "#888", "white")
+                            if es == "R": col, bg = "red", "#fee2e2"
+                            h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
+                        st.markdown(h + "</div>", unsafe_allow_html=True)
+                        with st.popover(f"Smarca {f[1]}"):
+                            c1, c2 = st.columns(2)
+                            k_id = f"{f[0]}_{turno_attivo.replace(':', '').replace(' ', '')}"
+                            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"✔️ {f[1]} ({turno_attivo})", "Infermiere", firma_op, "A"), True)
+                                st.rerun()
+                            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ RIFIUTO {f[1]} ({turno_attivo})", "Infermiere", firma_op, "R"), True)
+                                st.rerun()
+                        st.divider()
+            with t2:
+                with st.form("vit"):
+                    pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
+                    if st.form_submit_button("REGISTRA"): 
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True)
+                        st.rerun()
+            with t3:
+                with st.form("ni"):
+                    txt = st.text_area("Consegna Clinica")
+                    if st.form_submit_button("SALVA"): 
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
+                        st.rerun()
+            with t_ai:
+                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
+                st.subheader("🪄 Analisi Clinica IA")
+                g_rel = st.slider("Analizza ultimi (giorni):", 7, 180, 30, key="slider_inf")
+                if st.button("GENERA RELAZIONE PERIODICA", key="btn_inf_ia"):
+                    with st.spinner("Analisi in corso..."):
+                        res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
+                        st.markdown(res_ai)
+                st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
