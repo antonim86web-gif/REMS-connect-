@@ -79,67 +79,59 @@ st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", p
 
 st.markdown("""
 <style>
-    /* 1. SFONDO ARDESIA PRO */
+    /* 1. SFONDO E SIDEBAR */
     .stApp { background-color: #1e293b !important; }
-    
-    /* 2. SIDEBAR DARK KNIGHT CON GLOW AZZURRO */
     [data-testid="stSidebar"] {
         background-color: #000000 !important;
         border-right: 2px solid #00d4ff !important;
-        box-shadow: 10px 0 40px rgba(0, 212, 255, 0.3) !important;
     }
 
-    /* 3. TASTI MENU: EFFETTO FLOATING DINAMICO */
+    /* 2. FIX TESTO SPARITO: FORZIAMO IL COLORE AZZURRO */
+    div[role="radiogroup"] label p {
+        color: #00d4ff !important; /* Questo farà riapparire le scritte! */
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        margin: 0 !important;
+        z-index: 9999 !important; /* Lo porta in primo piano */
+    }
+
+    /* 3. BOTTONI NEON (FLOATING) */
     [data-testid="stMarker"], [data-baseweb="radio"] div:first-child { display: none !important; }
 
     div[role="radiogroup"] label {
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(0, 212, 255, 0.2) !important;
-        padding: 16px 20px !important;
-        border-radius: 14px !important;
-        margin-bottom: 12px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(0, 212, 255, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 12px 15px !important;
+        margin-bottom: 10px !important;
         display: flex !important;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        transition: all 0.3s ease !important;
     }
 
-    /* TESTO NEON SEMPRE ACCESO */
-    div[role="radiogroup"] label p {
-        color: #00d4ff !important;
-        font-weight: 800 !important;
-        font-size: 18px !important;
-        text-transform: uppercase !important;
-        text-shadow: 0 0 8px rgba(0, 212, 255, 0.2) !important;
-    }
-
-    /* IL "SALTO" DEL TASTO (FLOATING ATTIVO) */
+    /* EFFETTO SELEZIONATO */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(0, 212, 255, 0.15) !important;
+        background: rgba(0, 212, 255, 0.2) !important;
         border-color: #00d4ff !important;
-        transform: translateY(-12px) scale(1.03) !important;
-        box-shadow: 0 15px 30px rgba(0, 212, 255, 0.5) !important;
-    }
-
-    /* 4. TESTI E TABELLONE: MASSIMA CHIAREZZA */
-    .stMarkdown p, .stText, label, .letto-slot {
-        color: #f1f5f9 !important;
-        font-weight: 600 !important;
+        transform: translateX(5px) !important; /* Piccola spinta laterale invece che salto */
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.5) !important;
     }
     
-    h1, h2, h3, .sidebar-title {
-        color: #00d4ff !important;
-        text-shadow: 0 0 15px rgba(0, 212, 255, 0.4) !important;
+    div[role="radiogroup"] label:has(input:checked) p {
+        color: #ffffff !important; /* Il testo diventa bianco quando clicchi */
     }
 
-    /* 5. TASTO LOGOUT ELITE */
+    /* 4. LOGOUT ROSSO */
     .stButton > button {
         background: transparent !important;
-        color: #ff4b4b !important; /* Rosso per il logout, così non ti sbagli */
+        color: #ff4b4b !important;
         border: 2px solid #ff4b4b !important;
-        border-radius: 12px !important;
-        font-weight: 800 !important;
+        border-radius: 10px !important;
+        width: 100% !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # --- DATABASE ENGINE ---
