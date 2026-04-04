@@ -1,12 +1,6 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import streamlit as st
-import sqlite3
-import pandas as pd
-import calendar  # <--- QUESTA MANCA E CAUSA L'ERRORE ROSSO
-from datetime import datetime
-
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
 from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
 from groq import Groq # <--- Per l'IA di Groq
@@ -369,24 +363,26 @@ elif nav == "👥 Modulo Equipe":
                             if es == "R": col, bg = "red", "#fee2e2"
                             h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
-         # RIGA 372: Il 'with' deve essere allineato con il resto del ciclo
-        with st.popover(f"Smarca {f[1]}"):
-            # RIGA 373: QUI DEVE ESSERCI IL RIENTRO (4 spazi o un TAB)
-            c1, c2 = st.columns(2)
+                        with st.popover(f"Smarca {f[1]}"):
+                            c1, c2 = st.columns(2)
+                                        k_id = f"{f[0]}_{f[1].replace(' ', '')}_{turno_attivo[0]}" 
             
-            # Anche queste devono essere allineate sotto c1, c2
-            k_id = f"{f[0]}_{f[1]}_{turno_attivo.replace(' ', '')}"
-            
-            # I tasti 'if' devono stare sotto c1, c2
-            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
-                db_run("INSERT INTO somministrazioni (id_f, data, stato, op) VALUES (?, ?, 'ASSUNTO', ?)", (f[0], get_now_it().strftime('%Y-%m-%d %H:%M'), user_logged), True)
-                st.rerun()
-                
-            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
-                db_run("INSERT INTO somministrazioni (id_f, data, stato, op) VALUES (?, ?, 'RIFIUTATO', ?)", (f[0], get_now_it().strftime('%Y-%m-%d %H:%M'), user_logged), True)
-                st.rerun()
+            with st.popover(f"Smarca {f[1]}"):
+                c1, c2 = st.columns(2)
+                if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
+                    nota_f = f"Somm. {f[1]}: ASSUNTO ({turno_attivo})"
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?, ?, ?, ?, ?)", 
+                           (p_id, get_now_it().strftime('%d/%m/%Y'), nota_f, ruolo_corr, user_logged), True)
+                    st.rerun()
+                    
+                if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
+                    nota_f = f"Somm. {f[1]}: RIFIUTATO ({turno_attivo})"
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?, ?, ?, ?, ?)", 
+                           (p_id, get_now_it().strftime('%d/%m/%Y'), nota_f, ruolo_corr, user_logged), True)
+                    st.rerun()
 
-                st.divider()
+        st.divider()
+        render_postits(p_id)
             with t2:
                 with st.form("vit"):
                     pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
@@ -409,7 +405,7 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(res_ai)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-elif ruolo_corr == "Psicologo":
+        elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
                 with st.form("f_psi"):
@@ -423,7 +419,8 @@ elif ruolo_corr == "Psicologo":
                     if st.form_submit_button("REGISTRA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
                         st.rerun()
-elif ruolo_corr == "Assistente Sociale":
+
+        elif ruolo_corr == "Assistente Sociale":
             t1, t2 = st.tabs(["🤝 RETE", "🏠 PROGETTO"])
             with t1:
                 with st.form("f_soc"):
@@ -438,21 +435,21 @@ elif ruolo_corr == "Assistente Sociale":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🏠 PROGETTO: {prog}", "Assistente Sociale", firma_op), True)
                         st.rerun()
 
-elif ruolo_corr == "OPSI":
+        elif ruolo_corr == "OPSI":
             with st.form("f_opsi"):
                 cond = st.multiselect("Stato:", ["Tranquillo", "Agitato", "Ispezione"]); nota = st.text_input("Note")
                 if st.form_submit_button("REGISTRA"): 
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🛡️ VIGILANZA: {', '.join(cond)} | {nota}", "OPSI", firma_op), True)
                     st.rerun()
 
-elif ruolo_corr == "OSS":
+        elif ruolo_corr == "OSS":
             with st.form("oss_f"):
                 mans = st.multiselect("Mansioni:", ["Igiene", "Cambio", "Pulizia", "Letto"]); txt = st.text_area("Note")
                 if st.form_submit_button("REGISTRA"): 
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧹 {', '.join(mans)} | {txt}", "OSS", firma_op), True)
                     st.rerun()
 
-elif ruolo_corr == "Educatore":
+        elif ruolo_corr == "Educatore":
             t1, t2 = st.tabs(["💰 CASSA", "📝 CONSEGNA"])
             with t1:
                 mov = db_run("SELECT importo, tipo FROM cassa WHERE p_id=?", (p_id,)); saldo = sum(m[0] if m[1]=="ENTRATA" else -m[0] for m in mov)
@@ -470,7 +467,7 @@ elif ruolo_corr == "Educatore":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📝 {txt_edu}", "Educatore", firma_op), True)
                         st.rerun()
 
-                        st.divider(); render_postits(p_id)
+        st.divider(); render_postits(p_id)
 
 elif nav == "📅 Agenda Dinamica":
     st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
