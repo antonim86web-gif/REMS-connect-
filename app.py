@@ -1,49 +1,85 @@
 import streamlit as st
 
-# 1. CSS PULITO E "DEEP NIGHT" (Senza pallini perché non usiamo radio)
 st.markdown("""
     <style>
-    /* Sfondo Sidebar Deep Night */
+    /* 1. SIDEBAR DEEP NIGHT */
     [data-testid="stSidebar"] {
         background-color: #1a252f !important;
         background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
     }
 
-    /* Stilizziamo i bottoni per farli sembrare voci di menu */
-    .stButton > button {
-        width: 100% !important;
-        background-color: transparent !important;
-        color: white !important;
-        border: none !important;
+    /* 2. TRASFORMIAMO I BOTTONI VERDI IN VOCI DI MENU ELEGANTI */
+    div.stButton > button {
+        background-color: transparent !important; /* Rimuove il verde */
+        color: #ecf0f1 !important; /* Testo bianco sporco */
+        border: 1px solid rgba(255,255,255,0.1) !important; /* Bordo quasi invisibile */
         text-align: left !important;
-        padding: 10px 15px !important;
-        border-radius: 8px !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        height: 45px !important;
         font-size: 16px !important;
-        display: flex !important;
-        align-items: center !important;
-        transition: all 0.3s !important;
+        font-weight: 400 !important;
+        margin-bottom: 5px !important;
+        transition: all 0.3s ease !important;
     }
 
-    /* Effetto Hover e Selezione */
-    .stButton > button:hover {
-        background-color: rgba(52, 152, 219, 0.2) !important;
-        color: #3498db !important;
-    }
-
-    /* Titoli e testi sidebar */
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] p {
+    /* 3. EFFETTO SELEZIONE (Azzurro WebSConnect) */
+    div.stButton > button:hover, div.stButton > button:active, div.stButton > button:focus {
+        background-color: rgba(52, 152, 219, 0.2) !important; /* Sfondo azzurro trasparente */
+        border-left: 5px solid #3498db !important; /* Barra laterale azzurra */
         color: white !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
     }
-    
-    /* Il tasto Logout lo facciamo restare Verde */
+
+    /* 4. IL TASTO LOGOUT (Lo teniamo verde ma più sobrio) */
+    /* Usiamo un selettore specifico per l'ultimo bottone o quello con testo LOGOUT */
     div.stButton > button:has(div:contains("LOGOUT")) {
         background-color: #2ecc71 !important;
-        margin-top: 20px !important;
-        text-align: center !important;
+        border: none !important;
         justify-content: center !important;
+        font-weight: bold !important;
+        margin-top: 30px !important;
+    }
+
+    /* 5. PULIZIA TESTI SIDEBAR */
+    [data-testid="stSidebar"] .stMarkdown p {
+        color: #bdc3c7 !important;
+        font-size: 14px;
+        letter-spacing: 1px;
+    }
+    
+    /* Intestazione Rems-connect */
+    .sidebar-header {
+        color: white;
+        font-size: 22px;
+        font-weight: 800;
+        text-align: center;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
+
+# LOGICA SIDEBAR
+with st.sidebar:
+    st.markdown('<div class="sidebar-header">REMS WebSConnect</div>', unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
+    
+    st.write("NAVIGAZIONE")
+    
+    # Usiamo i bottoni ma il CSS sopra li renderà "voci di menu"
+    st.button("📊 Monitoraggio")
+    st.button("👥 Modulo Equipe")
+    st.button("📅 Agenda Dinamica")
+    st.button("🗺️ Mappa Posti Letto")
+    st.button("⚙️ Admin")
+    
+    st.button("LOGOUT")
+    
+    st.markdown(f"---")
+    st.markdown(f"**Antony** \nWebmaster  \nver. 28.9 Elite")
+    
 
 # 2. LOGICA DI NAVIGAZIONE CON BOTTONI (Senza pallini!)
 with st.sidebar:
