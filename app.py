@@ -365,7 +365,7 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         with st.popover(f"Smarca {f[1]}"):
                             c1, c2 = st.columns(2)
-                                        k_id = f"{f[0]}_{f[1].replace(' ', '')}_{turno_attivo[0]}" 
+                            k_id = f"{f[0]}_{f[1].replace(' ', '')}_{turno_attivo[0]}" 
             
             with st.popover(f"Smarca {f[1]}"):
                 c1, c2 = st.columns(2)
