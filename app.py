@@ -10,72 +10,75 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. RESET TOTALE SFONDO (Coerenza Dark Knight) */
+    /* 1. LO SFONDO DELLA PAGINA: Un Grigio Minerale che non è nero e non è bianco */
     .stApp {
-        background-color: #0d1117 !important;
+        background-color: #1e293b !important; /* Blu-Grigio profondo e professionale */
     }
 
-    /* 2. SIDEBAR PULITA E DEFINITA */
+    /* 2. SIDEBAR DARK KNIGHT: Nera pura con la sua ombra verso destra */
     [data-testid="stSidebar"] {
-        background-color: #010409 !important;
-        border-right: 2px solid #30363d !important;
+        background-color: #000000 !important;
+        box-shadow: 10px 0 25px rgba(0,0,0,0.5) !important;
     }
 
-    /* 3. RIMOZIONE PALLINI STREAMLIT */
+    /* 3. KILLER PALLINI STREAMLIT */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 4. I NUOVI BOTTONI (Cyber-Glass Style) */
+    /* 4. BOTTONI TRASPARENTI CON EFFETTO FLOATING */
     div[role="radiogroup"] label {
-        background: #161b22 !important; /* Grigio scuro solido, no ombre */
-        border: 1px solid #30363d !important;
-        padding: 14px 18px !important;
-        border-radius: 8px !important;
-        margin-bottom: 10px !important;
+        background: rgba(255, 255, 255, 0.05) !important; /* Trasparenza leggera */
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        padding: 16px 20px !important;
+        border-radius: 15px !important;
+        margin-bottom: 12px !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
-        transition: all 0.2s ease-in-out !important;
     }
 
-    /* 5. SCRITTE: FINALMENTE VISIBILI */
+    /* 5. LE SCRITTE: BIANCO GHIACCIO E GRANDI */
     div[role="radiogroup"] label p {
-        color: #f0f6fc !important; /* Bianco Ghiaccio - Leggibilità massima */
-        font-size: 17px !important;
+        color: #f1f5f9 !important;
+        font-size: 18px !important;
         font-weight: 600 !important;
         margin: 0px !important;
-        text-align: left !important;
-        opacity: 1 !important;
+        letter-spacing: 0.5px !important;
     }
 
-    /* 6. STATO ATTIVO (IL SELEZIONATO) */
-    /* Quando clicchi, il bottone si accende di Oro e il testo diventa nero per contrasto */
+    /* 6. L'EFFETTO FLOATING QUANDO SELEZIONATO */
     div[role="radiogroup"] label:has(input:checked) {
-        background: #e3b341 !important; /* Oro Professionale */
-        border-color: #f0f6fc !important;
-        transform: translateX(8px) !important; /* Slitta a destra invece di saltare su */
+        background: rgba(52, 152, 219, 0.2) !important; /* Azzurro trasparente */
+        border-color: #3498db !important;
+        transform: translateY(-10px) !important; /* IL SALTO CHE TI PIACE */
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6) !important; /* OMBRA PESANTE SOTTO */
     }
-
+    
+    /* Il testo del tasto selezionato si illumina */
     div[role="radiogroup"] label:has(input:checked) p {
-        color: #000000 !important; /* Testo nero SOLO sull'oro per leggibilità totale */
-        font-weight: 800 !important;
+        color: #ffffff !important;
+        text-shadow: 0 0 10px rgba(52, 152, 219, 0.8) !important;
     }
 
-    /* 7. EFFETTO AL PASSAGGIO DEL MOUSE (HOVER) */
+    /* 7. HOVER: REAZIONE AL PASSAGGIO DEL MOUSE */
     div[role="radiogroup"] label:hover {
-        border-color: #e3b341 !important;
-        background: #21262d !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        transform: translateY(-3px) !important;
     }
 
-    /* SISTEMAZIONE TITOLI E UTENTE */
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        color: #f0f6fc !important;
+    /* RESET MODULI INTERNI: Li rendiamo leggibili sullo sfondo blu-grigio */
+    .stExpander {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 10px !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
