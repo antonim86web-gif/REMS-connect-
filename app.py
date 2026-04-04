@@ -378,33 +378,24 @@ elif nav == "👥 Modulo Equipe":
            t1, t2, t3, t_ai, t_flash = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA", "⚡ FLASH HANDOVER"])
 
 # ... (tieni il codice di t1, t2, t3 e t_ai come sono) ...
-
-with t_flash:
-    st.markdown("<div class='ai-box' style='border-color: #f59e0b;'>", unsafe_allow_html=True)
-    st.subheader("🚀 Briefing Rapido Cambio Turno")
-    st.write(f"Analisi automatica basata sui turni reali (7/7/10 ore).")
-    
-    if st.button("GENERA BRIEFING ISTANTANEO", key=f"btn_flash_{p_id}"):
-        with st.spinner("Sintetizzando il turno precedente..."):
-            briefing = genera_handover_intelligente(p_id, p_sel)
-            st.markdown("---")
-            st.markdown(briefing)
-            scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-                if mostra:
-            st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.write(f"**Dosaggio:** {f[3]}")
-                st.write(f"**Orari:** {f[4]}")
-            with col2:
-                if st.button("SEGNA SOMMINISTRATO", key=f"somm_{f[0]}_{p_id}"):
+    with t2:
+        st.subheader("💊 Terapie in Corso")
+        terapie = db_run("SELECT id_t, farmaco, dose, orari, active FROM terapie WHERE id=?", (p_id,))
+        for f in terapie:
+            mostra = True
+            if f[4] == 0:
+                mostra = st.checkbox(f"Sospesa: {f[1]}", key=f"sos_{f[0]}_{p_id}")
+            
+            if mostra:
+                st.markdown(f"### 💊 {f[1]}")
+                st.write(f"**Dose:** {f[2]} | **Orari:** {f[3]}")
+                if st.button("SEGNA SOMMINISTRATO", key=f"btn_s_{f[0]}_{p_id}"):
                     db_run("INSERT INTO eventi (id, ruolo, op, nota, data) VALUES (?,?,?,?,?)",
                            (p_id, st.session_state.ruolo, st.session_state.utente, 
-                            f"Somministrato: {f[1]} {f[3]}", get_now_it().strftime("%d/%m/%Y %H:%M")))
-                    st.success("Registrato!")
-            st.markdown("---")
+                            f"Somm: {f[1]} {f[2]}", get_now_it().strftime("%d/%m/%Y %H:%M")))
+                    st.success("Registrato")
+                st.markdown("---")
+
 
     # Fine sezione Terapie - Inizio Sezione Parametri (Tab Successivo)
     with t3:
