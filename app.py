@@ -1,17 +1,24 @@
 import streamlit as st
 
-# 1. CSS POTENZIATO: OMBRA ESTERNA E STILE PULITO
+# 1. CSS CORRETTO: TORNA LA SIDEBAR, RESTA L'OMBRA
 st.markdown("""
     <style>
-    /* Ripristina l'ombra forte che distacca la sidebar dal fondo */
+    /* Ripristiniamo la visibilità dell'header ma solo per i pulsanti menu */
+    header {
+        background-color: transparent !important;
+        visibility: visible !important;
+    }
+
+    /* Rems-connect Sidebar con Ombra Profonda */
     [data-testid="stSidebar"] {
         background-color: #1a252f !important;
         background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
-        box-shadow: 10px 0 25px rgba(0,0,0,0.5) !important; /* L'ombra è tornata */
+        box-shadow: 10px 0 25px rgba(0,0,0,0.5) !important;
         border-right: none !important;
+        visibility: visible !important;
     }
 
-    /* Bottoni menu: trasparenti, eleganti e senza pallini */
+    /* Bottoni Menu puliti */
     div.stButton > button {
         background-color: rgba(255,255,255,0.02) !important;
         color: #ecf0f1 !important;
@@ -20,33 +27,32 @@ st.markdown("""
         width: 100% !important;
         text-align: left !important;
         padding: 10px 15px !important;
-        margin-bottom: 2px !important;
         transition: all 0.3s ease !important;
     }
 
-    /* Effetto selezione (Azzurro WebSConnect) */
+    /* Effetto selezione Azzurro */
     div.stButton > button:hover {
         border-color: #3498db !important;
         background-color: rgba(52, 152, 219, 0.2) !important;
-        color: white !important;
     }
-
-    /* Nascondi header standard di Streamlit per pulizia */
-    header {visibility: hidden;}
+    
+    /* Titolo Pagina */
+    h1 {
+        color: #2c3e50 !important;
+        font-weight: 800 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. LOGICA DI NAVIGAZIONE (Risolve DuplicateElementId)
+# 2. LOGICA DI NAVIGAZIONE
 if 'page' not in st.session_state:
     st.session_state.page = 'Monitoraggio'
 
 with st.sidebar:
-    st.markdown("<h2 style='color:white; margin-bottom:0;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#2ecc71; margin-top:0;'>● SUPER USER</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:white;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
     st.write("---")
-    st.write("NAVIGAZIONE")
     
-    # Usiamo 'key' uniche per evitare l'errore DuplicateElementId
     if st.button("📊 Monitoraggio", key="btn_mon"):
         st.session_state.page = 'Monitoraggio'
     if st.button("👥 Modulo Equipe", key="btn_equ"):
@@ -58,16 +64,12 @@ with st.sidebar:
     if st.button("⚙️ Admin", key="btn_adm"):
         st.session_state.page = 'Admin'
 
-# 3. GESTIONE DEI CONTENUTI (Risolve il problema della scritta Dashboard)
-st.write("") # Spazio per compensare l'header nascosto
-
+# 3. VISUALIZZAZIONE CONTENUTO
 if st.session_state.page == 'Monitoraggio':
-    st.markdown("<h1 style='color:#2c3e50;'>Dashboard Monitoraggio</h1>", unsafe_allow_html=True)
-    # Inserisci qui il contenuto del monitoraggio
+    st.title("Dashboard Monitoraggio")
+    # Qui il tuo codice del monitoraggio (Pippo Rossi, ecc.)
+    st.info("Benvenuto nel Pannello di Controllo")
     
-elif st.session_state.page == 'Equipe':
-    st.markdown("<h1 style='color:#2c3e50;'>Modulo Operativo Equipe</h1>", unsafe_allow_html=True)
-    # Inserisci qui il contenuto dell'equipe
 
 
 
