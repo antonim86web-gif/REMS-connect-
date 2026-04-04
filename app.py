@@ -1,63 +1,74 @@
 import streamlit as st
 
-st.markdown(
-    """
+# 1. CSS PULITO E "DEEP NIGHT" (Senza pallini perché non usiamo radio)
+st.markdown("""
     <style>
-    /* 1. ATTACCO CHIRURGICO AL PALLINO ROSSO */
-    /* Colpiamo l'elemento grafico circolare specifico di Streamlit */
-    div[role="radiogroup"] div[data-testid="stMarkdownContainer"] > p::before,
-    div[role="radiogroup"] [data-testid="stMarker"],
-    div[role="radiogroup"] span[data-baseweb="radio-dot"],
-    .st-ae, .st-af, .st-ag, .st-ah { 
-        display: none !important;
-        opacity: 0 !important;
-        width: 0 !important;
-        position: absolute !important;
-        left: -9999px !important; /* Lo buttiamo fuori dallo schermo */
-    }
-
-    /* 2. SISTEMIAMO LO SPAZIO RIMASTO VUOTO */
-    /* Facciamo sì che il testo e l'icona si riprendano il loro posto a sinistra */
-    div[role="radiogroup"] label {
-        padding-left: 10px !important;
-        margin-left: 0px !important;
-    }
-
-    /* 3. SIDEBAR DEEP NIGHT (Nero/Blu Profondo) */
+    /* Sfondo Sidebar Deep Night */
     [data-testid="stSidebar"] {
-        background-color: #0e1117 !important;
-        box-shadow: 8px 0 20px rgba(0,0,0,0.6) !important;
+        background-color: #1a252f !important;
+        background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
     }
 
-    /* 4. EFFETTO SELEZIONE (Highlight Azzurro Identico al Rendering) */
-    /* Quando l'utente clicca, l'intera riga si illumina */
-    div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: rgba(52, 152, 219, 0.25) !important;
-        border-radius: 12px !important;
-        border: 1px solid #3498db !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
-    }
-
-    /* 5. TESTI E ICONE BIANCHE */
-    [data-testid="stSidebar"] * {
-        color: white !important;
-        font-weight: 600 !important;
-        text-decoration: none !important;
-    }
-
-    /* 6. IL LOGOUT (Verde REMS) */
+    /* Stilizziamo i bottoni per farli sembrare voci di menu */
     .stButton > button {
-        background-color: #2ecc71 !important;
-        border-radius: 10px !important;
+        width: 100% !important;
+        background-color: transparent !important;
+        color: white !important;
         border: none !important;
-        height: 50px !important;
-        font-weight: bold !important;
+        text-align: left !important;
+        padding: 10px 15px !important;
+        border-radius: 8px !important;
+        font-size: 16px !important;
+        display: flex !important;
+        align-items: center !important;
+        transition: all 0.3s !important;
+    }
+
+    /* Effetto Hover e Selezione */
+    .stButton > button:hover {
+        background-color: rgba(52, 152, 219, 0.2) !important;
+        color: #3498db !important;
+    }
+
+    /* Titoli e testi sidebar */
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] p {
+        color: white !important;
+    }
+    
+    /* Il tasto Logout lo facciamo restare Verde */
+    div.stButton > button:has(div:contains("LOGOUT")) {
+        background-color: #2ecc71 !important;
+        margin-top: 20px !important;
+        text-align: center !important;
+        justify-content: center !important;
     }
     </style>
-    """, 
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
+# 2. LOGICA DI NAVIGAZIONE CON BOTTONI (Senza pallini!)
+with st.sidebar:
+    st.markdown("# Rems-connect")
+    st.markdown("● SUPER USER", help="Stato Attivo")
+    st.write("---")
+    st.write("NAVIGAZIONE")
+    
+    if st.button("📊 Monitoraggio"):
+        st.session_state.page = "Monitoraggio"
+    if st.button("👥 Modulo Equipe"):
+        st.session_state.page = "Equipe"
+    if st.button("📅 Agenda Dinamica"):
+        st.session_state.page = "Agenda"
+    if st.button("🗺️ Mappa Posti Letto"):
+        st.session_state.page = "Mappa"
+    if st.button("⚙️ Admin"):
+        st.session_state.page = "Admin"
+    
+    st.write("---")
+    if st.button("LOGOUT"):
+        st.write("Uscita...")
+    
+    st.write(f"**Antony**\nWebmaster\nver. 28.9 Elite")
+    
 
 
 
