@@ -1,6 +1,12 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import streamlit as st
+import sqlite3
+import pandas as pd
+import calendar  # <--- QUESTA MANCA E CAUSA L'ERRORE ROSSO
+from datetime import datetime
+
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
 from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
 from groq import Groq # <--- Per l'IA di Groq
