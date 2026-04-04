@@ -1,75 +1,85 @@
 import streamlit as st
 
-# 1. CSS CORRETTO: TORNA LA SIDEBAR, RESTA L'OMBRA
+# 1. CSS STRUTTURALE: OMBRE, FLOATING E DARK MODE
 st.markdown("""
     <style>
-    /* Ripristiniamo la visibilità dell'header ma solo per i pulsanti menu */
-    header {
-        background-color: transparent !important;
-        visibility: visible !important;
-    }
+    /* Ripristiniamo le freccette per il mobile */
+    header { visibility: visible !important; background: transparent !important; }
 
-    /* Rems-connect Sidebar con Ombra Profonda */
+    /* Sidebar con Ombra Esterna potente per distacco */
     [data-testid="stSidebar"] {
-        background-color: #1a252f !important;
-        background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
-        box-shadow: 10px 0 25px rgba(0,0,0,0.5) !important;
-        border-right: none !important;
-        visibility: visible !important;
+        background: linear-gradient(180deg, #111827 0%, #000000 100%) !important;
+        box-shadow: 12px 0 35px rgba(0,0,0,0.7) !important;
+        border-right: 1px solid rgba(255,255,255,0.05) !important;
     }
 
-    /* Bottoni Menu puliti */
+    /* Bottoni Floating con Ombra Interna */
     div.stButton > button {
-        background-color: rgba(255,255,255,0.02) !important;
-        color: #ecf0f1 !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 8px !important;
         width: 100% !important;
+        background-color: rgba(255,255,255,0.03) !important;
+        color: #e5e7eb !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 12px !important;
+        padding: 12px 20px !important;
         text-align: left !important;
-        padding: 10px 15px !important;
-        transition: all 0.3s ease !important;
+        font-weight: 500 !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
     }
 
-    /* Effetto selezione Azzurro */
+    /* Effetto Hover "Glow" Azzurro */
     div.stButton > button:hover {
+        background-color: rgba(52, 152, 219, 0.15) !important;
         border-color: #3498db !important;
-        background-color: rgba(52, 152, 219, 0.2) !important;
+        color: #3498db !important;
+        transform: translateY(-2px) !important; /* Effetto Floating */
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3) !important;
     }
-    
-    /* Titolo Pagina */
-    h1 {
-        color: #2c3e50 !important;
-        font-weight: 800 !important;
+
+    /* Nascondiamo DEFINITIVAMENTE il vecchio radio e i pallini */
+    [data-testid="stSidebar"] [role="radiogroup"], 
+    [data-testid="stSidebar"] .st-ae, .st-af, .st-ag {
+        display: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. LOGICA DI NAVIGAZIONE
-if 'page' not in st.session_state:
-    st.session_state.page = 'Monitoraggio'
+# 2. LOGICA DI NAVIGAZIONE (Stato della Pagina)
+if 'menu_paziente' not in st.session_state:
+    st.session_state.menu_paziente = "Monitoraggio"
 
+# 3. SIDEBAR PULITA (Senza Radio, solo Bottoni)
 with st.sidebar:
-    st.markdown("<h2 style='color:white;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#2ecc71;'>● SUPER USER</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:white; letter-spacing:1px;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#2ecc71; font-weight:bold;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
     st.write("---")
     
-    if st.button("📊 Monitoraggio", key="btn_mon"):
-        st.session_state.page = 'Monitoraggio'
-    if st.button("👥 Modulo Equipe", key="btn_equ"):
-        st.session_state.page = 'Equipe'
-    if st.button("📅 Agenda Dinamica", key="btn_age"):
-        st.session_state.page = 'Agenda'
-    if st.button("🗺️ Mappa Posti Letto", key="btn_map"):
-        st.session_state.page = 'Mappa'
-    if st.button("⚙️ Admin", key="btn_adm"):
-        st.session_state.page = 'Admin'
-
-# 3. VISUALIZZAZIONE CONTENUTO
-if st.session_state.page == 'Monitoraggio':
-    st.title("Dashboard Monitoraggio")
-    # Qui il tuo codice del monitoraggio (Pippo Rossi, ecc.)
-    st.info("Benvenuto nel Pannello di Controllo")
+    # Navigazione a Bottoni con Key Uniche per evitare DuplicateElementId
+    if st.button("📊  Monitoraggio Dati", key="nav_mon"):
+        st.session_state.menu_paziente = "Monitoraggio"
     
+    if st.button("👥  Modulo Equipe", key="nav_equ"):
+        st.session_state.menu_paziente = "Equipe"
+        
+    if st.button("📅  Agenda Dinamica", key="nav_age"):
+        st.session_state.menu_paziente = "Agenda"
+        
+    if st.button("🗺️  Mappa Posti Letto", key="nav_map"):
+        st.session_state.menu_paziente = "Mappa"
+
+    st.write("---")
+    st.button("🔓 LOGOUT", key="nav_logout")
+
+# 4. RENDERING DELLA PAGINA IN BASE ALLA SELEZIONE
+if st.session_state.menu_paziente == "Monitoraggio":
+    st.markdown("<h1>Dashboard Monitoraggio</h1>", unsafe_allow_html=True)
+    # qui va il tuo codice del Diario Clinico
+    st.button("DIARIO CLINICO GENERALE", use_container_width=True)
+
+elif st.session_state.menu_paziente == "Equipe":
+    st.markdown("<h1>Modulo Operativo Equipe</h1>", unsafe_allow_html=True)
+    # qui va il codice dell'equipe
+
 
 
 
