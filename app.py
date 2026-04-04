@@ -378,14 +378,13 @@ elif nav == "👥 Modulo Equipe":
            t1, t2, t3, t_ai, t_flash = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA", "⚡ FLASH HANDOVER"])
 
 # ... (tieni il codice di t1, t2, t3 e t_ai come sono) ...
-    with t2:
+        with t2:
         st.subheader("💊 Terapie in Corso")
         terapie = db_run("SELECT id_t, farmaco, dose, orari, active FROM terapie WHERE id=?", (p_id,))
         for f in terapie:
             mostra = True
             if f[4] == 0:
                 mostra = st.checkbox(f"Sospesa: {f[1]}", key=f"sos_{f[0]}_{p_id}")
-            
             if mostra:
                 st.markdown(f"### 💊 {f[1]}")
                 st.write(f"**Dose:** {f[2]} | **Orari:** {f[3]}")
@@ -395,6 +394,34 @@ elif nav == "👥 Modulo Equipe":
                             f"Somm: {f[1]} {f[2]}", get_now_it().strftime("%d/%m/%Y %H:%M")))
                     st.success("Registrato")
                 st.markdown("---")
+
+    with t3:
+        st.subheader("🩺 Parametri Vitali")
+        p_dati = db_run("SELECT data, op, pa, fc, sat, temp, glic FROM parametri WHERE id=? ORDER BY id_u DESC LIMIT 5", (p_id,))
+        if p_dati:
+            for p in p_dati:
+                with st.expander(f"Rilevazione del {p[0]}"):
+                    st.write(f"**Op:** {p[1]} | **PA:** {p[2]} | **FC:** {p[3]} | **Sat:** {p[4]}% | **T:** {p[5]}°C | **Glic:** {p[6]}")
+        else:
+            st.info("Nessun parametro registrato.")
+
+    with t_flash:
+        st.subheader("🚀 Briefing Cambio Turno")
+        st.info("L'IA analizza il turno precedente (Mattina, Pomeriggio o Notte) in base all'ora attuale.")
+        if st.button("GENERA BRIEFING ORA", key=f"flash_{p_id}"):
+            with st.spinner("Analisi in corso..."):
+                testo_briefing = genera_handover_intelligente(p_id, p_sel)
+                st.markdown(testo_briefing)
+
+    # Qui inizia la sezione dei diari specialistici (Tuo vecchio codice riga 432)
+    st.markdown("---")
+    st.subheader("📋 Diari Specialistici")
+    ruolo_corr = st.session_state.ruolo
+    if ruolo_corr == "Medico":
+        st.write("Sezione Medico")
+    elif ruolo_corr == "Psicologo":
+        st.write("Sezione Psicologo")
+
 
 
     # Fine sezione Terapie - Inizio Sezione Parametri (Tab Successivo)
