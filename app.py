@@ -386,7 +386,7 @@ elif nav == "👥 Modulo Equipe":
                 db_run("INSERT INTO somministrazioni (id_f, data, stato, op) VALUES (?, ?, 'RIFIUTATO', ?)", (f[0], get_now_it().strftime('%Y-%m-%d %H:%M'), user_logged), True)
                 st.rerun()
 
-                        st.divider()
+                st.divider()
             with t2:
                 with st.form("vit"):
                     pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
