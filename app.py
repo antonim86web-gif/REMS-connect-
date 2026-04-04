@@ -416,9 +416,6 @@ elif nav == "👥 Modulo Equipe":
     st.markdown("---")
     st.subheader("📋 Diari Specialistici")
 
-
-
-
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
