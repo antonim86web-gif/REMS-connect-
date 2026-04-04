@@ -370,14 +370,19 @@ elif nav == "👥 Modulo Equipe":
                             h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         with st.popover(f"Smarca {f[1]}"):
-                            c1, c2 = st.columns(2)
-                            k_id = f"{f[0]}_{turno_attivo.replace(':', '').replace(' ', '')}"
-                            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"✔️ {f[1]} ({turno_attivo})", "Infermiere", firma_op, "A"), True)
-                                st.rerun()
-                            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ RIFIUTO {f[1]} ({turno_attivo})", "Infermiere", firma_op, "R"), True)
-                                st.rerun()
+    c1, c2 = st.columns(2)
+    
+    # MODIFICA QUESTA RIGA QUI SOTTO:
+    # Aggiungiamo f[1] (il nome del farmaco) per essere sicuri al 100% dell'unicità
+    k_id = f"{f[0]}_{f[1]}_{turno_attivo.replace(' ', '')}" 
+    
+    if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
+        # ... tuo codice db_run ...
+        st.rerun()
+        
+    if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
+        # ... tuo codice db_run ...
+        st.rerun()
                         st.divider()
             with t2:
                 with st.form("vit"):
