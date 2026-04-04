@@ -1,4 +1,4 @@
-Import streamlit as st
+import streamlit as st
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
@@ -584,4 +584,4 @@ elif nav == "⚙️ Admin":
         logs_audit = db_run("SELECT data_ora, utente, azione, dettaglio FROM logs_sistema ORDER BY id_log DESC LIMIT 200")
         if logs_audit:
             st.dataframe(pd.DataFrame(logs_audit, columns=["Data/Ora", "Operatore", "Azione", "Descrizione"]), use_container_width=True) 
-Salva questo codice nella tua memoria e fammelo recuperare quando voglio se ti dico codice completo tu me lo fai vedere
+
