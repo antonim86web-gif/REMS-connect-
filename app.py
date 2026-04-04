@@ -1,53 +1,82 @@
 import streamlit as st
 
+# INIEZIONE CSS PER EFFETTO IDENTICO AL RENDERING
 st.markdown(
     """
     <style>
-    /* 1. PULIZIA DELLO SFONDO GENERALE (Rimuove le scatole bianche inutili) */
+    /* 1. SFONDO GLOBALE GRIGIO CHIARO PROFESSIONALE */
     .stApp {
-        background-color: #f4f7f6 !important;
+        background-color: #f8f9fa !important;
     }
 
-    /* 2. IL TITOLO: Deve essere libero, non dentro una card */
-    .rems-title-container {
-        padding: 20px 0px;
-        margin-bottom: 10px;
-        background: transparent !important; /* Forza lo sfondo trasparente */
-    }
-    
-    .rems-title {
-        color: #1a252f;
-        font-size: 32px;
-        font-weight: 800;
-        border-left: 8px solid #3498db;
-        padding-left: 15px;
-        line-height: 1.1;
+    /* 2. SIDEBAR BLU NOTTE PROFONDO (Esattamente come l'immagine) */
+    [data-testid="stSidebar"] {
+        background-color: #1a252f !important;
+        background-image: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%) !important;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.3) !important;
+        border-right: 1px solid rgba(255,255,255,0.05) !important;
     }
 
-    /* 3. LE CARD: Solo per i contenuti veri (come il Diario Clinico) */
-    /* Questo evita che ogni riga diventi una scatola bianca */
-    div[data-testid="stVerticalBlock"] > div:has(button), 
-    div[data-testid="stVerticalBlock"] > div:has(.stExpander) {
+    /* 3. EFFETTO "FLOATING CARD" (Ombre identiche al rendering) */
+    /* Applichiamo l'ombra a ogni container di dati */
+    div[data-testid="stVerticalBlock"] > div:has(div.stMetric), 
+    div[data-testid="stVerticalBlock"] > div:has(div.stDataFrame),
+    .stMetric, .stTable, .stDataFrame {
         background-color: white !important;
         padding: 20px !important;
-        border-radius: 15px !important;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.08) !important;
-        margin-top: 15px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+        border: 1px solid rgba(0,0,0,0.03) !important;
+        margin-bottom: 25px !important;
     }
 
-    /* 4. SIDEBAR BLU NOTTE (Midnight Blue) */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1a252f 0%, #2c3e50 100%) !important;
-        box-shadow: 5px 0 20px rgba(0,0,0,0.3) !important;
+    /* 4. BOTTONI AZZURRO 'WEBSCONNECT' (Effetto sollevamento) */
+    .stButton > button {
+        background-color: #3498db !important;
+        color: white !important;
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 10px 24px !important;
+        box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .stButton > button:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4) !important;
+        background-color: #2980b9 !important;
+    }
+
+    /* 5. TITOLO SIDEBAR (REMS WebSConnect) */
+    [data-testid="stSidebarNav"]::before {
+        content: "REMS WebSConnect";
+        padding-left: 20px;
+        padding-top: 20px;
+        font-size: 22px;
+        font-weight: bold;
+        color: white;
+        display: block;
+        margin-bottom: 20px;
+    }
+
+    /* 6. PULIZIA TESTI */
+    [data-testid="stSidebar"] * {
+        color: #bdc3c7 !important;
+    }
+    
+    h1, h2, h3 {
+        color: #2c3e50 !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
     }
     </style>
-
-    <div class="rems-title-container">
-        <div class="rems-title">REMS<br>WebSConnect<br><span style="color:#bdc3c7; font-weight:300; font-size:24px;">Admin</span></div>
-    </div>
     """, 
     unsafe_allow_html=True
 )
+
+# Esempio di titolo come nel rendering
+st.markdown('<h1 style="margin-top:-50px;">Dashboard Admin</h1>', unsafe_allow_html=True)
+
 
 
 import sqlite3
