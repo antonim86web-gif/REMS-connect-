@@ -409,7 +409,7 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(res_ai)
                 st.markdown("</div>", unsafe_allow_html=True)
 
-        elif ruolo_corr == "Psicologo":
+elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
                 with st.form("f_psi"):
