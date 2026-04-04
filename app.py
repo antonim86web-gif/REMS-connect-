@@ -369,20 +369,23 @@ elif nav == "👥 Modulo Equipe":
                             if es == "R": col, bg = "red", "#fee2e2"
                             h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
-                        with st.popover(f"Smarca {f[1]}"):
-        c1, c2 = st.columns(2)
-    
-    # MODIFICA QUESTA RIGA QUI SOTTO:
-    # Aggiungiamo f[1] (il nome del farmaco) per essere sicuri al 100% dell'unicità
-        k_id = f"{f[0]}_{f[1]}_{turno_attivo.replace(' ', '')}" 
-    
-    if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
-        # ... tuo codice db_run ...
-        st.rerun()
-        
-    if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
-        # ... tuo codice db_run ...
-        st.rerun()
+         # RIGA 372: Il 'with' deve essere allineato con il resto del ciclo
+        with st.popover(f"Smarca {f[1]}"):
+            # RIGA 373: QUI DEVE ESSERCI IL RIENTRO (4 spazi o un TAB)
+            c1, c2 = st.columns(2)
+            
+            # Anche queste devono essere allineate sotto c1, c2
+            k_id = f"{f[0]}_{f[1]}_{turno_attivo.replace(' ', '')}"
+            
+            # I tasti 'if' devono stare sotto c1, c2
+            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
+                db_run("INSERT INTO somministrazioni (id_f, data, stato, op) VALUES (?, ?, 'ASSUNTO', ?)", (f[0], get_now_it().strftime('%Y-%m-%d %H:%M'), user_logged), True)
+                st.rerun()
+                
+            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
+                db_run("INSERT INTO somministrazioni (id_f, data, stato, op) VALUES (?, ?, 'RIFIUTATO', ?)", (f[0], get_now_it().strftime('%Y-%m-%d %H:%M'), user_logged), True)
+                st.rerun()
+
                         st.divider()
             with t2:
                 with st.form("vit"):
