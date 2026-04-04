@@ -68,7 +68,7 @@ def genera_relazione_ia(p_id, p_sel, g_rel):
             ],
         )
         return completion.choices[0].message.content
-        def genera_handover_intelligente(p_id, p_sel):
+def genera_handover_intelligente(p_id, p_sel):
     ora_attuale = get_now_it().hour
     # Rotazione turni REMS: 7h (M) - 7h (P) - 10h (N)
     if 7 <= ora_attuale < 14:
