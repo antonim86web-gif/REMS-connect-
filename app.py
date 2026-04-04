@@ -10,70 +10,60 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SIDEBAR DEEP NIGHT - SFONDO */
+    /* 1. SIDEBAR DEEP NIGHT */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
         box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
     }
 
-    /* 2. KILLER PALLINI */
+    /* 2. KILLER PALLINI E INPUT NASCOSTI */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 3. CARD MENU - SPAZIATURA E TESTO */
+    /* 3. CARD MENU */
     div[role="radiogroup"] label {
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 15px 15px !important;
+        padding: 15px 20px !important;
         border-radius: 12px !important;
-        margin-bottom: 12px !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        margin-bottom: 15px !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
+        transition: all 0.3s ease !important;
     }
 
-    /* 4. TESTO - GRANDE E BIANCO PURO */
-    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
-        color: #FFFFFF !important; /* Bianco puro */
-        font-size: 19px !important; /* Molto più grande */
-        font-weight: 700 !important; /* Grassetto Elite */
-        margin-left: 0px !important;
-        white-space: normal !important; /* Evita il rimpicciolimento automatico */
-        line-height: 1.2 !important;
+    /* 4. IL RISOLUTORE: FORZA TESTO BIANCO SU TUTTO */
+    div[role="radiogroup"] label *, 
+    div[role="radiogroup"] label div, 
+    div[role="radiogroup"] label p {
+        color: #FFFFFF !important; /* BIANCO PURO */
+        font-size: 18px !important; /* GRANDE */
+        font-weight: 700 !important;
         text-align: left !important;
+        text-decoration: none !important;
     }
 
-    /* 5. TASTO ATTIVO (IL TUO FLOATING) */
+    /* 5. TASTO ATTIVO (FLOATING ELITE) */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(52, 152, 219, 0.25) !important;
+        background: rgba(52, 152, 219, 0.3) !important;
         border-color: #3498db !important;
-        transform: translateY(-8px) scale(1.03) !important; /* Floating potente */
-        box-shadow: 0 15px 35px rgba(52, 152, 219, 0.4) !important;
+        transform: translateY(-8px) !important; /* Effetto Floating */
+        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.4) !important;
     }
 
     /* 6. EFFETTO HOVER */
     div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.12) !important;
+        background: rgba(255,255,255,0.1) !important;
         border-color: rgba(52, 152, 219, 0.5) !important;
     }
 
-    /* TITOLI SIDEBAR */
-    .sidebar-title { 
-        color: #ffffff !important; 
-        font-size: 1.8rem; 
-        font-weight: 800; 
-        text-align: center;
-        margin-bottom: 10px;
-    }
-    .user-logged { 
-        color: #2ecc71 !important; 
-        text-align: center;
-        font-weight: 900;
-        margin-bottom: 20px;
+    /* RESET SPAZIATURE PER ALLINEAMENTO PERFETTO */
+    div[role="radiogroup"] {
+        gap: 0px !important;
     }
 </style>
 """, unsafe_allow_html=True)
