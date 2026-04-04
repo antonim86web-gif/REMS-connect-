@@ -72,85 +72,72 @@ def genera_relazione_ia(p_id, p_sel, g_rel):
         return completion.choices[0].message.content
     except Exception as e:
         return f"Errore Groq: {str(e)}"
-        
 
-        
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
 st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", page_icon="🏥")
-
 st.markdown("""
 <style>
-    /* 1. PAGINA ARDESIA E SIDEBAR NERA */
-    .stApp { background-color: #1e293b !important; }
-    [data-testid="stSidebar"] {
-        background-color: #000000 !important;
-        border-right: 2px solid #00d4ff !important;
-    }
-
-    /* 2. FORZATURA TOTALE TESTO SPARITO (SIDEBAR) */
-    /* Questo agisce su ogni singolo elemento di testo dentro i bottoni */
-    [data-testid="stSidebar"] *, 
-    div[role="radiogroup"] label p, 
-    div[role="radiogroup"] span,
-    div[role="radiogroup"] div {
+    /* 1. SIDEBAR: FIX DEFINITIVO TESTI */
+    [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 2px solid #00d4ff !important; }
+    
+    /* Forza visibilità totale dei testi nella sidebar */
+    [data-testid="stSidebar"] * {
         color: #00d4ff !important;
-        font-weight: 800 !important;
-        text-transform: uppercase !important;
-        opacity: 1 !important;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
         visibility: visible !important;
+        opacity: 1 !important;
     }
 
-    /* 3. BOTTONI FLOATING NEON */
-    [data-testid="stMarker"], [data-baseweb="radio"] div:first-child { display: none !important; }
-
+    /* Bottoni Sidebar con effetto Floating */
     div[role="radiogroup"] label {
-        background: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(0, 212, 255, 0.3) !important;
+        background: rgba(0, 212, 255, 0.05) !important;
+        border: 1px solid #00d4ff !important;
         border-radius: 12px !important;
-        padding: 10px 15px !important;
-        margin-bottom: 12px !important;
-        display: flex !important;
-        transition: all 0.3s ease !important;
-        min-height: 50px !important;
+        padding: 10px !important;
+        margin-bottom: 10px !important;
+        transition: 0.3s ease-in-out !important;
     }
-
-    /* EFFETTO SELEZIONATO (FLOATING) */
+    
+    /* Il "salto" del tasto selezionato */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(0, 212, 255, 0.2) !important;
-        border-color: #00d4ff !important;
         transform: translateY(-8px) !important;
-        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.5) !important;
+        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.4) !important;
+        background: rgba(0, 212, 255, 0.2) !important;
     }
+    div[role="radiogroup"] label:has(input:checked) * { color: #ffffff !important; }
+
+    /* 2. PAGINA E STANZE FLOATING */
+    .stApp { background-color: #1e293b !important; }
     
-    /* Quando selezionato, il testo diventa bianco per staccare */
-    div[role="radiogroup"] label:has(input:checked) * {
-        color: #ffffff !important;
+    .stanza-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: 0.3s;
+    }
+    .stanza-box:hover {
+        transform: translateY(-5px);
+        border-color: #00d4ff;
+        box-shadow: 0 10px 25px rgba(0, 212, 255, 0.2);
     }
 
-    /* 4. TABELLONE POSTI LETTO (VISIBILITÀ) */
-    /* Nello screenshot 22909 non si vede nulla: forziamo il bianco ghiaccio */
-    .stMarkdown, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-        color: #f1f5f9 !important;
-    }
-    
-    .reparto-title, .stanza-header {
-        color: #00d4ff !important;
-        font-weight: 900 !important;
-    }
-
-    /* 5. LOGOUT ROSSO */
-    .stButton > button {
-        background: transparent !important;
-        color: #ff4b4b !important;
-        border: 2px solid #ff4b4b !important;
-        border-radius: 12px !important;
-        width: 100% !important;
-        font-weight: 800 !important;
+    /* 3. CALENDARIO POST-IT */
+    .cal-postit {
+        background: #fff9c4 !important;
+        color: #333 !important;
+        padding: 6px;
+        border-radius: 3px;
+        margin-bottom: 4px;
+        border-left: 4px solid #fbc02d;
+        font-size: 11px !important;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        line-height: 1.2;
     }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # --- DATABASE ENGINE ---
@@ -257,7 +244,15 @@ st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>W
 
 # --- LOGICA NAVIGAZIONE ---
 if nav == "🗺️ Mappa Posti Letto":
-    st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="stanza-box">
+    <h3 style="color:#00d4ff; margin-bottom:10px;">🛏️ {stanza_nome}</h3>
+    <p style="color:#f1f5f9;">L1: {paziente_l1}</p>
+    <p style="color:#f1f5f9;">L2: {paziente_l2}</p>
+    </div>
+""", unsafe_allow_html=True)
+
+
     stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
     paz_db = db_run("SELECT p.id, p.nome, a.stanza_id, a.letto FROM pazienti p LEFT JOIN assegnazioni a ON p.id = a.p_id WHERE p.stato='ATTIVO'")
     mappa = {s[0]: {'rep': s[1], 'tipo': s[2], 'letti': {1: None, 2: None}} for s in stanze_db}
@@ -475,7 +470,7 @@ elif nav == "👥 Modulo Equipe":
         st.divider(); render_postits(p_id)
 
 elif nav == "📅 Agenda Dinamica":
-    st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
+    st.markdown(f'<div class="cal-postit">🚗 {app["paziente"]}<br>⏰ {app["ora"]}</div>', unsafe_allow_html=True
     c_nav1, c_nav2, c_nav3 = st.columns([1,2,1])
     with c_nav1: 
         if st.button("⬅️ Mese Precedente"): 
