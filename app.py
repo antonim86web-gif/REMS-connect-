@@ -81,55 +81,72 @@ st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", p
 
 st.markdown("""
 <style>
-    /* 1. SFONDO E SIDEBAR */
+    /* 1. PAGINA ARDESIA E SIDEBAR NERA */
     .stApp { background-color: #1e293b !important; }
     [data-testid="stSidebar"] {
         background-color: #000000 !important;
         border-right: 2px solid #00d4ff !important;
     }
 
-    /* 2. FIX TESTO SPARITO: FORZIAMO IL COLORE AZZURRO */
-    div[role="radiogroup"] label p {
-        color: #00d4ff !important; /* Questo farà riapparire le scritte! */
-        font-size: 18px !important;
+    /* 2. FORZATURA TOTALE TESTO SPARITO (SIDEBAR) */
+    /* Questo agisce su ogni singolo elemento di testo dentro i bottoni */
+    [data-testid="stSidebar"] *, 
+    div[role="radiogroup"] label p, 
+    div[role="radiogroup"] span,
+    div[role="radiogroup"] div {
+        color: #00d4ff !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
-        margin: 0 !important;
-        z-index: 9999 !important; /* Lo porta in primo piano */
+        opacity: 1 !important;
+        visibility: visible !important;
     }
 
-    /* 3. BOTTONI NEON (FLOATING) */
+    /* 3. BOTTONI FLOATING NEON */
     [data-testid="stMarker"], [data-baseweb="radio"] div:first-child { display: none !important; }
 
     div[role="radiogroup"] label {
         background: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(0, 212, 255, 0.3) !important;
         border-radius: 12px !important;
-        padding: 12px 15px !important;
-        margin-bottom: 10px !important;
+        padding: 10px 15px !important;
+        margin-bottom: 12px !important;
         display: flex !important;
         transition: all 0.3s ease !important;
+        min-height: 50px !important;
     }
 
-    /* EFFETTO SELEZIONATO */
+    /* EFFETTO SELEZIONATO (FLOATING) */
     div[role="radiogroup"] label:has(input:checked) {
         background: rgba(0, 212, 255, 0.2) !important;
         border-color: #00d4ff !important;
-        transform: translateX(5px) !important; /* Piccola spinta laterale invece che salto */
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.5) !important;
+        transform: translateY(-8px) !important;
+        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.5) !important;
     }
     
-    div[role="radiogroup"] label:has(input:checked) p {
-        color: #ffffff !important; /* Il testo diventa bianco quando clicchi */
+    /* Quando selezionato, il testo diventa bianco per staccare */
+    div[role="radiogroup"] label:has(input:checked) * {
+        color: #ffffff !important;
     }
 
-    /* 4. LOGOUT ROSSO */
+    /* 4. TABELLONE POSTI LETTO (VISIBILITÀ) */
+    /* Nello screenshot 22909 non si vede nulla: forziamo il bianco ghiaccio */
+    .stMarkdown, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #f1f5f9 !important;
+    }
+    
+    .reparto-title, .stanza-header {
+        color: #00d4ff !important;
+        font-weight: 900 !important;
+    }
+
+    /* 5. LOGOUT ROSSO */
     .stButton > button {
         background: transparent !important;
         color: #ff4b4b !important;
         border: 2px solid #ff4b4b !important;
-        border-radius: 10px !important;
+        border-radius: 12px !important;
         width: 100% !important;
+        font-weight: 800 !important;
     }
 </style>
 """, unsafe_allow_html=True)
