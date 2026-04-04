@@ -3,65 +3,55 @@ import streamlit as st
 st.markdown(
     """
     <style>
-    /* 1. SFONDO SIDEBAR DEEP NIGHT */
-    [data-testid="stSidebar"] {
-        background-color: #0e1117 !important; /* Ancora più scuro per risaltare */
-        background-image: linear-gradient(180deg, #1a252f 0%, #0e1117 100%) !important;
-        box-shadow: 8px 0 20px rgba(0,0,0,0.5) !important;
-    }
-
-    /* 2. KILLER DEI PALLINI (ROSSI E BIANCHI) - ATTACCO TOTALE */
-    /* Nasconde i pallini, i cerchietti e i contenitori dei marker */
-    [data-testid="stMarker"], 
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] [data-testid="stMarkdownContainer"]::before,
-    [data-testid="stSidebar"] .stRadio input {
+    /* 1. ATTACCO CHIRURGICO AL PALLINO ROSSO */
+    /* Colpiamo l'elemento grafico circolare specifico di Streamlit */
+    div[role="radiogroup"] div[data-testid="stMarkdownContainer"] > p::before,
+    div[role="radiogroup"] [data-testid="stMarker"],
+    div[role="radiogroup"] span[data-baseweb="radio-dot"],
+    .st-ae, .st-af, .st-ag, .st-ah { 
         display: none !important;
-        visibility: hidden !important;
+        opacity: 0 !important;
         width: 0 !important;
-    }
-    
-    /* Rimuove lo spazio vuoto lasciato dai pallini */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
-        padding-left: 0px !important;
+        position: absolute !important;
+        left: -9999px !important; /* Lo buttiamo fuori dallo schermo */
     }
 
-    /* 3. EFFETTO SELEZIONE "REMS STYLE" (Solo dove clicchi) */
-    /* Reset di base per tutti i tasti */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
-        background: transparent !important;
+    /* 2. SISTEMIAMO LO SPAZIO RIMASTO VUOTO */
+    /* Facciamo sì che il testo e l'icona si riprendano il loro posto a sinistra */
+    div[role="radiogroup"] label {
+        padding-left: 10px !important;
+        margin-left: 0px !important;
+    }
+
+    /* 3. SIDEBAR DEEP NIGHT (Nero/Blu Profondo) */
+    [data-testid="stSidebar"] {
+        background-color: #0e1117 !important;
+        box-shadow: 8px 0 20px rgba(0,0,0,0.6) !important;
+    }
+
+    /* 4. EFFETTO SELEZIONE (Highlight Azzurro Identico al Rendering) */
+    /* Quando l'utente clicca, l'intera riga si illumina */
+    div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
+        background-color: rgba(52, 152, 219, 0.25) !important;
+        border-radius: 12px !important;
+        border: 1px solid #3498db !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+    }
+
+    /* 5. TESTI E ICONE BIANCHE */
+    [data-testid="stSidebar"] * {
+        color: white !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+    }
+
+    /* 6. IL LOGOUT (Verde REMS) */
+    .stButton > button {
+        background-color: #2ecc71 !important;
         border-radius: 10px !important;
-        margin: 5px 10px !important;
-        padding: 12px !important;
-        transition: all 0.3s ease !important;
-        border: 1px solid transparent !important;
-    }
-
-    /* EFFETTO QUANDO SELEZIONATO */
-    /* Streamlit aggiunge un background grigio chiaro di default, lo sovrascriviamo */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: rgba(52, 152, 219, 0.2) !important; /* Azzurro trasparente */
-        border: 1px solid #3498db !important; /* Bordo azzurro sottile */
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-    }
-
-    /* 4. CONTRASTO TESTI E ICONE */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label span {
-        color: #ecf0f1 !important;
-        font-size: 17px !important;
-        font-weight: 500 !important;
-        margin-left: 5px !important;
-    }
-
-    /* Forza il bianco sulle scritte nella sidebar */
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2 {
-        color: white !important;
-    }
-
-    /* 5. FIX PER IL TITOLO "MODULO OPERATIVO" (SCRITTA BIANCA) */
-    /* Cerca tutti i titoli nel corpo pagina e li rende leggibili se sono su sfondo scuro */
-    h1, h2 {
-        color: white !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
+        border: none !important;
+        height: 50px !important;
+        font-weight: bold !important;
     }
     </style>
     """, 
