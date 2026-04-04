@@ -10,74 +10,71 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SIDEBAR DEEP NIGHT: SFONDO NERO PROFONDO E OMBRA ELITE */
+    /* 1. SIDEBAR DEEP NIGHT */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
         box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
     }
 
-    /* 2. KILLER DEI PALLINI: ELIMINA CERCHIETTI ROSSI/BIANCHI E SPAZI INUTILI */
+    /* 2. KILLER PALLINI */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 3. TRASFORMAZIONE RADIO IN MENU FLOATING */
+    /* 3. CARD DEL MENU - TESTO BIANCO E GRANDE */
     div[role="radiogroup"] label {
-        background: rgba(255,255,255,0.03) !important;
+        background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 16px 20px !important;
+        padding: 18px 20px !important; /* Più spazio interno */
         border-radius: 12px !important;
         margin-bottom: 12px !important;
-        color: #94a3b8 !important;
+        color: #ffffff !important; /* TESTO BIANCO PURO */
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
     }
 
-    /* 4. EFFETTO HOVER (PASSAGGIO MOUSE) */
+    /* 4. EFFETTO HOVER */
     div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.08) !important;
-        color: #ffffff !important;
-        border-color: rgba(255,255,255,0.3) !important;
+        background: rgba(52, 152, 219, 0.1) !important;
+        border-color: #3498db !important;
+        transform: translateX(5px) !important; /* Scivola un po' a destra */
     }
 
-    /* 5. TASTO ATTIVO: FLOATING REALE E ILLUMINAZIONE AZZURRA */
+    /* 5. TASTO ATTIVO (FLOATING) */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(52, 152, 219, 0.15) !important;
+        background: rgba(52, 152, 219, 0.25) !important;
         border-color: #3498db !important;
         color: #ffffff !important;
-        transform: translateY(-6px) !important; /* Spinta Floating */
-        box-shadow: 0 12px 25px rgba(52, 152, 219, 0.3) !important;
-        font-weight: 700 !important;
+        transform: translateY(-6px) scale(1.02) !important; /* ALZA E INGRANDISCE */
+        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.4) !important;
     }
 
-    /* 6. CORREZIONE TESTO SIDEBAR (Toglie il rientro del pallino) */
+    /* 6. DIMENSIONE CARATTERI */
     div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
         margin-left: 0px !important;
-        font-size: 16px !important;
-        margin-bottom: 0px !important;
+        font-size: 18px !important; /* SCRITTE BELLE GRANDI */
+        font-weight: 600 !important;
+        letter-spacing: 0.5px !important;
     }
 
-    /* 7. ELEMENTI SIDEBAR (Titoli e Testi) */
+    /* TITOLI SIDEBAR */
     .sidebar-title { 
-        color: #ffffff !important; font-size: 1.8rem; font-weight: 800; 
-        text-align: center; border-bottom: 1px solid #ffffff22; padding-bottom: 10px;
+        color: #ffffff !important; 
+        font-size: 1.8rem; 
+        font-weight: 800; 
+        text-align: center;
     }
-    .user-logged { color: #2ecc71 !important; font-weight: 900; text-align: center; }
-
-    /* 8. PRESERVAZIONE TABELLE E INTERFACCIA CHIARA (Dashboard) */
-    .main .block-container { background-color: transparent !important; }
-    
-    /* Garantisce che i bottoni verdi dei moduli non vengano corrotti dal CSS sidebar */
-    .stButton > button {
-        text-transform: uppercase !important;
-        font-weight: 700 !important;
+    .user-logged { 
+        color: #00ff00 !important; 
+        text-shadow: 0 0 10px rgba(0,255,0,0.3);
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
