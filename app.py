@@ -10,72 +10,69 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SFONDO TOTALE DELLA PAGINA (Addio bianco fastidioso) */
+    /* 1. RESET TOTALE SFONDO (Coerenza Dark Knight) */
     .stApp {
-        background-color: #05070a !important;
-        color: #e2e8f0 !important;
+        background-color: #0d1117 !important;
     }
 
-    /* 2. SIDEBAR DEEP NIGHT */
+    /* 2. SIDEBAR PULITA E DEFINITA */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #020617 0%, #000000 100%) !important;
-        border-right: 1px solid #1e293b !important;
+        background-color: #010409 !important;
+        border-right: 2px solid #30363d !important;
     }
 
-    /* 3. KILLER PALLINI */
+    /* 3. RIMOZIONE PALLINI STREAMLIT */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 4. CARD MENU SIDEBAR */
+    /* 4. I NUOVI BOTTONI (Cyber-Glass Style) */
     div[role="radiogroup"] label {
-        background: #111827 !important; /* Grigio molto scuro */
-        border: 1px solid #1e293b !important;
-        padding: 15px 20px !important;
-        border-radius: 10px !important;
-        margin-bottom: 12px !important;
+        background: #161b22 !important; /* Grigio scuro solido, no ombre */
+        border: 1px solid #30363d !important;
+        padding: 14px 18px !important;
+        border-radius: 8px !important;
+        margin-bottom: 10px !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
-        transition: all 0.3s ease !important;
+        transition: all 0.2s ease-in-out !important;
     }
 
-    /* 5. RISOLUZIONE SCRITTE BOTTONI (Colori accesi per vederli sempre) */
+    /* 5. SCRITTE: FINALMENTE VISIBILI */
     div[role="radiogroup"] label p {
-        color: #38bdf8 !important; /* Ciano brillante per le scritte */
-        font-size: 18px !important;
-        font-weight: 800 !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
+        color: #f0f6fc !important; /* Bianco Ghiaccio - Leggibilità massima */
+        font-size: 17px !important;
+        font-weight: 600 !important;
+        margin: 0px !important;
+        text-align: left !important;
+        opacity: 1 !important;
     }
 
-    /* 6. TASTO ATTIVO (IL TUO FLOATING) */
+    /* 6. STATO ATTIVO (IL SELEZIONATO) */
+    /* Quando clicchi, il bottone si accende di Oro e il testo diventa nero per contrasto */
     div[role="radiogroup"] label:has(input:checked) {
-        background: #1e293b !important;
-        border-color: #38bdf8 !important;
-        transform: translateY(-8px) !important;
-        box-shadow: 0 10px 20px rgba(56, 189, 248, 0.3) !important;
+        background: #e3b341 !important; /* Oro Professionale */
+        border-color: #f0f6fc !important;
+        transform: translateX(8px) !important; /* Slitta a destra invece di saltare su */
     }
 
-    /* Quando il tasto è attivo, la scritta diventa Giallo Neon */
     div[role="radiogroup"] label:has(input:checked) p {
-        color: #fbbf24 !important; /* Giallo Oro/Neon */
+        color: #000000 !important; /* Testo nero SOLO sull'oro per leggibilità totale */
+        font-weight: 800 !important;
     }
 
-    /* 7. RESET MODULI (Per adattarsi alla Dark Knight) */
-    .stExpander, div[data-testid="stExpander"] {
-        background-color: #0f172a !important;
-        border: 1px solid #1e293b !important;
-        color: white !important;
+    /* 7. EFFETTO AL PASSAGGIO DEL MOUSE (HOVER) */
+    div[role="radiogroup"] label:hover {
+        border-color: #e3b341 !important;
+        background: #21262d !important;
     }
-    
-    /* Input di testo e aree bianche */
-    input, textarea, .stSelectbox div {
-        background-color: #1e293b !important;
-        color: white !important;
-        border: 1px solid #334155 !important;
+
+    /* SISTEMAZIONE TITOLI E UTENTE */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #f0f6fc !important;
     }
 </style>
 """, unsafe_allow_html=True)
