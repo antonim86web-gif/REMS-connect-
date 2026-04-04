@@ -1,4 +1,4 @@
-import streamlit as st
+Import streamlit as st
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
@@ -365,25 +365,15 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         with st.popover(f"Smarca {f[1]}"):
                             c1, c2 = st.columns(2)
-                            k_id = f"{f[0]}_{f[1].replace(' ', '')}_{turno_attivo[0]}" 
-            
-            with st.popover(f"Smarca {f[1]}"):
-                c1, c2 = st.columns(2)
-                if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
-                    nota_f = f"Somm. {f[1]}: ASSUNTO ({turno_attivo})"
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?, ?, ?, ?, ?)", 
-                           (p_id, get_now_it().strftime('%d/%m/%Y'), nota_f, ruolo_corr, user_logged), True)
-                    st.rerun()
-                    
-                if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
-                    nota_f = f"Somm. {f[1]}: RIFIUTATO ({turno_attivo})"
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?, ?, ?, ?, ?)", 
-                           (p_id, get_now_it().strftime('%d/%m/%Y'), nota_f, ruolo_corr, user_logged), True)
-                    st.rerun()
-
-        st.divider()
-        render_postits(p_id)
-           with t2:
+                            k_id = f"{f[0]}_{turno_attivo.replace(':', '').replace(' ', '')}"
+                            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"✔️ {f[1]} ({turno_attivo})", "Infermiere", firma_op, "A"), True)
+                                st.rerun()
+                            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ RIFIUTO {f[1]} ({turno_attivo})", "Infermiere", firma_op, "R"), True)
+                                st.rerun()
+                        st.divider()
+            with t2:
                 with st.form("vit"):
                     pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
                     if st.form_submit_button("REGISTRA"): 
