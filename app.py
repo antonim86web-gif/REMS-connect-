@@ -1,4 +1,5 @@
-# 1. Crea l'interruttore nella barra laterale
+# PRIMA questa riga (la n. 1)
+import streamlit as st
 scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
 
 if scelta_grafica == "Nuovo Minimal":
@@ -23,7 +24,6 @@ else:
     st.title("🏥 REMS Connect - Standard")
     # ... tutto il tuo codice di adesso ...
 
-import streamlit as st
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
