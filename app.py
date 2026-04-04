@@ -470,7 +470,7 @@ elif ruolo_corr == "Educatore":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📝 {txt_edu}", "Educatore", firma_op), True)
                         st.rerun()
 
-        st.divider(); render_postits(p_id)
+                        st.divider(); render_postits(p_id)
 
 elif nav == "📅 Agenda Dinamica":
     st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
