@@ -470,7 +470,7 @@ elif nav == "👥 Modulo Equipe":
         st.divider(); render_postits(p_id)
 
 elif nav == "📅 Agenda Dinamica":
-    st.markdown(f'<div class="cal-postit">🚗 {app["paziente"]}<br>⏰ {app["ora"]}</div>', unsafe_allow_html=True
+    st.markdown(f'<div class="cal-postit">🚗 {app["paziente"]}<br>⏰ {app["ora"]}</div>', unsafe_allow_html=True)
     c_nav1, c_nav2, c_nav3 = st.columns([1,2,1])
     with c_nav1: 
         if st.button("⬅️ Mese Precedente"): 
