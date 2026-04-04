@@ -1,52 +1,60 @@
 import streamlit as st
+
+st.markdown(
+    """
+    <style>
+    /* 1. SIDEBAR BLU NOTTE CON GRADIENTE */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #1a252f 0%, #2c3e50 100%) !important;
+        box-shadow: 8px 0 25px rgba(0,0,0,0.4) !important;
+    }
+
+    /* 2. TESTI SIDEBAR BIANCO PULITO */
+    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] label {
+        color: #ecf0f1 !important;
+    }
+
+    /* 3. EFFETTO CARD SUI CONTENUTI (Ombra morbida) */
+    .stMetric, .stDataFrame, .stTable, div[data-testid="stVerticalBlock"] > div {
+        background-color: white !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        border: 1px solid rgba(0,0,0,0.03) !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* 4. IL TITOLO 'TOTALIZZANTE' */
+    .rems-title {
+        color: #1a252f;
+        font-family: 'Segoe UI', Roboto, Helvetica;
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin-bottom: 25px;
+        border-left: 6px solid #3498db;
+        padding-left: 15px;
+    }
+
+    /* 5. BOTTONE LOGOUT (Verde come nel tuo screen ma con ombra) */
+    div.stButton > button:first-child {
+        background-color: #2ecc71 !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3) !important;
+    }
+    </style>
+
+    <div class="rems-title">REMS WebSConnect <span style="color:#bdc3c7; font-weight:300;">| Admin</span></div>
+    """, 
+    unsafe_allow_html=True
+)
+
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
 from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
-from groq import Groq # <--- Per l'IA di Groq
-
-# --- INIEZIONE CSS PER REMS WEBSCONNECT ---
-st.markdown("""
-    <style>
-    /* BLOCCO 1: VARIABILI */
-    :root {
-        --primary-dark: #2c3e50;
-        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-        --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
-        --shadow-lg: 8px 0 25px rgba(0, 0, 0, 0.15);
-    }
-
-    /* BLOCCO 2: LAYOUT E OMBRE (Modificato per Streamlit) */
-    /* Applichiamo l'ombra alla sidebar nativa di Streamlit */
-    [data-testid="stSidebar"] {
-        background-color: #2c3e50;
-        box-shadow: var(--shadow-lg);
-    }
-
-    /* Applichiamo l'ombra ai box (container) di Streamlit */
-    .stElementContainer, .stVerticalBlock > div {
-        border-radius: 10px;
-        transition: all 0.3s ease;
-    }
-    
-    /* Rendiamo i box simili alle nostre "data-card" */
-    div[data-testid="stMetricBlock"], .stDataFrame {
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: var(--shadow-sm);
-        border: 1px solid rgba(0,0,0,0.05);
-    }
-
-    /* BLOCCO 3: EFFETTI DINAMICI */
-    /* Effetto quando passi sopra i widget */
-    div[data-testid="stMetricBlock"]:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-md);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
+from groq import Groq # <--- Per l'IA
 # --- IL RESTO DEL TUO CODICE ADMIN ---
 
 # ... qui continui con la tua logica Streamlit
