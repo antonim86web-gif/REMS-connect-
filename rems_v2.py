@@ -79,64 +79,38 @@ st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", p
 
 st.markdown("""
 <style>
-    [data-testid="stSidebar"] { background-color: #1e3a8a !important; }
-    [data-testid="stSidebar"] * { color: #ffffff !important; }
-    .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
-    .user-logged { color: #00ff00 !important; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
-    .sidebar-footer { color: #ffffff !important; font-size: 0.8rem; text-align: center; margin-top: 20px; opacity: 0.8; }
-    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: solidolid #ffffff22; }
-    .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
-    
-    .ai-box { background: #f8fafc; border: 2px solid #a855f7; border-radius: 15px; padding: 25px; margin-top: 10px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2); }
-    .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
-    @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
+    /* Sfondo chiaro e moderno */
+    .stApp { background-color: #f1f5f9; }
 
-    .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
-    .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; overflow: visible !important; }
-    .day-num-html { font-weight: 900; color: #64748b; font-size: 0.8rem; margin-bottom: 4px; display: block; }
-    
-    .event-tag-html { font-size: 0.65rem; background: #dbeafe; color: #1e40af; padding: 2px 4px; border-radius: 4px; margin-bottom: 3px; border-left: 3px solid #2563eb; line-height: 1.1; position: relative; cursor: help; }
-    .event-tag-html .tooltip-text { visibility: hidden; width: 220px; background-color: #1e3a8a; color: #fff; text-align: left; border-radius: 8px; padding: 12px; position: absolute; z-index: 9999 !important; bottom: 125%; left: 0%; opacity: 0; transition: opacity 0.3s; box-shadow: 0 8px 20px rgba(0,0,0,0.4); font-size: 0.75rem; line-height: 1.4; white-space: normal; border: 1px solid #ffffff44; pointer-events: none; }
-    .event-tag-html:hover .tooltip-text { visibility: visible; opacity: 1; }
-    
-    .today-html { background-color: #f0fdf4 !important; border: 2px solid #22c55e !important; }
-    .postit { padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 10px solid; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); color: #1e293b; background-color: #ffffff; }
-    .postit-header { font-weight: 800; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 5px; display: flex; justify-content: space-between; }
-    
-    .role-psichiatra { background-color: #fef2f2; border-color: #dc2626; } 
-    .role-infermiere { background-color: #eff6ff; border-color: #2563eb; } 
-    .role-educatore { background-color: #ecfdf5; border-color: #059669; }  
-    .role-oss { background-color: #f8fafc; border-color: #64748b; }
-    .role-psicologo { background-color: #faf5ff; border-color: #a855f7; }
-    .role-sociale { background-color: #fff7ed; border-color: #f97316; }
-    .role-opsi { background-color: #f1f5f9; border-color: #0f172a; border-style: dashed; }
-
-    .scroll-giorni { display: flex; overflow-x: auto; gap: 4px; padding: 8px; background: #fdfdfd; }
-    .quadratino { 
-        min-width: 38px; height: 50px; border-radius: 4px; border: 1px solid #eee; 
-        display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;
+    /* Card per i pazienti */
+    .paziente-card {
+        background: white;
+        padding: 25px;
+        border-radius: 24px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
     }
-    .q-oggi { border: 2px solid #1e3a8a !important; background: #fffde7; }
-    .q-num { font-size: 7px; color: #999; }
-    .q-esito { font-size: 11px; font-weight: 900; }
-    .q-op { font-size: 6px; color: #444; }
 
-    .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-    .cassa-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
-    .saldo-txt { font-size: 2.2rem; font-weight: 900; color: #166534; }
+    /* Pulsantoni Grandi e Intuitivi */
+    div.stButton > button {
+        border-radius: 16px !important;
+        height: 60px !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        background-color: #ffffff !important;
+        color: #1e3a8a !important;
+        border: 2px solid #e2e8f0 !important;
+        transition: all 0.3s ease;
+    }
     
-    .map-reparto { background: #f1f5f9; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
-    .reparto-title { text-align: center; color: #1e3a8a; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; border-bottom: 2px solid #1e3a8a33; }
-    .stanza-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
-    .stanza-tile { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; border-left: 6px solid #94a3b8; }
-    .stanza-header { font-weight: 800; font-size: 0.8rem; color: #475569; margin-bottom: 5px; border-bottom: 1px solid #eee; }
-    .letto-slot { font-size: 0.8rem; color: #1e293b; padding: 2px 0; }
-    .stanza-occupata { border-left-color: #22c55e; background-color: #f0fdf4; }
-    .stanza-piena { border-left-color: #2563eb; background-color: #eff6ff; }
-    .stanza-isolamento { border-left-color: #ef4444; background-color: #fef2f2; border-width: 2px; }
+    div.stButton > button:hover {
+        border-color: #3b82f6 !important;
+        background-color: #eff6ff !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
 
 # --- DATABASE ENGINE ---
 DB_NAME = "rems_final_v12.db"
