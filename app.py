@@ -392,7 +392,7 @@ with t_flash:
             scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
     st.markdown("</div>", unsafe_allow_html=True)
     
-        if mostra:
+                if mostra:
             st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
             col1, col2 = st.columns([2, 1])
             with col1:
@@ -435,6 +435,7 @@ with t_flash:
                 st.markdown(briefing)
                 scrivi_log("HANDOVER_IA", f"Briefing generato per {p_sel}")
         st.markdown("</div>", unsafe_allow_html=True)
+
 
 
         elif ruolo_corr == "Psicologo":
