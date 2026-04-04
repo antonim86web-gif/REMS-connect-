@@ -423,8 +423,7 @@ elif ruolo_corr == "Psicologo":
                     if st.form_submit_button("REGISTRA"): 
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
                         st.rerun()
-
-    elif ruolo_corr == "Assistente Sociale":
+elif ruolo_corr == "Assistente Sociale":
             t1, t2 = st.tabs(["🤝 RETE", "🏠 PROGETTO"])
             with t1:
                 with st.form("f_soc"):
@@ -439,21 +438,21 @@ elif ruolo_corr == "Psicologo":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🏠 PROGETTO: {prog}", "Assistente Sociale", firma_op), True)
                         st.rerun()
 
-    elif ruolo_corr == "OPSI":
+elif ruolo_corr == "OPSI":
             with st.form("f_opsi"):
                 cond = st.multiselect("Stato:", ["Tranquillo", "Agitato", "Ispezione"]); nota = st.text_input("Note")
                 if st.form_submit_button("REGISTRA"): 
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🛡️ VIGILANZA: {', '.join(cond)} | {nota}", "OPSI", firma_op), True)
                     st.rerun()
 
-    elif ruolo_corr == "OSS":
+elif ruolo_corr == "OSS":
             with st.form("oss_f"):
                 mans = st.multiselect("Mansioni:", ["Igiene", "Cambio", "Pulizia", "Letto"]); txt = st.text_area("Note")
                 if st.form_submit_button("REGISTRA"): 
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧹 {', '.join(mans)} | {txt}", "OSS", firma_op), True)
                     st.rerun()
 
-    elif ruolo_corr == "Educatore":
+elif ruolo_corr == "Educatore":
             t1, t2 = st.tabs(["💰 CASSA", "📝 CONSEGNA"])
             with t1:
                 mov = db_run("SELECT importo, tipo FROM cassa WHERE p_id=?", (p_id,)); saldo = sum(m[0] if m[1]=="ENTRATA" else -m[0] for m in mov)
