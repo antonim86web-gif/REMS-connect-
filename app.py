@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 1. IL MOTORE GRAFICO: OMBRA PAZZESCA E TESTI LEGGIBILI
+# 1. CSS CHIRURGICO: TRASFORMA IL RADIO IN BOTTONI ELITE
 st.markdown("""
     <style>
     /* Sidebar Deep Night */
@@ -9,71 +9,73 @@ st.markdown("""
         box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
     }
 
-    /* TRASFORMAZIONE BOTTONI IN VOCI DI MENU */
-    div.stButton > button {
-        background-color: rgba(255,255,255,0.03) !important;
+    /* ELIMINA I PALLINI ROSSI E BIANCHI ALLA RADICE */
+    [data-testid="stMarker"], 
+    [data-baseweb="radio"] div:first-child {
+        display: none !important;
+    }
+
+    /* TRASFORMA LE ETICHETTE DEL RADIO IN BOTTONI FLOATING */
+    div[role="radiogroup"] label {
+        background: rgba(255,255,255,0.03) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        color: #bdc3c7 !important;
+        padding: 15px 20px !important;
         border-radius: 12px !important;
-        width: 100% !important;
-        height: 55px !important; /* Più alto così il testo respira */
-        font-size: 18px !important; /* Testo più grande */
-        font-weight: 500 !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
-        padding-left: 20px !important;
+        margin-bottom: 10px !important;
+        color: #94a3b8 !important;
         transition: all 0.3s ease !important;
+        display: flex !important;
+        width: 100% !important;
     }
 
-    /* Effetto Hover e Floating */
-    div.stButton > button:hover {
-        background-color: rgba(52, 152, 219, 0.15) !important;
-        color: white !important;
+    /* EFFETTO SELEZIONE E FLOATING (Quando clicchi) */
+    div[role="radiogroup"] label:has(input:checked) {
+        background: rgba(52, 152, 219, 0.2) !important;
         border-color: #3498db !important;
-        transform: translateY(-4px) !important;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
+        color: white !important;
+        transform: translateY(-5px) !important; /* Il Floating che volevi */
+        box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3) !important;
     }
 
-    /* Nascondi header per non avere doppie scritte */
-    header { visibility: visible; }
+    /* Togliamo lo spazio vuoto lasciato dai pallini spariti */
+    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
+        margin-left: 0px !important;
+        font-size: 17px !important;
+        font-weight: 500 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. LOGICA DI NAVIGAZIONE (Il "Cambio" della tua auto)
-if 'page' not in st.session_state:
-    st.session_state.page = "Monitoraggio"
-
+# 2. UNICA LOGICA DI NAVIGAZIONE (Usiamo solo il Radio, trasformato graficamente)
 with st.sidebar:
     st.markdown("<h2 style='color:white;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
     st.markdown("<p style='color:#2ecc71;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
     st.write("---")
     
-    # IMPORTANTE: Il click del bottone aggiorna lo stato e FORZA il ricaricamento
-    if st.button("📊 Monitoraggio Dati", key="mon"):
-        st.session_state.page = "Monitoraggio"
-        st.rerun() # Questo fa entrare nel modulo!
+    # Questo è l'UNICO comando di navigazione. I bottoni st.button vanno eliminati!
+    scelta = st.radio(
+        "NAVIGAZIONE",
+        ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"],
+        label_visibility="collapsed"
+    )
     
-    if st.button("👥 Modulo Equipe", key="equ"):
-        st.session_state.page = "Equipe"
-        st.rerun()
-        
-    if st.button("📅 Agenda Dinamica", key="age"):
-        st.session_state.page = "Agenda"
-        st.rerun()
-
     st.write("---")
-    st.markdown(f"**Antony Webmaster**")
+    st.markdown("**Antony Webmaster**")
 
-# 3. CONTENUTO DEI MODULI (Qui è dove "entri" nelle pagine)
-if st.session_state.page == "Monitoraggio":
-    st.markdown("<h1 style='color:#2c3e50;'>Dashboard Monitoraggio</h1>", unsafe_allow_html=True)
-    # Metti qui il tuo codice del Diario Clinico
+# 3. CONTENUTO: Qui la logica torna a funzionare perfettamente
+if scelta == "📊 Monitoraggio":
+    st.title("Dashboard Monitoraggio")
+    # Qui incolla il tuo codice del Diario Clinico (Pippo Rossi, ecc.)
     st.button("DIARIO CLINICO GENERALE", use_container_width=True)
 
-elif st.session_state.page == "Equipe":
-    st.markdown("<h1 style='color:#2c3e50;'>Modulo Operativo Equipe</h1>", unsafe_allow_html=True)
-    # Metti qui il codice dell'Equipe
-    st.info("Sei entrato nel modulo Equipe")
+elif scelta == "👥 Modulo Equipe":
+    st.title("Modulo Operativo Equipe")
+    st.info("Area Equipe Clinica")
+
+elif scelta == "🗺️ Mappa Posti Letto":
+    st.title("Mappa Stanze")
+    st.success("Visualizzazione Mappa Attiva")
+    
     
   
 import sqlite3
