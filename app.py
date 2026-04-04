@@ -378,7 +378,7 @@ elif nav == "👥 Modulo Equipe":
            t1, t2, t3, t_ai, t_flash = st.tabs(["💊 TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA", "⚡ FLASH HANDOVER"])
 
 # ... (tieni il codice di t1, t2, t3 e t_ai come sono) ...
-            with t2:
+    with t2:
         st.subheader("💊 Terapie in Corso")
         terapie = db_run("SELECT id_t, farmaco, dose, orari, active FROM terapie WHERE id=?", (p_id,))
         for f in terapie:
