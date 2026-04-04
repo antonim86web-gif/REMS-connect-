@@ -1,24 +1,11 @@
-# PRIMA questa riga (la n. 1)
-import streamlit as st
-
-
 import sqlite3
+import streamlit as st
+from datetime import datetime, timedelta, timezone
+import hashlib
 import pandas as pd
-import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
-from datetime import datetime, timedelta
-# 1. Scelta grafica
-scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
-
-if scelta_grafica == "Nuovo Minimal":
-    st.title("📱 REMS Semplice")
-    # ... (il resto del blocco minimal) ...
-    st.stop()
-
-else:
-    # 2. Versione Classica (Tutto spostato a destra di 4 spazi)
-    st.title("🏥 REMS Connect - Standard")
-    # QUI INCOLLA IL RESTO DEL CODICE ORIGINALE 
-    # Assicurati che ogni riga inizi con 4 spazi vuoti!
+import calendar
+import streamlit as st
+from groq import Groq
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -74,19 +61,23 @@ def scrivi_log(azione, dettaglio):
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_sel, g_rel):
+    # Organizziamo i dati in un testo leggibile per l'IA
+    dati_per_ia = f"ID Paziente: {p_id}\nNominativo: {p_sel}\nDati Clinici/Note: {g_rel}"
+    
+    prompt = f"""
+    Sei un assistente clinico esperto per una REMS (Residenza per l'Esecuzione delle Misure di Sicurezza).
+    Il tuo compito è generare una relazione clinica professionale basata sui seguenti dati:
+    
+    {dati_per_ia}
+    
+    Scrivi una relazione strutturata, formale e dettagliata, adatta a un contesto sanitario giudiziario.
+    """
     try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "Sei un esperto clinico REMS. Genera relazioni formali."},
-                {"role": "user", "content": f"ID: {p_id}, Paziente: {p_sel}, Note: {g_rel}"}
-            ],
-        )
-        return completion.choices[0].message.content
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
     except Exception as e:
-        return f"Errore Groq: {str(e)}"
-        
-
+        return f"Errore nell'elaborazione IA: {str(e)}"
         
 
 # --- CONFIGURAZIONE INTERFACCIA ELITE PRO v28.9.2 ---
@@ -99,7 +90,7 @@ st.markdown("""
     .sidebar-title { color: #ffffff !important; font-size: 1.8rem !important; font-weight: 800 !important; text-align: center; margin-bottom: 1rem; padding-top: 10px; border-bottom: 2px solid #ffffff33; }
     .user-logged { color: #00ff00 !important; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
     .sidebar-footer { color: #ffffff !important; font-size: 0.8rem; text-align: center; margin-top: 20px; opacity: 0.8; }
-    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: solidolid #ffffff22; }
+    .section-banner { background-color: #1e3a8a; color: white !important; padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid #ffffff22; }
     .stButton>button[kind="secondary"] { background-color: #22c55e !important; color: white !important; border: none !important; width: 100%; font-weight: 700; }
     
     .ai-box { background: #f8fafc; border: 2px solid #a855f7; border-radius: 15px; padding: 25px; margin-top: 10px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2); }
