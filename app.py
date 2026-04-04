@@ -175,6 +175,25 @@ st.markdown("""
         justify-content: center; 
         flex-shrink: 0;
     }
+    /* 5. STILE PULSANTI VERDI ELITE */
+    .stButton>button {
+        background-color: #22c55e !important; /* Verde brillante */
+        color: white !important;
+        border: none !important;
+        width: 100% !important;
+        font-weight: 700 !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        text-transform: uppercase !important;
+        box-shadow: 0 4px 6px rgba(34, 197, 94, 0.2) !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .stButton>button:hover {
+        background-color: #16a34a !important; /* Verde più scuro al passaggio del mouse */
+        box-shadow: 0 6px 12px rgba(34, 197, 94, 0.4) !important;
+        transform: translateY(-2px);
+    }
 </style>
 """, unsafe_allow_html=True)
 
