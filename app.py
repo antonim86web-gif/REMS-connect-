@@ -5,6 +5,52 @@ import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
 from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
 from groq import Groq # <--- Per l'IA di Groq
 
+# --- INIEZIONE CSS PER REMS WEBSCONNECT ---
+st.markdown("""
+    <style>
+    /* BLOCCO 1: VARIABILI */
+    :root {
+        --primary-dark: #2c3e50;
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 5px 15px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 8px 0 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* BLOCCO 2: LAYOUT E OMBRE (Modificato per Streamlit) */
+    /* Applichiamo l'ombra alla sidebar nativa di Streamlit */
+    [data-testid="stSidebar"] {
+        background-color: #2c3e50;
+        box-shadow: var(--shadow-lg);
+    }
+
+    /* Applichiamo l'ombra ai box (container) di Streamlit */
+    .stElementContainer, .stVerticalBlock > div {
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    /* Rendiamo i box simili alle nostre "data-card" */
+    div[data-testid="stMetricBlock"], .stDataFrame {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    /* BLOCCO 3: EFFETTI DINAMICI */
+    /* Effetto quando passi sopra i widget */
+    div[data-testid="stMetricBlock"]:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-md);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- IL RESTO DEL TUO CODICE ADMIN ---
+st.title("REMS WebSConnect - Pannello Admin")
+# ... qui continui con la tua logica Streamlit
+
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
