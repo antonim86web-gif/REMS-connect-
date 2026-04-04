@@ -374,7 +374,7 @@ elif nav == "👥 Modulo Equipe":
     
     # MODIFICA QUESTA RIGA QUI SOTTO:
     # Aggiungiamo f[1] (il nome del farmaco) per essere sicuri al 100% dell'unicità
-    k_id = f"{f[0]}_{f[1]}_{turno_attivo.replace(' ', '')}" 
+        k_id = f"{f[0]}_{f[1]}_{turno_attivo.replace(' ', '')}" 
     
     if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
         # ... tuo codice db_run ...
