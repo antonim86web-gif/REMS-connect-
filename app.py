@@ -48,7 +48,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- IL RESTO DEL TUO CODICE ADMIN ---
-st.title("")
+
 # ... qui continui con la tua logica Streamlit
 
 # Configurazione Groq
