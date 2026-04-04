@@ -68,17 +68,20 @@ def genera_relazione_ia(p_id, p_sel, g_rel):
             ],
         )
         return completion.choices[0].message.content
-        
+    except Exception as e:
+        return f"Errore Groq: {str(e)}"
+
 def genera_handover_intelligente(p_id, p_sel):
     ora_attuale = get_now_it().hour
+    # Rotazione turni REMS: 7h (M) - 7h (P) - 10h (N)
     if 7 <= ora_attuale < 14:
-        ore_indietro = 10
+        ore_indietro = 10  # Analizza la Notte precedente
         turno_prec = "NOTTE (21:00 - 07:00)"
     elif 14 <= ora_attuale < 21:
-        ore_indietro = 7
+        ore_indietro = 7   # Analizza la Mattina precedente
         turno_prec = "MATTINA (07:00 - 14:00)"
     else:
-        ore_indietro = 7
+        ore_indietro = 7   # Analizza il Pomeriggio precedente
         turno_prec = "POMERIGGIO (14:00 - 21:00)"
 
     inizio_turno_prec = (get_now_it() - timedelta(hours=ore_indietro)).strftime("%d/%m/%Y %H:%M")
@@ -93,7 +96,7 @@ def genera_handover_intelligente(p_id, p_sel):
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"Sei un coordinatore REMS. Analizza il turno {turno_prec}. Estrai: Criticità, Terapia e Stato Emotivo. Sii telegrafico."},
+                {"role": "system", "content": f"Sei un coordinatore clinico REMS. Analizza il turno {turno_prec}. Sii telegrafico."},
                 {"role": "user", "content": f"Paziente {p_sel}. Note:\n{contesto}"}
             ]
         )
@@ -101,23 +104,6 @@ def genera_handover_intelligente(p_id, p_sel):
     except Exception as e:
         return f"Errore IA: {str(e)}"
 
-
-    contesto = "\n".join([f"[{r}] {o}: {n}" for r, o, n in note])
-    
-    try:
-        res = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": f"Sei un coordinatore REMS. Analizza il turno {turno_prec}. Estrai: Criticità, Terapia e Stato Emotivo. Sii telegrafico."},
-                {"role": "user", "content": f"Paziente {p_sel}. Note:\n{contesto}"}
-            ]
-        )
-        return f"### ⚡ BRIEFING TURNO PRECEDENTE: {turno_prec}\n\n{res.choices[0].message.content}"
-    except Exception as e:
-        return f"Errore IA: {str(e)}"
-        
-    except Exception as e:
-        return f"Errore Groq: {str(e)}"
         
 
         
