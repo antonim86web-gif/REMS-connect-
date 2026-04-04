@@ -23,7 +23,7 @@ else:
     st.title("🏥 REMS Connect - Standard")
     # ... tutto il tuo codice di adesso ...
 
-importt streamlit as st
+import streamlit as st
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
