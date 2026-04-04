@@ -1,8 +1,8 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import hashlib 
-from datetime import datetime, timedelta
+import hashlib
+from datetime import datetime, timedelta, timezone
 # 1. Scelta grafica
 scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
 
