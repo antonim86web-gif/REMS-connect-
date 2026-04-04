@@ -10,15 +10,17 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SFONDO PAGINA: Nero Grafite (Sostituisce il bianco e si sposa con l'azzurro) */
+    /* 1. SFONDO PAGINA: Nero Profondo */
     .stApp {
         background-color: #0b0f14 !important;
     }
 
-    /* 2. SIDEBAR DARK KNIGHT: Nero Puro */
+    /* 2. SIDEBAR CON OMBRA AZZURRO ELETTRICO LATERALE */
     [data-testid="stSidebar"] {
         background-color: #000000 !important;
-        border-right: 1px solid #00d4ff33 !important;
+        border-right: 1px solid #00d4ff !important;
+        /* Ombra che si proietta sullo sfondo a destra */
+        box-shadow: 10px 0 30px rgba(0, 212, 255, 0.3) !important;
     }
 
     /* 3. RIMOZIONE ELEMENTI DEFAULT */
@@ -28,10 +30,10 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 4. BOTTONI MENU FLOATING */
+    /* 4. BOTTONI MENU (TOTALMENTE TRASPARENTI) */
     div[role="radiogroup"] label {
-        background: rgba(0, 212, 255, 0.05) !important;
-        border: 1px solid rgba(0, 212, 255, 0.1) !important;
+        background: transparent !important; /* Trasparenza totale */
+        border: 1px solid rgba(0, 212, 255, 0.2) !important;
         padding: 16px 20px !important;
         border-radius: 12px !important;
         margin-bottom: 15px !important;
@@ -39,36 +41,41 @@ st.markdown("""
         width: 100% !important;
         cursor: pointer !important;
         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        position: relative !important;
+        z-index: 1 !important;
     }
 
-    /* 5. SCRITTE AZZURRO ELETTRICO */
+    /* 5. SCRITTA AZZURRO ELETTRICO - FORZATA IN PRIMO PIANO */
     div[role="radiogroup"] label p {
         color: #00d4ff !important;
         font-size: 19px !important;
         font-weight: 800 !important;
         text-transform: uppercase !important;
         margin: 0px !important;
-        text-shadow: 0 0 8px rgba(0, 212, 255, 0.4) !important;
+        /* Forza la scritta sopra ogni possibile copertura */
+        position: relative !important;
+        z-index: 9999 !important;
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.5) !important;
     }
 
-    /* 6. STATO ATTIVO: FLOATING + OMBRA AZZURRO ELETTRICO */
+    /* 6. STATO ATTIVO: FLOATING + OMBRA NEON */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(0, 212, 255, 0.15) !important;
+        background: rgba(0, 212, 255, 0.1) !important; /* Solo un velo di colore */
         border-color: #00d4ff !important;
         transform: translateY(-10px) !important;
-        box-shadow: 0 15px 25px rgba(0, 212, 255, 0.4) !important; /* Ombra coerente col colore */
+        box-shadow: 0 15px 25px rgba(0, 212, 255, 0.4) !important;
     }
 
     div[role="radiogroup"] label:has(input:checked) p {
-        color: #ffffff !important;
-        text-shadow: 0 0 15px #00d4ff !important;
+        color: #ffffff !important; /* Bianco puro quando selezionato */
+        text-shadow: 0 0 20px #00d4ff !important;
     }
 
     /* 7. TASTO LOGOUT: UNIFORMATO AL FLOATING */
     .stButton > button {
-        background: rgba(0, 212, 255, 0.05) !important;
+        background: transparent !important;
         color: #00d4ff !important;
-        border: 1px solid #00d4ff !important;
+        border: 2px solid #00d4ff !important;
         border-radius: 12px !important;
         width: 100% !important;
         height: 55px !important;
@@ -76,33 +83,32 @@ st.markdown("""
         font-size: 18px !important;
         text-transform: uppercase !important;
         transition: all 0.3s ease !important;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.2) !important;
     }
 
     .stButton > button:hover {
         transform: translateY(-8px) !important;
         background: rgba(0, 212, 255, 0.2) !important;
-        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.4) !important; /* Stessa ombra azzurra */
+        box-shadow: 0 10px 25px rgba(0, 212, 255, 0.5) !important;
         color: #ffffff !important;
     }
 
-    /* 8. COERENZA TABELLE E APPUNTAMENTI (Dark Mode Leggibile) */
+    /* 8. COERENZA TABELLE E TESTI */
     [data-testid="stTable"] {
         background-color: #161b22 !important;
-        border-radius: 10px !important;
         color: #e5e7eb !important;
     }
     
     th {
-        background-color: #1e293b !important;
-        color: #00d4ff !important; /* Header tabella azzurro */
+        color: #00d4ff !important;
     }
 
-    /* Colore generale testi per non farli sparire nel nero */
-    .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+    .stMarkdown p, .stMarkdown h1, .stMarkdown h2 {
         color: #f1f5f9 !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
