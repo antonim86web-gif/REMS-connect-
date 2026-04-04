@@ -1,4 +1,29 @@
-import streamlit as st
+# 1. Crea l'interruttore nella barra laterale
+scelta_grafica = st.sidebar.radio("Scegli lo stile:", ["Classico", "Nuovo Minimal"])
+
+if scelta_grafica == "Nuovo Minimal":
+    # 2. Se scegli Minimal, applica questo stile pulito
+    st.markdown("""
+    <style>
+        .stApp { background-color: #f0f2f6; }
+        .stButton>button { 
+            width: 100%; 
+            height: 70px; 
+            border-radius: 15px; 
+            font-size: 20px !important;
+            border: 2px solid #007bff;
+        }
+        h1 { color: #1e3a8a; text-align: center; }
+    </style>
+    """, unsafe_allow_html=True)
+    st.title("📱 REMS Connect - Semplice")
+    # Qui metterai la versione semplificata che scriveremo insieme
+else:
+    # 3. Qui lasci tutto il tuo codice attuale (quello vecchio)
+    st.title("🏥 REMS Connect - Standard")
+    # ... tutto il tuo codice di adesso ...
+
+importt streamlit as st
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
