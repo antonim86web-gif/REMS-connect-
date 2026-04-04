@@ -10,75 +10,88 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. LO SFONDO DELLA PAGINA: Un Grigio Minerale che non è nero e non è bianco */
+    /* 1. SFONDO PAGINA: Grigio-Blu Notte (per non essere nero su nero) */
     .stApp {
-        background-color: #1e293b !important; /* Blu-Grigio profondo e professionale */
+        background-color: #111827 !important;
     }
 
-    /* 2. SIDEBAR DARK KNIGHT: Nera pura con la sua ombra verso destra */
+    /* 2. SIDEBAR DARK: Nera pura per far risaltare l'Azzurro Elettrico */
     [data-testid="stSidebar"] {
         background-color: #000000 !important;
-        box-shadow: 10px 0 25px rgba(0,0,0,0.5) !important;
+        border-right: 1px solid #1e293b !important;
     }
 
-    /* 3. KILLER PALLINI STREAMLIT */
+    /* 3. KILLER PALLINI E RADIO DEFAULT */
     [data-testid="stMarker"], 
     [data-baseweb="radio"] div:first-child,
     [data-testid="stSidebar"] input[type="radio"] {
         display: none !important;
     }
 
-    /* 4. BOTTONI TRASPARENTI CON EFFETTO FLOATING */
+    /* 4. BOTTONI MENU (FLOATING) */
     div[role="radiogroup"] label {
-        background: rgba(255, 255, 255, 0.05) !important; /* Trasparenza leggera */
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(56, 189, 248, 0.2) !important;
         padding: 16px 20px !important;
-        border-radius: 15px !important;
-        margin-bottom: 12px !important;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        border-radius: 12px !important;
+        margin-bottom: 15px !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
 
-    /* 5. LE SCRITTE: BIANCO GHIACCIO E GRANDI */
+    /* 5. SCRITTA AZZURRO ELETTRICO (Leggibilità Totale) */
     div[role="radiogroup"] label p {
-        color: #f1f5f9 !important;
-        font-size: 18px !important;
-        font-weight: 600 !important;
+        color: #00d4ff !important; /* AZZURRO ELETTRICO ACCESO */
+        font-size: 19px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
         margin: 0px !important;
-        letter-spacing: 0.5px !important;
+        text-shadow: 0 0 5px rgba(0, 212, 255, 0.2) !important;
     }
 
-    /* 6. L'EFFETTO FLOATING QUANDO SELEZIONATO */
+    /* 6. STATO ATTIVO: FLOATING POTENTE CON OMBRA AZZURRA */
     div[role="radiogroup"] label:has(input:checked) {
-        background: rgba(52, 152, 219, 0.2) !important; /* Azzurro trasparente */
-        border-color: #3498db !important;
-        transform: translateY(-10px) !important; /* IL SALTO CHE TI PIACE */
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6) !important; /* OMBRA PESANTE SOTTO */
+        background: rgba(0, 212, 255, 0.1) !important;
+        border-color: #00d4ff !important;
+        transform: translateY(-10px) scale(1.02) !important;
+        box-shadow: 0 15px 30px rgba(0, 212, 255, 0.3) !important; /* OMBRA DELLO STESSO COLORE */
     }
-    
-    /* Il testo del tasto selezionato si illumina */
+
     div[role="radiogroup"] label:has(input:checked) p {
-        color: #ffffff !important;
-        text-shadow: 0 0 10px rgba(52, 152, 219, 0.8) !important;
+        color: #ffffff !important; /* Il testo diventa Bianco quando attivo per risaltare */
+        text-shadow: 0 0 15px #00d4ff !important;
     }
 
-    /* 7. HOVER: REAZIONE AL PASSAGGIO DEL MOUSE */
-    div[role="radiogroup"] label:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
-        transform: translateY(-3px) !important;
+    /* 7. BOTTONE LOGOUT: STESSO EFFETTO FLOATING */
+    .stButton > button {
+        background: rgba(255, 255, 255, 0.03) !important;
+        color: #00d4ff !important;
+        border: 1px solid #00d4ff !important;
+        border-radius: 12px !important;
+        width: 100% !important;
+        height: 55px !important;
+        font-weight: 800 !important;
+        font-size: 18px !important;
+        transition: all 0.3s ease !important;
+        text-transform: uppercase !important;
     }
 
-    /* RESET MODULI INTERNI: Li rendiamo leggibili sullo sfondo blu-grigio */
-    .stExpander {
-        background-color: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 10px !important;
+    .stButton > button:hover {
+        transform: translateY(-8px) !important;
+        background: rgba(0, 212, 255, 0.2) !important;
+        box-shadow: 0 10px 20px rgba(0, 212, 255, 0.3) !important;
+        color: white !important;
+    }
+
+    /* SISTEMAZIONE PER IL TESTO DEI MODULI */
+    .stMarkdown h1, .stMarkdown h2, p {
+        color: #e5e7eb !important;
     }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
