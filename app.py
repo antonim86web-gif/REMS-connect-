@@ -1,82 +1,90 @@
-import streamlit as st
 
-# 1. IL KILLER DEI PALLINI E IL PADRONE DEL FLOATING
+  import streamlit as st
+
+# 1. IL MOTORE GRAFICO "ELITE DEEP NIGHT"
 st.markdown("""
     <style>
-    /* SIDEBAR DEEP NIGHT CON OMBRA POTENTE */
+    /* Sidebar: Nero Profondo e Ombra da Urlo */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
-        box-shadow: 15px 0 35px rgba(0,0,0,0.8) !important;
+        box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
     }
 
-    /* ELIMINAZIONE TOTALE E DEFINITIVA DI TUTTI I PALLINI (RADIO E MARKER) */
-    [data-testid="stMarker"], 
-    [data-baseweb="radio"] div:first-child,
-    input[type="radio"] + div {
-        display: none !important;
-        visibility: hidden !important;
+    /* Creiamo la classe per il nostro Bottone Floating */
+    .menu-item {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
     }
 
-    /* TRASFORMAZIONE RADIO IN MENU FLOATING ELITE */
-    div[role="radiogroup"] label {
-        background: rgba(255,255,255,0.03) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 15px 20px !important;
-        border-radius: 12px !important;
-        margin-bottom: 10px !important;
-        color: #94a3b8 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-        cursor: pointer !important;
+    .menu-item:hover {
+        background: rgba(52, 152, 219, 0.1);
+        transform: translateY(-5px); /* Ecco il tuo Floating! */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        color: white;
+        border-color: #3498db;
     }
 
-    /* EFFETTO FLOATING QUANDO SELEZIONATO */
-    div[role="radiogroup"] label:has(input:checked) {
+    /* Quando il tasto è attivo (Simulazione) */
+    .menu-active {
         background: rgba(52, 152, 219, 0.2) !important;
         border-color: #3498db !important;
         color: white !important;
-        transform: translateY(-4px) scale(1.02) !important; /* FLOATING VERO */
+        transform: translateY(-5px);
         box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3) !important;
     }
 
-    /* EFFETTO HOVER */
-    div[role="radiogroup"] label:hover {
-        background: rgba(255,255,255,0.08) !important;
-        color: white !important;
-    }
-
-    /* SCRITTE SIDEBAR */
-    [data-testid="stSidebar"] h2, [data-testid="stSidebar"] p {
-        color: white !important;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    /* Nascondiamo tutto lo sporco di Streamlit */
+    [data-testid="stSidebar"] [role="radiogroup"], 
+    [data-testid="stSidebar"] .stRadio {
+        display: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. NAVIGAZIONE PULITA
+# 2. LOGICA DI NAVIGAZIONE PULITA
+if 'choice' not in st.session_state:
+    st.session_state.choice = "Monitoraggio"
+
+def set_page(name):
+    st.session_state.choice = name
+
 with st.sidebar:
-    st.markdown("## REMS WebSConnect")
-    st.markdown("<p style='color:#2ecc71;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:white; margin-bottom:20px;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#2ecc71; font-weight:bold;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
     st.write("---")
     
-    # Unico widget radio: il CSS farà tutto il lavoro sporco
-    scelta = st.radio(
-        "NAVIGAZIONE",
-        ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"],
-        label_visibility="collapsed"
-    )
-    
+    # Creiamo i bottoni a mano per evitare i pallini rossi
+    pages = {
+        "📊 Monitoraggio": "Monitoraggio",
+        "👥 Modulo Equipe": "Equipe",
+        "📅 Agenda Dinamica": "Agenda",
+        "🗺️ Mappa Posti Letto": "Mappa"
+    }
+
+    for label, id_page in pages.items():
+        # Se la pagina è quella attiva, aggiungiamo la classe 'menu-active'
+        is_active = "menu-active" if st.session_state.choice == id_page else ""
+        if st.button(label, key=f"btn_{id_page}", use_container_width=True):
+            st.session_state.choice = id_page
+            st.rerun()
+
     st.write("---")
     st.markdown("**Antony Webmaster** \n*Elite Edition 28.9*")
 
-# 3. CONTENUTO DASHBOARD
-if "Monitoraggio" in scelta:
+# 3. CONTENUTO
+if st.session_state.choice == "Monitoraggio":
     st.title("Dashboard Monitoraggio")
     st.button("DIARIO CLINICO GENERALE", use_container_width=True)
-elif "Equipe" in scelta:
-    st.title("Modulo Equipe")
-    
-    
+  
 import sqlite3
 import pandas as pd
 import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
