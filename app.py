@@ -79,38 +79,104 @@ st.set_page_config(page_title="REMS Connect ELITE PRO v28.9.2", layout="wide", p
 
 st.markdown("""
 <style>
-    /* Sfondo chiaro e moderno */
-    .stApp { background-color: #f1f5f9; }
-
-    /* Card per i pazienti */
-    .paziente-card {
-        background: white;
-        padding: 25px;
-        border-radius: 24px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+    /* 1. SIDEBAR BLU NAVY ELITE */
+    [data-testid="stSidebar"] { 
+        background-color: #1e3a8a !important; 
+    }
+    [data-testid="stSidebar"] * { 
+        color: #ffffff !important; 
+    }
+    .sidebar-title { 
+        color: #ffffff !important; 
+        font-size: 1.8rem !important; 
+        font-weight: 800 !important; 
+        text-align: center; 
+        margin-bottom: 1rem; 
+        padding-top: 10px; 
+        border-bottom: 2px solid #ffffff33; 
+    }
+    .user-logged { 
+        color: #00ff00 !important; 
+        font-weight: 900; 
+        font-size: 1.1rem; 
+        text-transform: uppercase; 
+        margin-bottom: 20px; 
+        text-align: center; 
     }
 
-    /* Pulsantoni Grandi e Intuitivi */
-    div.stButton > button {
-        border-radius: 16px !important;
-        height: 60px !important;
-        font-size: 1.1rem !important;
-        font-weight: 700 !important;
-        background-color: #ffffff !important;
-        color: #1e3a8a !important;
-        border: 2px solid #e2e8f0 !important;
-        transition: all 0.3s ease;
+    /* 2. BANNER PRINCIPALE (Secton Banner) */
+    .section-banner { 
+        background-color: #1e3a8a; 
+        color: white !important; 
+        padding: 25px; 
+        border-radius: 12px; 
+        margin-bottom: 30px; 
+        text-align: center; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+        border: 1px solid #ffffff22; 
     }
-    
-    div.stButton > button:hover {
-        border-color: #3b82f6 !important;
-        background-color: #eff6ff !important;
+
+    /* 3. POST-IT DIARI CLINICI */
+    .postit { 
+        padding: 15px; 
+        border-radius: 8px; 
+        margin-bottom: 12px; 
+        border-left: 10px solid; 
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1); 
+        color: #1e293b; 
+        background-color: #ffffff; 
+    }
+    .postit-header { 
+        font-weight: 800; 
+        font-size: 0.85rem; 
+        text-transform: uppercase; 
+        margin-bottom: 5px; 
+        display: flex; 
+        justify-content: space-between; 
+    }
+
+    /* COLORI BORDI POST-IT PER RUOLO */
+    .role-psichiatra { background-color: #fef2f2; border-color: #dc2626; } 
+    .role-infermiere { background-color: #eff6ff; border-color: #2563eb; } 
+    .role-educatore { background-color: #ecfdf5; border-color: #059669; } 
+    .role-oss { background-color: #f8fafc; border-color: #64748b; }
+    .role-psicologo { background-color: #faf5ff; border-color: #a855f7; }
+    .role-sociale { background-color: #fff7ed; border-color: #f97316; }
+
+    /* 4. TABELLA CALENDARIO E GRIGLIA */
+    .cal-table { 
+        width:100%; 
+        border-collapse: collapse; 
+        background: white; 
+        border-radius: 12px; 
+    }
+    .cal-table th { 
+        background: #f1f5f9; 
+        padding: 10px; 
+        color: #1e3a8a; 
+        font-weight: 800; 
+        border: 1px solid #e2e8f0; 
+    }
+    .scroll-giorni { 
+        display: flex; 
+        overflow-x: auto; 
+        gap: 4px; 
+        padding: 8px; 
+        background: #fdfdfd; 
+    }
+    .quadratino { 
+        min-width: 38px; 
+        height: 50px; 
+        border-radius: 4px; 
+        border: 1px solid #eee; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        justify-content: center; 
+        flex-shrink: 0;
     }
 </style>
 """, unsafe_allow_html=True)
-
 
 # --- DATABASE ENGINE ---
 DB_NAME = "rems_final_v12.db"
