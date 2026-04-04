@@ -120,19 +120,53 @@ st.markdown("""
 
     /* Tabelle (Coerenza Dark-Slate) */
     [data-testid="stTable"] {
-        background-color: #26364f !important; /* Più chiaro dello sfondo per staccare */
-        border: 1px solid #30363d !important;
+st.markdown("""
+<style>
+    /* 1. SFONDO E SIDEBAR SOLIDI */
+    .stApp { background-color: #1e293b !important; }
+    [data-testid="stSidebar"] {
+        background-color: #000000 !important;
+        border-right: 2px solid #00d4ff !important;
+    }
+
+    /* 2. RESET DEI TASTI: VISIBILITÀ E CLICCABILITÀ */
+    div[role="radiogroup"] label {
+        background: rgba(255, 255, 255, 0.05) !important; /* Grigio chiarissimo per vedere il tasto */
+        border: 1px solid #00d4ff !important;
+        padding: 12px !important;
         border-radius: 10px !important;
-        color: #f1f5f9 !important;
+        margin-bottom: 10px !important;
+        display: flex !important;
+        cursor: pointer !important;
+    }
+
+    /* FORZIAMO IL COLORE DEL TESTO - ORA DEVI VEDERLO */
+    div[role="radiogroup"] label p {
+        color: #00d4ff !important;
+        opacity: 1 !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+        visibility: visible !important;
+        display: block !important;
+    }
+
+    /* 3. EFFETTO FLOATING QUANDO SELEZIONATO */
+    div[role="radiogroup"] label:has(input:checked) {
+        background: #00d4ff !important; /* Diventa azzurro pieno */
+        transform: translateY(-5px) !important;
+        box-shadow: 0 5px 15px rgba(0, 212, 255, 0.5) !important;
     }
     
-    th {
-        color: #00d4ff !important; /* Intestazioni tabella Azzurre */
-        font-weight: 800 !important;
+    div[role="radiogroup"] label:has(input:checked) p {
+        color: #000000 !important; /* Testo nero su fondo azzurro per leggere bene */
+    }
+
+    /* 4. SCRITTE IN PAGINA: BIANCO PURO */
+    .stMarkdown p, h1, h2, h3 {
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
