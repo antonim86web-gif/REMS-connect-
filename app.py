@@ -10,7 +10,7 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 st.markdown("""
 <style>
-    /* 1. SIDEBAR DEEP NIGHT */
+    /* 1. SIDEBAR DEEP NIGHT - SFONDO */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
         box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
@@ -23,42 +23,42 @@ st.markdown("""
         display: none !important;
     }
 
-    /* 3. CARD DEL MENU - TESTO BIANCO E GRANDE */
+    /* 3. CARD MENU - SPAZIATURA E TESTO */
     div[role="radiogroup"] label {
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
-        padding: 18px 20px !important; /* Più spazio interno */
+        padding: 15px 15px !important;
         border-radius: 12px !important;
         margin-bottom: 12px !important;
-        color: #ffffff !important; /* TESTO BIANCO PURO */
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         display: flex !important;
         width: 100% !important;
         cursor: pointer !important;
     }
 
-    /* 4. EFFETTO HOVER */
-    div[role="radiogroup"] label:hover {
-        background: rgba(52, 152, 219, 0.1) !important;
-        border-color: #3498db !important;
-        transform: translateX(5px) !important; /* Scivola un po' a destra */
+    /* 4. TESTO - GRANDE E BIANCO PURO */
+    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
+        color: #FFFFFF !important; /* Bianco puro */
+        font-size: 19px !important; /* Molto più grande */
+        font-weight: 700 !important; /* Grassetto Elite */
+        margin-left: 0px !important;
+        white-space: normal !important; /* Evita il rimpicciolimento automatico */
+        line-height: 1.2 !important;
+        text-align: left !important;
     }
 
-    /* 5. TASTO ATTIVO (FLOATING) */
+    /* 5. TASTO ATTIVO (IL TUO FLOATING) */
     div[role="radiogroup"] label:has(input:checked) {
         background: rgba(52, 152, 219, 0.25) !important;
         border-color: #3498db !important;
-        color: #ffffff !important;
-        transform: translateY(-6px) scale(1.02) !important; /* ALZA E INGRANDISCE */
-        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.4) !important;
+        transform: translateY(-8px) scale(1.03) !important; /* Floating potente */
+        box-shadow: 0 15px 35px rgba(52, 152, 219, 0.4) !important;
     }
 
-    /* 6. DIMENSIONE CARATTERI */
-    div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p {
-        margin-left: 0px !important;
-        font-size: 18px !important; /* SCRITTE BELLE GRANDI */
-        font-weight: 600 !important;
-        letter-spacing: 0.5px !important;
+    /* 6. EFFETTO HOVER */
+    div[role="radiogroup"] label:hover {
+        background: rgba(255,255,255,0.12) !important;
+        border-color: rgba(52, 152, 219, 0.5) !important;
     }
 
     /* TITOLI SIDEBAR */
@@ -67,10 +67,13 @@ st.markdown("""
         font-size: 1.8rem; 
         font-weight: 800; 
         text-align: center;
+        margin-bottom: 10px;
     }
     .user-logged { 
-        color: #00ff00 !important; 
-        text-shadow: 0 0 10px rgba(0,255,0,0.3);
+        color: #2ecc71 !important; 
+        text-align: center;
+        font-weight: 900;
+        margin-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
