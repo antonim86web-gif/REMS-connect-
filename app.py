@@ -1,88 +1,80 @@
 import streamlit as st
 
-# 1. IL MOTORE GRAFICO "ELITE DEEP NIGHT"
+# 1. IL MOTORE GRAFICO: OMBRA PAZZESCA E TESTI LEGGIBILI
 st.markdown("""
     <style>
-    /* Sidebar: Nero Profondo e Ombra da Urlo */
+    /* Sidebar Deep Night */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0f172a 0%, #000000 100%) !important;
         box-shadow: 15px 0 35px rgba(0,0,0,0.9) !important;
     }
 
-    /* Creiamo la classe per il nostro Bottone Floating */
-    .menu-item {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.1);
-        padding: 15px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        color: #94a3b8;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        text-decoration: none;
+    /* TRASFORMAZIONE BOTTONI IN VOCI DI MENU */
+    div.stButton > button {
+        background-color: rgba(255,255,255,0.03) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        color: #bdc3c7 !important;
+        border-radius: 12px !important;
+        width: 100% !important;
+        height: 55px !important; /* Più alto così il testo respira */
+        font-size: 18px !important; /* Testo più grande */
+        font-weight: 500 !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        padding-left: 20px !important;
+        transition: all 0.3s ease !important;
     }
 
-    .menu-item:hover {
-        background: rgba(52, 152, 219, 0.1);
-        transform: translateY(-5px); /* Ecco il tuo Floating! */
-        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-        color: white;
-        border-color: #3498db;
-    }
-
-    /* Quando il tasto è attivo (Simulazione) */
-    .menu-active {
-        background: rgba(52, 152, 219, 0.2) !important;
-        border-color: #3498db !important;
+    /* Effetto Hover e Floating */
+    div.stButton > button:hover {
+        background-color: rgba(52, 152, 219, 0.15) !important;
         color: white !important;
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3) !important;
+        border-color: #3498db !important;
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4) !important;
     }
 
-    /* Nascondiamo tutto lo sporco di Streamlit */
-    [data-testid="stSidebar"] [role="radiogroup"], 
-    [data-testid="stSidebar"] .stRadio {
-        display: none !important;
-    }
+    /* Nascondi header per non avere doppie scritte */
+    header { visibility: visible; }
     </style>
 """, unsafe_allow_html=True)
 
-# 2. LOGICA DI NAVIGAZIONE PULITA
-if 'choice' not in st.session_state:
-    st.session_state.choice = "Monitoraggio"
-
-def set_page(name):
-    st.session_state.choice = name
+# 2. LOGICA DI NAVIGAZIONE (Il "Cambio" della tua auto)
+if 'page' not in st.session_state:
+    st.session_state.page = "Monitoraggio"
 
 with st.sidebar:
-    st.markdown("<h2 style='color:white; margin-bottom:20px;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='color:#2ecc71; font-weight:bold;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:white;'>REMS WebSConnect</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#2ecc71;'>● SUPER USER ACTIVE</p>", unsafe_allow_html=True)
     st.write("---")
     
-    # Creiamo i bottoni a mano per evitare i pallini rossi
-    pages = {
-        "📊 Monitoraggio": "Monitoraggio",
-        "👥 Modulo Equipe": "Equipe",
-        "📅 Agenda Dinamica": "Agenda",
-        "🗺️ Mappa Posti Letto": "Mappa"
-    }
-
-    for label, id_page in pages.items():
-        # Se la pagina è quella attiva, aggiungiamo la classe 'menu-active'
-        is_active = "menu-active" if st.session_state.choice == id_page else ""
-        if st.button(label, key=f"btn_{id_page}", use_container_width=True):
-            st.session_state.choice = id_page
-            st.rerun()
+    # IMPORTANTE: Il click del bottone aggiorna lo stato e FORZA il ricaricamento
+    if st.button("📊 Monitoraggio Dati", key="mon"):
+        st.session_state.page = "Monitoraggio"
+        st.rerun() # Questo fa entrare nel modulo!
+    
+    if st.button("👥 Modulo Equipe", key="equ"):
+        st.session_state.page = "Equipe"
+        st.rerun()
+        
+    if st.button("📅 Agenda Dinamica", key="age"):
+        st.session_state.page = "Agenda"
+        st.rerun()
 
     st.write("---")
-    st.markdown("**Antony Webmaster** \n*Elite Edition 28.9*")
+    st.markdown(f"**Antony Webmaster**")
 
-# 3. CONTENUTO
-if st.session_state.choice == "Monitoraggio":
-    st.title("Dashboard Monitoraggio")
+# 3. CONTENUTO DEI MODULI (Qui è dove "entri" nelle pagine)
+if st.session_state.page == "Monitoraggio":
+    st.markdown("<h1 style='color:#2c3e50;'>Dashboard Monitoraggio</h1>", unsafe_allow_html=True)
+    # Metti qui il tuo codice del Diario Clinico
     st.button("DIARIO CLINICO GENERALE", use_container_width=True)
+
+elif st.session_state.page == "Equipe":
+    st.markdown("<h1 style='color:#2c3e50;'>Modulo Operativo Equipe</h1>", unsafe_allow_html=True)
+    # Metti qui il codice dell'Equipe
+    st.info("Sei entrato nel modulo Equipe")
+    
   
 import sqlite3
 import pandas as pd
