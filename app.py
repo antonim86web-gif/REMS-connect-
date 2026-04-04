@@ -3,61 +3,69 @@ import streamlit as st
 st.markdown(
     """
     <style>
-    /* 1. SISTEMIAMO IL BANNER BLU (Contrasto Scritta) */
-    /* Cerchiamo il div che contiene quel testo e forziamo il bianco */
-    div[data-testid="stVerticalBlock"] > div:has(h1), 
-    .stMarkdown h1, .stMarkdown h2 {
-        color: white !important; /* Forza la scritta bianca sul blu */
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* La rende ancora più leggibile */
+    /* 1. SIDEBAR DARK MIDNIGHT (Esattamente come il rendering) */
+    [data-testid="stSidebar"] {
+        background-color: #1a252f !important;
+        background-image: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%) !important;
+        box-shadow: 10px 0 25px rgba(0,0,0,0.4) !important;
     }
 
-    /* 2. SIDEBAR: Trasformiamo la navigazione (Rimuoviamo i pallini) */
-    [data-testid="stSidebarNav"] {
+    /* 2. RIMUOVIAMO DEFINITIVAMENTE I PALLINI (ROSSI E BIANCHI) */
+    /* Nascondiamo il cerchietto esterno e il pallino interno */
+    div[data-testid="stMarkdownContainer"] [data-testid="stMarker"],
+    div[role="radiogroup"] [data-testid="stMarker"],
+    div[role="radiogroup"] input[type="radio"] {
+        display: none !important;
+        width: 0px !important;
+        height: 0px !important;
+    }
+
+    /* 3. SISTEMIAMO LA NAVIGAZIONE (Effetto Click) */
+    /* Togliamo lo sfondo di default a tutti */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
         background-color: transparent !important;
-    }
-    
-    /* Nascondiamo i pallini radio originali se stai usando st.radio nella sidebar */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label {
-        background-color: rgba(255,255,255,0.05) !important;
-        margin-bottom: 5px !important;
-        border-radius: 8px !important;
-        padding: 10px !important;
-        color: white !important;
         border: none !important;
+        padding: 12px 15px !important;
+        margin-bottom: 4px !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    /* SOLO quello selezionato deve avere lo sfondo azzurro del rendering */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input[checked=""]) {
+        background-color: rgba(52, 152, 219, 0.2) !important; /* Azzurro trasparente */
+        border-left: 4px solid #3498db !important; /* Barra laterale come nel rendering */
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
     }
     
-    /* Rimuoviamo il cerchietto bianco/rosso della selezione */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] [data-testid="stMarkdownContainer"] p {
-        color: white !important;
+    /* Effetto Hover (Passaggio mouse) */
+    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
+        background-color: rgba(255,255,255,0.1) !important;
+    }
+
+    /* 4. CONTRASTO TESTI NELLA SIDEBAR */
+    [data-testid="stSidebar"] * {
+        color: #ecf0f1 !important; /* Bianco sporco, più riposante */
         font-weight: 500 !important;
     }
-    
-    div[data-testid="stMarker"] {
-        display: none !important; /* Questo elimina il pallino rosso/bianco */
-    }
 
-    /* 3. EFFETTO SELEZIONE (Highlight blu come nel rendering) */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-baseweb="radio"] {
-        background: transparent !important;
+    /* 5. FIX BANNER BLU (Testo Bianco) */
+    /* Forza il testo bianco per tutti i titoli nel corpo pagina */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        color: #2c3e50 !important; /* Titoli neri su bianco */
     }
     
-    /* Se un elemento è selezionato, diamogli lo sfondo azzurro del rendering */
-    [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input[checked]) {
-        background-color: #3498db !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-    }
-
-    /* 4. LOGOUT (Lo facciamo risaltare) */
-    .stButton > button {
-        width: 100% !important;
-        background-color: #2ecc71 !important;
-        border: none !important;
+    /* Se il banner è un contenitore blu, forziamo il bianco all'interno */
+    div[data-testid="stVerticalBlock"] > div:has(h1) h1 {
         color: white !important;
     }
     </style>
     """, 
     unsafe_allow_html=True
 )
+
 
 
 import sqlite3
