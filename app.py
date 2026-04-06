@@ -431,8 +431,16 @@ elif nav == "👥 Modulo Equipe":
 
             # --- AREA PDF (SOTTO I TAB MA DENTRO IL RUOLO MEDICO) ---
             st.divider()
-            with st.expander("📄 ESPORTAZIONE PDF"):
-                tipo_rep = st.radio("Seleziona tipo report:", ["Diario Completo", "Solo Terapie", "Solo Consegne"], horizontal=True)
+            with st.expander("📄 ESPORTAZIONE PDF", expanded=True):
+                # 1. Scelta rapida
+                tipo_rep = st.radio(
+                    "Contenuto del Report:", 
+                    ["Diario Completo", "Solo Terapie", "Solo Consegne"], 
+                    horizontal=True,
+                    key="radio_pdf_final"
+                )
+
+                # 2. Logica di filtraggio query
                 if tipo_rep == "Solo Terapie":
                     q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '💊%' OR op LIKE 'SOMMINISTRAZIONE%') ORDER BY id_u DESC"
                 elif tipo_rep == "Solo Consegne":
@@ -441,9 +449,25 @@ elif nav == "👥 Modulo Equipe":
                     q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
                 
                 dati_pdf = db_run(q_pdf, (p_id,))
-                if dati_pdf and st.button("GENERA PDF"):
-                    pdf_b = genera_pdf_clinico(p_sel, dati_pdf, tipo_rep)
-                    st.download_button("📥 Scarica PDF", data=pdf_b, file_name=f"Report_{p_sel}.pdf", mime="application/pdf")
+
+                # 3. Generazione e Download immediato
+                if dati_pdf:
+                    try:
+                        # Chiamiamo la funzione che restituisce i bytes
+                        pdf_b = genera_pdf_clinico(p_sel, dati_pdf, tipo_rep)
+                        
+                        st.download_button(
+                            label=f"📥 SCARICA PDF: {tipo_rep.upper()}",
+                            data=pdf_b,
+                            file_name=f"Report_{p_sel}_{tipo_rep.replace(' ', '_')}.pdf",
+                            mime="application/pdf",
+                            key="dl_btn_auto",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"Errore tecnico PDF: {e}")
+                else:
+                    st.warning("Nessun dato trovato per questa selezione.")
         
 
 
