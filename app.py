@@ -323,7 +323,7 @@ elif nav == "📊 Monitoraggio":
             col1, col2 = st.columns([4, 1])
             with col2:
                 if eventi:
-                    pdf_data = genera_pdf_paziente(nome, eventi)
+                    pdf_data = genera_pdf_clinico(nome, eventi)
                     st.download_button(f"📥 Scarica PDF", data=pdf_data, file_name=f"diario_{nome}.pdf", mime="application/pdf", key=f"pdf_{pid}")
             
             with col1:
