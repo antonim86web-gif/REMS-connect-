@@ -349,16 +349,13 @@ elif nav == "👥 Modulo Equipe":
             import calendar 
             t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
             
-            # --- FORZATURA FIRMA: CERCHIAMO IL NOME IN OGNI POSTO POSSIBILE ---
-            nome_loggato = st.session_state.get('user') or \
-                           st.session_state.get('username') or \
-                           st.session_state.get('nome_utente') or \
-                           "Operatore Identificato" # Fallback finale
+            # --- SINCRONIZZAZIONE FIRMA CON DIARIO GENERALE ---
+            # Usiamo 'username' che è quella che appare nei tuoi screenshot del diario
+            nome_loggato = st.session_state.get('username', 'SUPER USER (ADMIN)')
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                # Visualizziamo chi sta firmando per sicurezza
-                st.caption(f"✍️ Firma attiva: **{nome_loggato}**")
+                st.markdown(f"✍️ Firma registrata come: **{nome_loggato}**")
             with t2: # Parametri
                 with st.form("vit_inf"):
                     c1, c2, c3 = st.columns(3)
