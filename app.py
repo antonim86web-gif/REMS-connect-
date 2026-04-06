@@ -8,7 +8,7 @@ from groq import Groq # <--- Per l'IA di Groq
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-from fpdf import FPDF
+#from fpdf import FPDF
 
 def genera_pdf_paziente(p_nome, eventi):
     pdf = FPDF()
