@@ -413,12 +413,12 @@ elif nav == "👥 Modulo Equipe":
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                db_run("INSERT INTO eventi (id, data, , ruolo, nome, cognome) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                db_run("INSERT INTO eventi (id, data, ruolo, ruolo, nome, cognome) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
