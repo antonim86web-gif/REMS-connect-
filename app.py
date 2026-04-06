@@ -350,22 +350,27 @@ elif nav == "👥 Modulo Equipe":
             from datetime import timedelta
             t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
             
-            # --- 🔍 TEST IDENTITÀ (DA DOVE PRENDE LA FIRMA?) ---
-            # Questo blocco cerca ALEX MARS nelle variabili di sessione
-            nome_reale = st.session_state.get('username') or \
-                         st.session_state.get('user_name') or \
-                         st.session_state.get('user') or \
-                         st.session_state.get('nome') or \
-                         "Operatore"
+            # --- AGGANCIO DINAMICO ALL'UTENTE LOGGATO ---
+            # Cerchiamo il nome in tutte le variabili di sessione possibili
+            def get_logged_user():
+                # Elenco delle chiavi comuni dove i sistemi di login salvano il nome
+                keys = ['username', 'user', 'name', 'full_name', 'utente', 'utente_nome', 'login_name']
+                for k in keys:
+                    val = st.session_state.get(k)
+                    if val and val not in ["None", "Operatore", ""]:
+                        return val
+                return "Operatore Non Identificato"
+
+            nome_reale = get_logged_user()
 
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 
-                # Visualizzazione del test a video
-                if nome_reale != "Operatore":
-                    st.success(f"✅ TEST OK: Utente loggato riconosciuto come **{nome_reale}**")
+                # Messaggio di conferma per l'operatore
+                if nome_reale != "Operatore Non Identificato":
+                    st.success(f"✍️ Firma Legale attiva per: **{nome_reale}**")
                 else:
-                    st.error("⚠️ TEST FALLITO: Il sistema non trova il nome. Verrà usato 'Operatore'.")
+                    st.warning("⚠️ Attenzione: Nome utente non rilevato. La firma apparirà come 'Operatore'.")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -380,14 +385,14 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Recupero firme filtrate per ID farmaco e Turno
+                        # Filtro firme per ID farmaco e Turno specifico
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%({turno_attivo})%", f"%/{mese_corrente}%"))
                         
                         f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # --- CALENDARIO ---
+                        # --- CALENDARIO CON FIRMA DINAMICA NEL QUADRATINO ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 6px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
@@ -413,7 +418,6 @@ elif nav == "👥 Modulo Equipe":
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_ins = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
-                                # Salvataggio con la variabile NOME_REALE verificata dal test
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, "Infermiere", nome_reale, "A"), True)
                                 st.rerun()
@@ -423,6 +427,8 @@ elif nav == "👥 Modulo Equipe":
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
+            
+            # (Seguono T2, T3, T4 con l'uso della variabile nome_reale)
 
             with t2: # Tab Parametri
                 with st.form("vit_inf"):
