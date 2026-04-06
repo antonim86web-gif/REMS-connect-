@@ -351,20 +351,28 @@ elif nav == "👥 Modulo Equipe":
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                # RECUPERO FIRMA MIGLIORATO
-                nome_loggato = st.session_state.get('user', st.session_state.get('username', 'Operatore Rems'))
+                
+                # --- FIX FIRMA: Sincronizzazione con il Diario ---
+                # Cerchiamo 'username' (quello del diario) o 'user'
+                nome_loggato = st.session_state.get('username', st.session_state.get('user', 'Operatore Rems'))
+                st.caption(f"✍️ Firma attiva: **{nome_loggato}**")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 for f in terapie_keep:
                     t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
-                    mostra = (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or (turno_attivo == "Al bisogno" and f[5] == 1)
+                    mostra = (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or \
+                             (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or \
+                             (turno_attivo == "Al bisogno" and f[5] == 1)
                     
                     if mostra:
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
-                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
+                        
+                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
+                                       (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
+                        
                         f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
@@ -378,13 +386,12 @@ elif nav == "👥 Modulo Equipe":
                             if info:
                                 ora_s = info['full'].split(" ")[1] if " " in info['full'] else "--:--"
                                 op_f = info['o'] if info['o'] else "N.D."
-                                # Rimosso \n e usato spazio semplice per compatibilità tooltip
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
-                                    t_pop = f"✅ ASSUNTO - Ore: {ora_s} - Op: {op_f}"
+                                    t_pop = f"✅ ASSUNTO | Ore: {ora_s} | Op: {op_f}"
                                 elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
-                                    t_pop = f"❌ RIFIUTATO - Ore: {ora_s} - Op: {op_f}"
+                                    t_pop = f"❌ RIFIUTATO | Ore: {ora_s} | Op: {op_f}"
                             
                             h += f"<div title='{t_pop}' style='min-width: 40px; height: 50px; background: {bg_c}; color: {col_t}; {is_today} border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: default; font-size: 0.8rem;'><div style='font-weight: bold;'>{d}</div><div style='font-size: 1rem;'>{esito_txt}</div></div>"
                         
@@ -393,18 +400,18 @@ elif nav == "👥 Modulo Equipe":
                         with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})", "Infermiere", nome_loggato, "A"), True)
+                                data_ora = get_now_it().strftime("%d/%m/%Y %H:%M")
+                                nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, data_ora, nota_f, "Infermiere", nome_loggato, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})", "Infermiere", nome_loggato, "R"), True)
+                                data_ora = get_now_it().strftime("%d/%m/%Y %H:%M")
+                                nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, data_ora, nota_f, "Infermiere", nome_loggato, "R"), True)
                                 st.rerun()
                         st.divider()
-            with t3: # Consegne
-                with st.form("cons_inf"):
-                    txt_c = st.text_area("Nota Clinica")
-                    if st.form_submit_button("SALVA CONSEGNA"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", st.session_state.get('user', 'Op')), True)
-                        st.rerun()
 
             with t4: # Briefing (24h)
                 st.subheader("📋 Briefing Turno (Last 24h)")
