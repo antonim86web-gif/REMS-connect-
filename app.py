@@ -335,7 +335,7 @@ elif nav == "👥 Modulo Equipe":
                             st.rerun()
 
             with t2:
-            st.subheader("💊 Gestione Terapia Farmacologica")
+                st.subheader("💊 Gestione Terapia Farmacologica")
             
             # 1. Recupero Terapie dal DB (usando p_id dalla sidebar)
             terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
