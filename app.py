@@ -450,14 +450,16 @@ elif nav == "👥 Modulo Equipe":
 
             with t_ai:
                 st.subheader("🤖 Assistente Clinico IA")
-                if st.button("GENERA RELAZIONE CLINICA AVANZATA"):
-                    with st.spinner("Analisi dei diari in corso..."):
-                        relazione = genera_relazione_ia(p_id, p_sel, 7) 
-                        st.markdown(f"""
-                            <div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap;'>
-                                <b>🧠 VALUTAZIONE CLINICA IA:</b><br><br>{relazione}
-                            </div>
-                        """, unsafe_allow_html=True)
+                if st.button("GENERA REPORT IA PER TURNISTI"):
+    with st.spinner("..."):
+        report = genera_relazione_ia(p_id, p_sel, giorni_ia)
+        
+        # --- SOSTITUISCI st.info(report) O st.write(report) CON QUESTO: ---
+        st.markdown(f"""
+            <div style='background:#f0f7ff; border-left:5px solid #2563eb; padding:15px; border-radius:8px; color:#1e3a8a; white-space:pre-wrap;'>
+                <b>🤖 SINTESI INFERMIERISTICA IA:</b><br><br>{report}
+            </div>
+        """, unsafe_allow_html=True
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
