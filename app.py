@@ -415,13 +415,65 @@ elif nav == "👥 Modulo Equipe":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", firma_op), True)
                         st.rerun()
 
-            with t4: # BRIEFING (Ultime 24 Ore)
-                st.subheader("📋 Briefing Turno (Last 24h)")
-                ieri = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
-                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri))
-                for d_b, op_b, nt_b in b_logs:
-                    bg = "#fff1f2" if "RIFIUTO" in nt_b or "⚠️" in nt_b else "#f8fafc"
-                    st.markdown(f"<div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:5px;'><small><b>{d_b} - {op_b}</b></small><br>{nt_b}</div>", unsafe_allow_html=True)
+            with t4: # --- BRIEFING POTENZIATO DA IA ---
+                st.subheader("📋 Briefing Clinico Intelligente")
+                
+                # 1. Recupero dati ultime 24 ore per l'IA
+                ieri_iso = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
+                dati_briefing = db_run("""SELECT ruolo, op, nota FROM eventi 
+                                        WHERE id=? AND data >= ? 
+                                        ORDER BY id_u DESC""", (p_id, ieri_iso))
+                
+                # 2. Pulsante per generare la sintesi IA
+                if st.button("🪄 GENERA SINTESI IA (LAST 24H)", key="btn_brief_ia"):
+                    if dati_briefing:
+                        testo_per_ia = "\n".join([f"[{r}] {o}: {n}" for r, o, n in dati_briefing])
+                        with st.spinner("L'IA sta analizzando i passaggi di consegna..."):
+                            try:
+                                prompt_briefing = f"""
+                                Analizza questi eventi delle ultime 24h per il paziente {p_sel}. 
+                                Crea un briefing rapidissimo per il cambio turno infermieristico:
+                                - CRITICITÀ (Rifiuti farmaci, urgenze, note OPSI)
+                                - ANDAMENTO (Comportamento, parametri)
+                                - DA MONITORARE (Cosa deve fare il turno montante)
+                                Sii professionale e sintetico.
+                                Dati: {testo_per_ia}
+                                """
+                                
+                                response = client.chat.completions.create(
+                                    model="llama-3.3-70b-versatile",
+                                    messages=[
+                                        {"role": "system", "content": "Sei il coordinatore clinico di una REMS. Fornisci briefing precisi."},
+                                        {"role": "user", "content": prompt_briefing}
+                                    ],
+                                )
+                                sintesi = response.choices[0].message.content
+                                st.markdown(f"<div class='ai-box' style='border-color:#2563eb;'>{sintesi}</div>", unsafe_allow_html=True)
+                            except Exception as e:
+                                st.error(f"Errore IA: {e}")
+                    else:
+                        st.warning("Nessun dato registrato nelle ultime 24 ore per generare la sintesi.")
+
+                st.divider()
+                
+                # 3. Visualizzazione Log Raw (Cronologia delle ultime 24h)
+                st.markdown("### 🕒 Cronologia Recente")
+                for d_b, op_b, nt_b in db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri_iso)):
+                    # Allerta visiva per rifiuti o note flash
+                    bg = "#fff1f2" if any(x in nt_b for x in ["RIFIUTO", "⚠️", "❌"]) else "#f8fafc"
+                    st.markdown(f"""
+                        <div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:8px;'>
+                            <small><b>{d_b} - {op_b}</b></small><br>{nt_b}
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                # Nota Flash per il briefing (sempre utile)
+                with st.popover("➕ Aggiungi Nota Flash Urgent"):
+                    n_f = st.text_input("Nota rapida per i colleghi")
+                    if st.button("PUBBLICA NEL BRIEFING", key="flash_brief"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"⚠️ [BRIEFING] {n_f}", "Infermiere", firma_op), True)
+                        st.rerun()
                 
                 with st.popover("➕ Nota Flash Briefing"):
                     n_f = st.text_input("Urgenza")
