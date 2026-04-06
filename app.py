@@ -351,55 +351,73 @@ elif nav == "👥 Modulo Equipe":
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                # 1. Recupero firma "REALE" dall'interfaccia o dalla sessione
+                # Recupero firma operatore
                 nome_loggato = st.session_state.get('user', st.session_state.get('username', 'Operatore'))
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
+                if not terapie_keep:
+                    st.info("Nessuna terapia impostata.")
+                
                 for f in terapie_keep:
                     t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
                     
-                    mostra = (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or \
-                             (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or \
-                             (turno_attivo == "Al bisogno" and f[5] == 1)
+                    # Filtro Turno
+                    mostra = False
+                    if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
+                    elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
+                    elif turno_attivo == "Al bisogno" and f[5] == 1: mostra = True
                     
                     if mostra:
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Recupero dati: Data (0), Esito (1), Operatore (2)
+                        # Recupero firme dal database
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
                         
-                        f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
+                        f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        h = "<div class='scroll-giorni'>"
+                        # COSTRUZIONE CALENDARIO (VERSIONE STABILE)
+                        h = "<div class='scroll-giorni' style='display: flex; overflow-x: auto; padding: 10px; gap: 5px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
-                            is_today = "q-oggi" if d == get_now_it().day else ""
+                            is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
+                            
                             esito_txt, col_t, bg_c = ("-", "#888", "white")
-                            t_pop = f"Giorno {d}: Libero"
+                            t_pop = f"Giorno {d}: Nessun dato"
                             
                             if info:
-                                ora_s = info['full'].split(" ")[1] if " " in info['full'] else ""
-                                op_f = info['o'] if info['o'] else "Non firmato"
+                                ora_s = info['full'].split(" ")[1] if " " in info['full'] else "--:--"
+                                op_f = info['o'] if info['o'] else "N.D."
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
-                                    t_pop = f"✅ ASSUNTO\nOre: {ora_s}\nFirma: {op_f}"
+                                    t_pop = f"✅ ASSUNTO\\nOre: {ora_s}\\nOp: {op_f}"
                                 elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
-                                    t_pop = f"❌ RIFIUTATO\nOre: {ora_s}\nFirma: {op_f}"
+                                    t_pop = f"❌ RIFIUTATO\\nOre: {ora_s}\\nOp: {op_f}"
                             
-                            # Rimosso il punto interrogativo (cursor:default) e reso il popup attivo su tutto il quadrato
-                            h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t}; cursor:default; width:100%; height:100%;' title='{t_pop}'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
+                            # Generazione quadratino HTML
+                            h += f"""
+                            <div title='{t_pop}' style='
+                                min-width: 40px; height: 50px; 
+                                background: {bg_c}; color: {col_t}; 
+                                {is_today} border-radius: 5px; 
+                                display: flex; flex-direction: column; 
+                                align-items: center; justify-content: center; 
+                                cursor: default; font-size: 0.8rem;'>
+                                <div style='font-weight: bold;'>{d}</div>
+                                <div style='font-size: 1rem;'>{esito_txt}</div>
+                            </div>"""
                         
-                        st.markdown(h + "</div>", unsafe_allow_html=True)
+                        h += "</div>"
+                        st.markdown(h, unsafe_allow_html=True)
                         
+                        # Bottoni Smarcamento
                         with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
-                            # Smarcamento con firma sicura
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} {dose_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
