@@ -451,8 +451,8 @@ elif nav == "👥 Modulo Equipe":
             with t_ai:
                 st.subheader("🤖 Assistente Clinico IA")
                 if st.button("GENERA REPORT IA PER TURNISTI"):
-    with st.spinner("..."):
-        report = genera_relazione_ia(p_id, p_sel, giorni_ia)
+            with st.spinner("..."):
+                report = genera_relazione_ia(p_id, p_sel, giorni_ia)
         
         # --- SOSTITUISCI st.info(report) O st.write(report) CON QUESTO: ---
         st.markdown(f"""
