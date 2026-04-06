@@ -395,14 +395,14 @@ elif nav == "👥 Modulo Equipe":
                 terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 if terapie_attuali:
                     for t in terapie_attuali:
-                    c1, c2 = st.columns([4, 1])
+                        c1, c2 = st.columns([4, 1])
                 # Mostriamo la DATA (t[6]) in grassetto all'inizio
-                     info_terapia = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})"
-                     c1.info(info_terapia)
+                         info_terapia = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})"
+                         c1.info(info_terapia)
                 
-                    if c2.button("🗑️", key=f"del_med_{t[0]}"):
-                    db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                    st.rerun()
+                        if c2.button("🗑️", key=f"del_med_{t[0]}"):
+                        db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                        st.rerun()
                 
                 st.divider()
 
