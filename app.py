@@ -348,7 +348,7 @@ elif nav == "👥 Modulo Equipe":
         elif ruolo_corr == "Infermiere":
             import calendar 
             from datetime import timedelta
-            t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA", "🤖 RELAZIONE IA"])
+            t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA"])
             
             # --- IDENTIFICAZIONE DINAMICA DAL TUO LOGIN ---
             u = st.session_state.user_session
