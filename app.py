@@ -334,38 +334,52 @@ elif nav == "👥 Modulo Equipe":
                             st.success("Nota registrata con successo.")
                             st.rerun()
 
-            with t2: # Tab Terapia
-                st.subheader("Gestione Terapia Farmacologica")
-    # Carichiamo le terapie usando i nomi delle colonne corretti
-    terapie = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-    
-    for t in terapie:
-        with st.container():
-            st.markdown(f"""
-            <div style='background:#f1f5f9; padding:10px; border-radius:8px; border-left:5px solid #1e3a8a; margin-bottom:5px;'>
-                <b>💊 {t[1]}</b> - {t[2]} <br>
-                <small>Mattina: {'✅' if t[3] else '❌'} | Pomeriggio: {'✅' if t[4] else '❌'} | Al bisogno: {'✅' if t[5] else '❌'}</small>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(f"Elimina {t[1]}", key=f"del_t_{t[0]}"):
-                db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                st.rerun()
-    
+            with t2:
+            st.subheader("💊 Gestione Terapia Farmacologica")
+            
+            # 1. Recupero Terapie dal DB (usando p_id dalla sidebar)
+            terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+            
+            if terapie_attuali:
+                for t in terapie_attuali:
+                    t_id_u, f_nome, f_dose, m_n, p_n, a_b = t
+                    col1, col2 = st.columns([4, 1])
+                    
+                    with col1:
+                        st.markdown(f"""
+                        <div style='background:#f8fafc; padding:10px; border-radius:8px; border-left:5px solid #1e3a8a; margin-bottom:5px;'>
+                            <b>{f_nome}</b> - {f_dose} <br>
+                            <small>M: {'✅' if m_n else '❌'} | P: {'✅' if p_n else '❌'} | Bisogno: {'✅' if a_b else '❌'}</small>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col2:
+                        if st.button("🗑️", key=f"del_t_{t_id_u}"):
+                            db_run("DELETE FROM terapie WHERE id_u=?", (t_id_u,), True)
+                            st.rerun()
+            else:
+                st.info("Nessuna terapia attiva per questo paziente.")
 
-    st.divider()
-    with st.expander("➕ Prescrivi Nuovo Farmaco"):
-        with st.form("nuova_t"):
-            f_n = st.text_input("Farmaco")
-            d_n = st.text_input("Dose")
-            c1, c2, c3 = st.columns(3)
-            m = c1.checkbox("Mattina")
-            p = c2.checkbox("Pomeriggio")
-            b = c3.checkbox("Al bisogno")
-            if st.form_submit_button("REGISTRA PRESCRIZIONE"):
-                db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)", 
-                       (p_id, f_n, d_n, int(m), int(p), int(b)), True)
-                st.success("Farmaco aggiunto!")
-                st.rerun()
+            st.divider()
+            
+            # 2. Modulo Inserimento Nuova Terapia
+            with st.expander("➕ Prescrivi Nuovo Farmaco"):
+                with st.form("form_nuova_t"):
+                    f_n = st.text_input("Nome Farmaco")
+                    d_n = st.text_input("Dosaggio (es: 2mg)")
+                    c1, c2, c3 = st.columns(3)
+                    m = c1.checkbox("Mattina")
+                    p = c2.checkbox("Pomeriggio")
+                    b = c3.checkbox("Al bisogno")
+                    
+                    if st.form_submit_button("CONFERMA PRESCRIZIONE"):
+                        if f_n and d_n:
+                            db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)", 
+                                   (p_id, f_n, d_n, int(m), int(p), int(b)), True)
+                            st.success(f"Prescritto: {f_n}")
+                            st.rerun()
+                        else:
+                            st.error("Inserisci nome e dosaggio!")
 
             with t3:
                 st.subheader("Esame Obiettivo")
