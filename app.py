@@ -432,7 +432,6 @@ elif nav == "👥 Modulo Equipe":
             # --- AREA PDF (SOTTO I TAB MA DENTRO IL RUOLO MEDICO) ---
             st.divider()
             with st.expander("📄 ESPORTAZIONE PDF", expanded=True):
-                # 1. Scelta rapida
                 tipo_rep = st.radio(
                     "Contenuto del Report:", 
                     ["Diario Completo", "Solo Terapie", "Solo Consegne"], 
@@ -440,22 +439,18 @@ elif nav == "👥 Modulo Equipe":
                     key="radio_pdf_final"
                 )
 
-                # 2. Logica di filtraggio query
                 if tipo_rep == "Solo Terapie":
-                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '💊%' OR op LIKE 'SOMMINISTRAZIONE%') ORDER BY id_u DESC"
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' OR op LIKE '%SOMMINISTRAZIONE%') ORDER BY id_u DESC"
                 elif tipo_rep == "Solo Consegne":
-                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND ruolo='Infermiere' ORDER BY id_u DESC"
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND ruolo = 'Infermiere' ORDER BY id_u DESC"
                 else:
                     q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
                 
                 dati_pdf = db_run(q_pdf, (p_id,))
 
-                # 3. Generazione e Download immediato
                 if dati_pdf:
                     try:
-                        # Chiamiamo la funzione che restituisce i bytes
                         pdf_b = genera_pdf_clinico(p_sel, dati_pdf, tipo_rep)
-                        
                         st.download_button(
                             label=f"📥 SCARICA PDF: {tipo_rep.upper()}",
                             data=pdf_b,
