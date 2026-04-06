@@ -352,14 +352,15 @@ elif nav == "👥 Modulo Equipe":
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 
-                # --- SISTEMA DI RILEVAMENTO IDENTITÀ (Sincronizzato con Diario) ---
-                # Cerchiamo in tutte le variabili possibili del tuo sistema di login
+                # --- RECUPERO IDENTITÀ REALE (Nome e Cognome) ---
+                # Proviamo tutte le varianti usate di solito nei sistemi Streamlit
                 nome_reale = st.session_state.get('username') or \
                              st.session_state.get('user') or \
-                             st.session_state.get('utente_nome') or \
-                             "Operatore" 
+                             st.session_state.get('nome_completo') or \
+                             st.session_state.get('name') or \
+                             "Operatore Non Identificato"
                 
-                st.markdown(f"👤 Operatore Loggato: **{nome_reale}**")
+                st.info(f"👤 Operatore in turno: **{nome_reale}**")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -381,30 +382,30 @@ elif nav == "👥 Modulo Equipe":
                         f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # --- CALENDARIO CON FIRMA INTEGRATA NEL QUADRATINO ---
+                        # --- CALENDARIO CON FIRMA VISIBILE ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 6px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
-                            esito_txt, col_t, bg_c, firma_sotto = ("-", "#888", "white", "")
+                            esito_txt, col_t, bg_c, firma_quadratino = ("-", "#888", "white", "")
                             
                             if info:
-                                # Qui appare Nome e Cognome recuperati dal DB
-                                firma_sotto = info['o'] if info['o'] else "N.D."
+                                firma_quadratino = info['o'] if info['o'] else "N.D."
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
                                 elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
+                            # Quadratino largo per Nome e Cognome
                             h += f"""
-                            <div style='min-width: 80px; height: 85px; background: {bg_c}; color: {col_t}; 
+                            <div style='min-width: 85px; height: 85px; background: {bg_c}; color: {col_t}; 
                                 {is_today} border-radius: 6px; display: flex; flex-direction: column; 
                                 align-items: center; justify-content: center; font-size: 0.75rem; 
                                 box-shadow: 1px 1px 3px rgba(0,0,0,0.1);'>
                                 <div style='font-weight: bold; color: #555;'>{d}</div>
                                 <div style='font-size: 1.2rem; font-weight: bold;'>{esito_txt}</div>
                                 <div style='font-size: 0.55rem; color: #333; margin-top: 4px; text-align: center; 
-                                    line-height: 1; width: 95%; overflow: hidden; font-weight: 500;'>{firma_sotto}</div>
+                                    line-height: 1.1; width: 95%; overflow: hidden; font-weight: 600;'>{firma_quadratino}</div>
                             </div>"""
                         
                         st.markdown(h + "</div>", unsafe_allow_html=True)
@@ -413,15 +414,25 @@ elif nav == "👥 Modulo Equipe":
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, , ruolo, nome, cognome) VALUES (?,?,?,?,?,?)", 
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, ruolo, ruolo, nome, cognome) VALUES (?,?,?,?,?,?)", 
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
+
+            with t2: # Tab Parametri (Manteniamo la firma corretta anche qui)
+                with st.form("vit_inf"):
+                    c1, c2, c3 = st.columns(3)
+                    p_val = c1.text_input("PA"); f_val = c2.text_input("FC"); s_val = c3.text_input("SatO2")
+                    if st.form_submit_button("SALVA PARAMETRI"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", nome_reale), True)
+                        st.rerun()
+            # ... (Resto dei tab T3, T4, T_AI rimangono uguali)
 
             with t2: # Tab Parametri
                 with st.form("vit_inf"):
