@@ -342,16 +342,23 @@ elif nav == "👥 Modulo Equipe":
 
         elif ruolo_corr == "Infermiere":
             t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
+            
             with t1:
-                turno_attivo = st.selectbox("Seleziona Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
-                # Recuperiamo le terapie specifiche per il paziente
+                st.subheader("Registrazione Somministrazione Farmaci")
+                turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+                
+                # Recupero terapie attive per il paziente
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
+                if not terapie_keep:
+                    st.info("Nessuna terapia impostata per questo paziente.")
+                
                 for f in terapie_keep:
-                    t_id_univoco = f[0] # ID UNIVOCO della riga nel DB
+                    t_id_univoco = f[0]
                     nome_f = f[1]
                     dose_f = f[2]
                     
+                    # Filtro visibilità in base al turno selezionato
                     mostra = False
                     if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
                     elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
@@ -360,43 +367,101 @@ elif nav == "👥 Modulo Equipe":
                     if mostra:
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         
-                        # FIX: Filtriamo i log degli eventi ESATTAMENTE per questo farmaco usando il suo ID o nome specifico
-                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
-                                       (p_id, f"%{nome_f}%", f"%({turno_attivo})%", f"%/{get_now_it().strftime('%m/%Y')}%"))
+                        # --- RECUPERO STORICO FIRME (SOLO PER QUESTO ID UNIVOCO) ---
+                        # Cerchiamo il tag [ID] nella nota per evitare collisioni tra farmaci
+                        mese_corrente = get_now_it().strftime('%m/%Y')
+                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
+                                       (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
                         
                         f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
                         
-                        # Rendering Calendario Orizzontale
+                        # Disegno Calendario Orizzontale
+                        import calendar
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
+                        
                         h = "<div class='scroll-giorni'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
-                            cl = "quadratino q-oggi" if d == get_now_it().day else "quadratino"
-                            es, col, bg = (info['e'], "#15803d", "#dcfce7") if info and info['e'] == "A" else (("-", "#888", "white"))
-                            if info and info['e'] == "R": col, bg = "#b91c1c", "#fee2e2"; es = "R"
+                            is_today = "q-oggi" if d == get_now_it().day else ""
                             
-                            h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div></div>"
+                            # Logica Colori
+                            esito_txt = "-"
+                            colore_testo = "#888"
+                            bg_colore = "white"
+                            
+                            if info:
+                                if info['e'] == "A":
+                                    esito_txt = "A"
+                                    colore_testo = "#15803d" # Verde scuro
+                                    bg_colore = "#dcfce7"    # Verde chiaro
+                                elif info['e'] == "R":
+                                    esito_txt = "R"
+                                    colore_testo = "#b91c1c" # Rosso scuro
+                                    bg_colore = "#fee2e2"    # Rosso chiaro
+                            
+                            h += f"""<div class='quadratino {is_today}' style='background:{bg_colore}; color:{colore_testo};'>
+                                        <div class='q-num'>{d}</div>
+                                        <div class='q-esito'>{esito_txt}</div>
+                                     </div>"""
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
-                        # BOTTONI DI SMARCAMENTO CON KEY UNICA
-                        # Usiamo t_id_univoco per differenziare i bottoni di farmaci diversi
-                        with st.popover(f"Smarca {nome_f}"):
-                            c1, c2 = st.columns(2)
-                            if c1.button("✅ ASSUNTO", key=f"btn_A_{t_id_univoco}_{turno_attivo}"):
-                                # Inseriamo il farmaco specifico nella nota per distinguerlo dagli altri
-                                nota_evento = f"✔️ {nome_f} {dose_f} ({turno_attivo})"
+                        # --- BOTTONI DI SMARCAMENTO ---
+                        with st.popover(f"Registra Somministrazione: {nome_f}"):
+                            col_a, col_r = st.columns(2)
+                            
+                            # Azione ASSUNTO
+                            if col_a.button("✅ ASSUNTO", key=f"btn_ok_{t_id_univoco}_{turno_attivo}"):
+                                nota_f = f"✔️ [{t_id_univoco}] {nome_f} {dose_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_evento, "Infermiere", firma_op, "A"), True)
-                                scrivi_log("TERAPIA", f"Smarcata assunzione: {nome_f} per {p_sel}")
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "A"), True)
+                                scrivi_log("TERAPIA", f"Smarcato {nome_f} come ASSUNTO per {p_sel}")
                                 st.rerun()
-                                
-                            if c2.button("❌ RIFIUTATO", key=f"btn_R_{t_id_univoco}_{turno_attivo}"):
-                                nota_evento = f"❌ RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
+                            
+                            # Azione RIFIUTATO
+                            if col_r.button("❌ RIFIUTO", key=f"btn_ko_{t_id_univoco}_{turno_attivo}"):
+                                nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_evento, "Infermiere", firma_op, "R"), True)
-                                scrivi_log("TERAPIA", f"Registrato rifiuto: {nome_f} per {p_sel}")
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "R"), True)
+                                scrivi_log("TERAPIA", f"Registrato RIFIUTO per {nome_f} - {p_sel}")
                                 st.rerun()
+                        
                         st.divider()
+
+            with t2: # Parametri Vitali
+                with st.form("form_parametri"):
+                    st.write("### Rilevazione Parametri Vitali")
+                    c1, c2, c3 = st.columns(3)
+                    pa = c1.text_input("Pressione Art. (es: 120/80)")
+                    fc = c2.text_input("Frequenza Card. (bpm)")
+                    sat = c3.text_input("Saturazione O2 (%)")
+                    c4, c5 = st.columns(2)
+                    tc = c4.text_input("Temp. Corporea (°C)")
+                    gli = c5.text_input("Glicemia (mg/dL)")
+                    
+                    if st.form_submit_button("REGISTRA PARAMETRI"):
+                        nota_vit = f"💓 PARAMETRI: PA {pa} | FC {fc} | Sat {sat} | TC {tc} | Glicemia {gli}"
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_vit, "Infermiere", firma_op), True)
+                        st.success("Parametri salvati correttamente.")
+                        st.rerun()
+
+            with t3: # Consegne Infermieristiche
+                with st.form("form_consegne_inf"):
+                    txt_cons = st.text_area("Inserisci la consegna clinica / osservazioni", height=150)
+                    if st.form_submit_button("SALVA CONSEGNA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), txt_cons, "Infermiere", firma_op), True)
+                        st.rerun()
+
+            with t_ai: # Relazione IA
+                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
+                st.subheader("🤖 Assistente IA: Sintesi Infermieristica")
+                giorni_ia = st.slider("Analizza dati degli ultimi (giorni):", 1, 30, 7)
+                if st.button("GENERA REPORT IA PER TURNISTI"):
+                    with st.spinner("L'IA sta riassumendo l'andamento clinico..."):
+                        report = genera_relazione_ia(p_id, p_sel, giorni_ia)
+                        st.info(report)
+                st.markdown("</div>", unsafe_allow_html=True)
             with t2:
                 with st.form("vit"):
                     pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
