@@ -314,21 +314,32 @@ if nav == "🗺️ Mappa Posti Letto":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
-    
+
+    # --- INCOLLA QUI IL MOTORE DI RICERCA ---
+    st.markdown("---")
+    c1, c2 = st.columns(2)
+    with c1:
+        f_data = st.text_input("📅 Filtra per Data (es: 2026-04)", placeholder="AAAA-MM-GG")
+    with c2:
+        f_op = st.text_input("👤 Filtra Operatore/Ruolo", placeholder="Es: Rossi o Infermiere")
+    st.markdown("---")
+
     for pid, nome in p_lista:
         with st.expander(f"📁 SCHEDA: {nome}"):
-            # Recupero eventi per il PDF e la visualizzazione
-            eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (pid,))
             
-            col1, col2 = st.columns([4, 1])
-            with col2:
-             eventi = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (pid,))
-            if eventi:
-                pdf_data = genera_pdf_clinico(nome, eventi)
-                st.download_button(label="📥 Scarica PDF", data=pdf_data, file_name=f"diario_{nome}.pdf", mime="application/pdf", key=f"pdf_{pid}")
+            # --- MODIFICA LA QUERY PER USARE I FILTRI ---
+            query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
+            params = [pid]
             
-            with col1:
-                render_postits(pid)
+            if f_data:
+                query += " AND data LIKE ?"
+                params.append(f"%{f_data}%")
+            if f_op:
+                query += " AND (op LIKE ? OR ruolo LIKE ?)"
+                params.append(f"%{f_op}%")
+                params.append(f"%{f_op}%")
+            
+            eventi = db_run(query + " ORDER BY id_u DESC", tuple(params))
 
 elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
