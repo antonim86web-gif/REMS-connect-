@@ -77,7 +77,7 @@ firma_op = st.session_state.firma_op
 ruolo_corr = st.session_state.ruolo_corr
     
     # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
-    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT ATTIVO")
+    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
     except: pass
     
     # --- NUOVE COLONNE TERAPIA PER ORARI SPECIFICI ---
