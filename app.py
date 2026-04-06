@@ -339,7 +339,7 @@ elif nav == "👥 Modulo Equipe":
                         st.download_button("Scarica Relazione", res_ai, file_name=f"Relazione_{p_sel}.txt")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-elif ruolo_corr == "Infermiere":
+        elif ruolo_corr == "Infermiere":
             t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
             with t1:
                 turno_attivo = st.selectbox("Seleziona Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
