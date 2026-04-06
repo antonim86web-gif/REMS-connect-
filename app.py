@@ -293,14 +293,14 @@ elif nav == "👥 Modulo Equipe":
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
-    if ruolo_corr == "Medico/Psichiatra":
-        t1, t2, t3, t_ai = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
+         if ruolo_corr == "Medico/Psichiatra":
+                t1, t2, t3, t_ai = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
 
-            with t1:
-                st.subheader("Inserimento Nota in Diario Clinico")
-                with st.form("form_diario_med"):
-                    nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
-                    if st.form_submit_button("REGISTRA NOTA CLINICA"):
+                with t1:
+                    st.subheader("Inserimento Nota in Diario Clinico")
+                    with st.form("form_diario_med"):
+                        nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
+                        if st.form_submit_button("REGISTRA NOTA CLINICA"):
                         if nota_med:
                             db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
                                    (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Medico", firma_op), True)
