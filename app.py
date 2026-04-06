@@ -293,7 +293,7 @@ elif nav == "👥 Modulo Equipe":
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
-    if ruolo_corr == "Medico/Psichiatra":
+         if ruolo_corr == "Medico/Psichiatra":
             t1, t2, t3, t_ai = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
 
             with t1:
