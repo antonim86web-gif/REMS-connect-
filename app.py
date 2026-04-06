@@ -333,9 +333,7 @@ elif nav == "👥 Modulo Equipe":
         
         st.divider()
 
-        # --- PARTE 2: IL TUO CODICE ESISTENTE PER LA GESTIONE TERAPIA ---
-        st.markdown("#### ✍️ Modifica Prescrizione Attiva")
-        # Qui incolla (o mantieni) il codice che già avevi per inserire i farmaci...
+        
                 st.subheader("Gestione Terapia Farmacologica")
                 terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 if terapie_attuali:
