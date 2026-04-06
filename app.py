@@ -323,9 +323,9 @@ elif nav == "📊 Monitoraggio":
             col1, col2 = st.columns([4, 1])
             with col2:
              eventi = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (pid,))
-if eventi:
-    pdf_data = genera_pdf_clinico(nome, eventi)
-    st.download_button(label="📥 Scarica PDF", data=pdf_data, file_name=f"diario_{nome}.pdf", mime="application/pdf", key=f"pdf_{pid}")
+            if eventi:
+                pdf_data = genera_pdf_clinico(nome, eventi)
+                st.download_button(label="📥 Scarica PDF", data=pdf_data, file_name=f"diario_{nome}.pdf", mime="application/pdf", key=f"pdf_{pid}")
             
             with col1:
                 render_postits(pid)
