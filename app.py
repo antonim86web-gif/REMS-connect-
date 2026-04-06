@@ -350,27 +350,14 @@ elif nav == "👥 Modulo Equipe":
             from datetime import timedelta
             t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
             
-            # --- AGGANCIO DINAMICO ALL'UTENTE LOGGATO ---
-            # Cerchiamo il nome in tutte le variabili di sessione possibili
-            def get_logged_user():
-                # Elenco delle chiavi comuni dove i sistemi di login salvano il nome
-                keys = ['username', 'user', 'name', 'full_name', 'utente', 'utente_nome', 'login_name']
-                for k in keys:
-                    val = st.session_state.get(k)
-                    if val and val not in ["None", "Operatore", ""]:
-                        return val
-                return "Operatore Non Identificato"
-
-            nome_reale = get_logged_user()
+            # --- RECUPERO FIRMA DAL TUO SISTEMA ---
+            # Usiamo la stessa logica della tua riga 223
+            u = st.session_state.user_session
+            nome_reale = f"{u['nome']} {u['cognome']}" # Es: "Alex Mars"
 
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                
-                # Messaggio di conferma per l'operatore
-                if nome_reale != "Operatore Non Identificato":
-                    st.success(f"✍️ Firma Legale attiva per: **{nome_reale}**")
-                else:
-                    st.warning("⚠️ Attenzione: Nome utente non rilevato. La firma apparirà come 'Operatore'.")
+                st.caption(f"👤 Operatore: **{nome_reale}** ({u['ruolo']})")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -385,14 +372,14 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Filtro firme per ID farmaco e Turno specifico
+                        # Recupero firme dal DB
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%({turno_attivo})%", f"%/{mese_corrente}%"))
                         
-                        f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
+                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # --- CALENDARIO CON FIRMA DINAMICA NEL QUADRATINO ---
+                        # --- CALENDARIO ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 6px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
@@ -400,7 +387,7 @@ elif nav == "👥 Modulo Equipe":
                             esito_txt, col_t, bg_c, firma_q = ("-", "#888", "white", "")
                             
                             if info:
-                                firma_q = info['o'] if info['o'] else "N.D."
+                                firma_q = info['o'] # Qui apparirà Nome e Cognome
                                 if info['e'] == "A": esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
                                 elif info['e'] == "R": esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
@@ -419,16 +406,14 @@ elif nav == "👥 Modulo Equipe":
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_ins = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, "Infermiere", nome_reale, "A"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, u['ruolo'], nome_reale, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_ins = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, "Infermiere", nome_reale, "R"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, u['ruolo'], nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
-            
-            # (Seguono T2, T3, T4 con l'uso della variabile nome_reale)
 
             with t2: # Tab Parametri
                 with st.form("vit_inf"):
