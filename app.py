@@ -339,38 +339,61 @@ elif nav == "👥 Modulo Equipe":
                         st.download_button("Scarica Relazione", res_ai, file_name=f"Relazione_{p_sel}.txt")
                 st.markdown("</div>", unsafe_allow_html=True)
 
-        elif ruolo_corr == "Infermiere":
+elif ruolo_corr == "Infermiere":
             t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
             with t1:
                 turno_attivo = st.selectbox("Seleziona Turno", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+                # Recuperiamo le terapie specifiche per il paziente
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+                
                 for f in terapie_keep:
+                    t_id_univoco = f[0] # ID UNIVOCO della riga nel DB
+                    nome_f = f[1]
+                    dose_f = f[2]
+                    
                     mostra = False
                     if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
                     elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
                     elif turno_attivo == "Al bisogno" and f[5] == 1: mostra = True
                     
                     if mostra:
-                        st.markdown(f"### 💊 {f[1]} <small>({f[2]})</small>", unsafe_allow_html=True)
+                        st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
+                        
+                        # FIX: Filtriamo i log degli eventi ESATTAMENTE per questo farmaco usando il suo ID o nome specifico
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
-                                       (p_id, f"%{f[1]}%", f"%({turno_attivo})%", f"%/{get_now_it().strftime('%m/%Y')}%"))
-                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
+                                       (p_id, f"%{nome_f}%", f"%({turno_attivo})%", f"%/{get_now_it().strftime('%m/%Y')}%"))
+                        
+                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
+                        
+                        # Rendering Calendario Orizzontale
+                        num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         h = "<div class='scroll-giorni'>"
-                        for d in range(1, calendar.monthrange(get_now_it().year, get_now_it().month)[1] + 1):
+                        for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             cl = "quadratino q-oggi" if d == get_now_it().day else "quadratino"
-                            es, col, bg = (info['e'], "green", "#dcfce7") if info else ("-", "#888", "white")
-                            if es == "R": col, bg = "red", "#fee2e2"
-                            h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div><div class='q-op'>{info['o'] if info else ''}</div></div>"
+                            es, col, bg = (info['e'], "#15803d", "#dcfce7") if info and info['e'] == "A" else (("-", "#888", "white"))
+                            if info and info['e'] == "R": col, bg = "#b91c1c", "#fee2e2"; es = "R"
+                            
+                            h += f"<div class='{cl}' style='background:{bg}; color:{col};'><div class='q-num'>{d}</div><div class='q-esito'>{es}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
-                        with st.popover(f"Smarca {f[1]}"):
+                        
+                        # BOTTONI DI SMARCAMENTO CON KEY UNICA
+                        # Usiamo t_id_univoco per differenziare i bottoni di farmaci diversi
+                        with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
-                            k_id = f"{f[0]}_{turno_attivo.replace(':', '').replace(' ', '')}"
-                            if c1.button("✅ ASSUNTO", key=f"A_{k_id}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"✔️ {f[1]} ({turno_attivo})", "Infermiere", firma_op, "A"), True)
+                            if c1.button("✅ ASSUNTO", key=f"btn_A_{t_id_univoco}_{turno_attivo}"):
+                                # Inseriamo il farmaco specifico nella nota per distinguerlo dagli altri
+                                nota_evento = f"✔️ {nome_f} {dose_f} ({turno_attivo})"
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_evento, "Infermiere", firma_op, "A"), True)
+                                scrivi_log("TERAPIA", f"Smarcata assunzione: {nome_f} per {p_sel}")
                                 st.rerun()
-                            if c2.button("❌ RIFIUTATO", key=f"R_{k_id}"):
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ RIFIUTO {f[1]} ({turno_attivo})", "Infermiere", firma_op, "R"), True)
+                                
+                            if c2.button("❌ RIFIUTATO", key=f"btn_R_{t_id_univoco}_{turno_attivo}"):
+                                nota_evento = f"❌ RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_evento, "Infermiere", firma_op, "R"), True)
+                                scrivi_log("TERAPIA", f"Registrato rifiuto: {nome_f} per {p_sel}")
                                 st.rerun()
                         st.divider()
             with t2:
