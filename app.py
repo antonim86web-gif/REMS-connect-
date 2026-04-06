@@ -1,94 +1,50 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import hashlib
-from datetime import datetime
-from groq import Groq
+import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
+import calendar
+from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
+from groq import Groq # <--- Per l'IA di Groq
 
-# --- 1. CONFIGURAZIONE GROQ ---
+# Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- 2. FUNZIONE DATABASE (Punta a rems_final_v12.db) ---
-def db_run(query, params=(), commit=False):
-    conn = sqlite3.connect("rems_final_v12.db", check_same_thread=False)
-    cur = conn.cursor()
-    try:
-        cur.execute(query, params)
-        if commit:
-            conn.commit()
-        return cur.fetchall()
-    except Exception as e:
-        st.error(f"Errore DB: {e}")
-        return []
-    finally:
-        conn.close()
 
-# --- 3. RIPARAZIONE TOTALE DATABASE ---
+# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
-    conn = sqlite3.connect("rems_final_v12.db")
+    conn = sqlite3.connect('rems_final_v12.db')
     c = conn.cursor()
+    # Colonne per eventi
+    try: c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
+    except: pass
+    try: c.execute("ALTER TABLE eventi ADD COLUMN figura_professionale TEXT")
+    except: pass
+    try: c.execute("ALTER TABLE eventi ADD COLUMN esito TEXT")
+    except: pass
     
-    # Creazione tabelle con i nomi colonne corretti
-    c.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT, stato TEXT DEFAULT 'ATTIVO')")
-    c.execute("CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)")
+    # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
+    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
+    except: pass
     
-    # Qui forziamo la creazione della tabella terapie con id_p e orari
-    c.execute('''CREATE TABLE IF NOT EXISTS terapie 
-                 (id_u INTEGER PRIMARY KEY AUTOINCREMENT, 
-                  id_p INTEGER, 
-                  farmaco TEXT, 
-                  dose TEXT, 
-                  orari TEXT, 
-                  mat_nuovo INTEGER DEFAULT 0, 
-                  pom_nuovo INTEGER DEFAULT 0, 
-                  al_bisogno INTEGER DEFAULT 0)''')
-
-    # Se la tabella esisteva già ma senza id_p, aggiungiamo le colonne una per una
-    colonne_extra = [
-        ("terapie", "id_p", "INTEGER"),
-        ("terapie", "orari", "TEXT"),
-        ("terapie", "mat_nuovo", "INTEGER DEFAULT 0"),
-        ("terapie", "pom_nuovo", "INTEGER DEFAULT 0"),
-        ("terapie", "al_bisogno", "INTEGER DEFAULT 0"),
-        ("pazienti", "stato", "TEXT DEFAULT 'ATTIVO'")
-    ]
+    # --- NUOVE COLONNE TERAPIA PER ORARI SPECIFICI ---
+    try: c.execute("ALTER TABLE terapie ADD COLUMN mat_nuovo INTEGER DEFAULT 0")
+    except: pass
+    try: c.execute("ALTER TABLE terapie ADD COLUMN pom_nuovo INTEGER DEFAULT 0")
+    except: pass
+    try: c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
+    except: pass
     
-    for tab, col, tipo in colonne_extra:
-        try:
-            c.execute(f"ALTER TABLE {tab} ADD COLUMN {col} {tipo}")
-        except:
-            pass
-            
+    # Tabella Log per Tracciabilità Legale
+    c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
+                 id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
+                 data_ora TEXT, 
+                 utente TEXT, 
+                 azione TEXT, 
+                 dettaglio TEXT)""")
     conn.commit()
     conn.close()
 
-# Eseguiamo la riparazione
 aggiorna_struttura_db()
-
-# --- 4. SIDEBAR MINIMALE (Senza menu inutili) ---
-st.sidebar.title("🏥 REMS Connect")
-
-# Carichiamo i pazienti reali
-p_raw = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
-
-if not p_raw:
-    # Se vuoto, non mostriamo "Esempio Paziente" ma un messaggio o un inserimento
-    st.sidebar.warning("Nessun paziente in archivio.")
-    p_id = 0
-    p_sel = "Nessuno"
-else:
-    lista_p = {p[1]: p[0] for p in p_raw}
-    p_sel = st.sidebar.selectbox("Seleziona Paziente", list(lista_p.keys()), key="paziente_selector")
-    p_id = lista_p[p_sel]
-
-# Logout con chiave unica
-if st.sidebar.button("ESCI", key="logout_btn_top"):
-    st.session_state.clear()
-    st.rerun()
-
-# Recupero variabili sessione
-ruolo_corr = st.session_state.get('ruolo_corr', 'Operatore')
-firma_op = st.session_state.get('firma_op', 'Anonimo')
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
@@ -276,9 +232,9 @@ if conta_oggi > 0:
 opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"]
 if u['ruolo'] == "Admin": opts.append("⚙️ Admin")
 nav = st.sidebar.radio("NAVIGAZIONE", opts)
-# Usa una chiave univoca per evitare il DuplicateElementId
-if st.sidebar.button("LOGOUT", key="logout_sidebar_unique"):
-    st.session_state.clear()
+if st.sidebar.button("LOGOUT"): 
+    scrivi_log("LOGOUT", "Uscita dal sistema")
+    st.session_state.user_session = None; 
     st.rerun()
 st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
