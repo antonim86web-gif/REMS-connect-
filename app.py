@@ -351,9 +351,12 @@ elif nav == "👥 Modulo Equipe":
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                # Recupero identità reale dal login
-                nome_reale = st.session_state.get('username', st.session_state.get('user', 'Operatore'))
-                st.markdown(f"👤 Operatore: **{nome_reale}**")
+                
+                # --- RECUPERO IDENTITÀ DAL LOGIN ---
+                # Cerchiamo 'username' che è quella che contiene il nome completo nei tuoi log
+                nome_reale = st.session_state.get('username', 'Operatore non identificato')
+                
+                st.markdown(f"👤 Operatore Loggato: **{nome_reale}**")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -368,7 +371,7 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Filtro incrociato: ID farmaco + Turno specifico
+                        # Recupero firme filtrate per ID farmaco e Turno specifico
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%({turno_attivo})%", f"%/{mese_corrente}%"))
                         
@@ -379,26 +382,23 @@ elif nav == "👥 Modulo Equipe":
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
-                            esito_txt, col_t, bg_c, firma_txt = ("-", "#888", "white", "")
+                            esito_txt, col_t, bg_c, firma_visibile = ("-", "#888", "white", "")
                             
                             if info:
-                                # Abbreviamo il nome per farlo stare nel quadratino (es: "SUPER USER" -> "S. USER")
-                                op_raw = info['o'] if info['o'] else "N.D."
-                                firma_txt = (op_raw[:7] + "..") if len(op_raw) > 8 else op_raw
-                                
+                                firma_visibile = info['o'] if info['o'] else "N.D."
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
                                 elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
-                            # Quadratino con firma visibile
+                            # Quadratino con FIRMA COMPLETA (testo piccolo ma visibile)
                             h += f"""
-                            <div style='min-width: 50px; height: 65px; background: {bg_c}; color: {col_t}; 
+                            <div style='min-width: 65px; height: 75px; background: {bg_c}; color: {col_t}; 
                                 {is_today} border-radius: 5px; display: flex; flex-direction: column; 
-                                align-items: center; justify-content: center; font-size: 0.7rem;'>
-                                <div style='font-weight: bold;'>{d}</div>
-                                <div style='font-size: 1rem; font-weight: bold;'>{esito_txt}</div>
-                                <div style='font-size: 0.55rem; color: #444; margin-top: 2px; text-align: center;'>{firma_txt}</div>
+                                align-items: center; justify-content: center; font-size: 0.7rem; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);'>
+                                <div style='font-weight: bold; color: #555;'>{d}</div>
+                                <div style='font-size: 1.1rem; font-weight: bold;'>{esito_txt}</div>
+                                <div style='font-size: 0.5rem; color: #333; margin-top: 2px; text-align: center; line-height: 0.9; width: 100%; overflow: hidden;'>{firma_visibile}</div>
                             </div>"""
                         
                         st.markdown(h + "</div>", unsafe_allow_html=True)
