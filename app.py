@@ -10,7 +10,7 @@ from groq import Groq # <--- Per l'IA di Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 from fpdf import FPDF
 
-def genera_pdf_clinico(p_nome, dati_clinici):
+def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"): 
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
