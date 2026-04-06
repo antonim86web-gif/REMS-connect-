@@ -352,11 +352,7 @@ elif nav == "👥 Modulo Equipe":
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 # RECUPERO FIRMA MIGLIORATO
-                nome_loggato = st.session_state.get('username', 'SUPER USER (ADMIN)')
-            
-            with :
-                st.subheader("Registrazione Somministrazione Farmaci")
-                st.markdown(f"✍️ Firma registrata come: **{nome_loggato}**")
+                nome_loggato = st.session_state.get('user', st.session_state.get('username', 'Operatore Rems'))
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -403,7 +399,6 @@ elif nav == "👥 Modulo Equipe":
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})", "Infermiere", nome_loggato, "R"), True)
                                 st.rerun()
                         st.divider()
-
             with t3: # Consegne
                 with st.form("cons_inf"):
                     txt_c = st.text_area("Nota Clinica")
