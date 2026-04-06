@@ -388,26 +388,25 @@ elif nav == "👥 Modulo Equipe":
                             st.success("Nota registrata!")
                             st.rerun()
 
-                with t2:
-        st.subheader("💊 Gestione Terapia Farmacologica")
-        
-        # 1. Recupero dati (Assicurati che la colonna 'data' esista nel DB)
+            with t2:
+                st.subheader("💊 Gestione Terapia Farmacologica")
+        # Query con 7 colonne (l'ultima è la data)
         terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
         
         if terapie_attuali:
             for t in terapie_attuali:
                 c1, c2 = st.columns([0.8, 0.2])
-                # t[6] è la data della prescrizione
+                # t[6] è la DATA
                 info_ter = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'})"
-                
                 with c1:
                     st.info(info_ter)
-                
                 with c2:
                     if st.button("🗑️", key=f"del_med_{t[0]}"):
                         db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
                         st.rerun()
                 st.divider()
+        else:
+            st.warning("Nessuna terapia attiva trovata.")
         else:
             st.warning("Nessuna terapia attiva trovata.")
                 # --- FORM NUOVA PRESCRIZIONE ---
