@@ -1,8 +1,14 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from datetime import datetime
+import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
+import calendar
+from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
 import io
+from groq import Groq # <--- Per l'IA di Groq
+
+# Configurazione Groq
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # --- 1. FUNZIONE ESECUZIONE DATABASE ---
 # Questa funzione è il motore: gestisce apertura, esecuzione e chiusura sicura.
