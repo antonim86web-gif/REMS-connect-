@@ -41,24 +41,15 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
         # Usiamo la nota pulita qui
         pdf.multi_cell(0, 7, nota_pulita)
         pdf.ln(4)
-        
-    return pdf.output(dest='S')
-
-    # Ciclo sui dati del diario
-    for data, op, nota in dati_clinici:
-        pdf.set_font("Arial", 'B', 10)
-        # Riga Intestazione Nota (Data e Operatore)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(0, 7, f"Data: {data} | Operatore: {op}", ln=True, fill=True)
-        
-        # Testo della Nota
-        pdf.set_font("Arial", size=10)
-        # Multi_cell gestisce l'andata a capo automatica per note lunghe
-        pdf.multi_cell(0, 7, f"{nota}")
+        pdf.multi_cell(0, 7, nota_pulita)
         pdf.ln(4)
         
-    # Restituisce il PDF come pacchetto di byte
+    # Restituisce il PDF come pacchetto di byte (SINGOLO RETURN)
     return pdf.output()
+        
+    
+
+
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
