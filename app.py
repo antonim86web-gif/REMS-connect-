@@ -409,8 +409,6 @@ elif nav == "👥 Modulo Equipe":
                 else:
                     st.warning("Dati insufficienti per l'analisi IA.")
 
-        # --- SEZIONE INFERMIERE (Allineata correttamente) ---
-        elif ruolo_corr == "Infermiere":
 
         elif ruolo_corr == "Infermiere":
             import calendar 
