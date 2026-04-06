@@ -352,10 +352,11 @@ elif nav == "👥 Modulo Equipe":
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 
-                # --- ASSEGNAZIONE FIRMA AUTOMATICA PER RUOLO ---
-                # Se non c'è un utente loggato, usa il nome del ruolo selezionato
-                nome_loggato = st.session_state.get('username', 'INFERMIERE DI TURNO')
-                st.caption(f"✍️ Firma registrata come: **{nome_loggato}**")
+                # --- RECUPERO IDENTITÀ REALE ---
+                # Cerchiamo nell'ordine: nome utente, login o (se proprio vuoto) il ruolo
+                nome_reale = st.session_state.get('username', st.session_state.get('user', 'Utente non loggato'))
+                
+                st.markdown(f"👤 Operatore: **{nome_reale}**")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -370,14 +371,14 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Recupero dati: Data (0), Esito (1), Operatore (2)
+                        # Recupero dati per il calendario
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
                         
                         f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # Calendario con Tooltip pulito (senza \n)
+                        # --- CALENDARIO CON TOOLTIP PULITO ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 5px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
@@ -387,7 +388,7 @@ elif nav == "👥 Modulo Equipe":
                             
                             if info:
                                 ora_s = info['full'].split(" ")[1] if " " in info['full'] else "--:--"
-                                # Se nel DB c'è "Operatore", lo mostriamo, altrimenti mostriamo la firma salvata
+                                # Mostra il nome salvato nel DB per quel giorno
                                 op_f = info['o'] if info['o'] else "N.D."
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
@@ -404,13 +405,14 @@ elif nav == "👥 Modulo Equipe":
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
+                                # Inseriamo NOME_REALE nella colonna OP
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_loggato, "A"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_loggato, "R"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
 
