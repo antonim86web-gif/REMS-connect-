@@ -341,24 +341,23 @@ elif nav == "👥 Modulo Equipe":
                 st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
-            t1, t2, t3, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "🤖 RELAZIONE IA"])
+            # 1. Definizione dei 5 Tab (Incluso Briefing e IA)
+            t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 
-                # Recupero terapie attive per il paziente
+                # Recupero terapie attive
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 if not terapie_keep:
-                    st.info("Nessuna terapia impostata per questo paziente.")
+                    st.info("Nessuna terapia impostata.")
                 
                 for f in terapie_keep:
-                    t_id_univoco = f[0]
-                    nome_f = f[1]
-                    dose_f = f[2]
+                    t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
                     
-                    # Filtro visibilità in base al turno selezionato
+                    # Filtro turno
                     mostra = False
                     if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
                     elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
@@ -367,15 +366,13 @@ elif nav == "👥 Modulo Equipe":
                     if mostra:
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         
-                        # --- RECUPERO STORICO FIRME (SOLO PER QUESTO ID UNIVOCO) ---
-                        # Cerchiamo il tag [ID] nella nota per evitare collisioni tra farmaci
+                        # Recupero firme con Tag ID [ID] per evitare sovrascritture
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
                         
                         f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
                         
-                        # Disegno Calendario Orizzontale
                         import calendar
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
@@ -383,105 +380,59 @@ elif nav == "👥 Modulo Equipe":
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "q-oggi" if d == get_now_it().day else ""
-                            
-                            # Logica Colori
-                            esito_txt = "-"
-                            colore_testo = "#888"
-                            bg_colore = "white"
-                            
+                            esito_txt, col_t, bg_c = ("-", "#888", "white")
                             if info:
-                                if info['e'] == "A":
-                                    esito_txt = "A"
-                                    colore_testo = "#15803d" # Verde scuro
-                                    bg_colore = "#dcfce7"    # Verde chiaro
-                                elif info['e'] == "R":
-                                    esito_txt = "R"
-                                    colore_testo = "#b91c1c" # Rosso scuro
-                                    bg_colore = "#fee2e2"    # Rosso chiaro
+                                if info['e'] == "A": esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
+                                elif info['e'] == "R": esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
-                            h += f"""<div class='quadratino {is_today}' style='background:{bg_colore}; color:{colore_testo};'>
-                                        <div class='q-num'>{d}</div>
-                                        <div class='q-esito'>{esito_txt}</div>
-                                     </div>"""
+                            h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t};'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
-                        # --- BOTTONI DI SMARCAMENTO ---
-                        with st.popover(f"Registra Somministrazione: {nome_f}"):
-                            col_a, col_r = st.columns(2)
-                            
-                            # Azione ASSUNTO
-                            if col_a.button("✅ ASSUNTO", key=f"btn_ok_{t_id_univoco}_{turno_attivo}"):
+                        with st.popover(f"Smarca {nome_f}"):
+                            c1, c2 = st.columns(2)
+                            if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} {dose_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "A"), True)
-                                scrivi_log("TERAPIA", f"Smarcato {nome_f} come ASSUNTO per {p_sel}")
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "A"), True)
                                 st.rerun()
-                            
-                            # Azione RIFIUTATO
-                            if col_r.button("❌ RIFIUTO", key=f"btn_ko_{t_id_univoco}_{turno_attivo}"):
+                            if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "R"), True)
-                                scrivi_log("TERAPIA", f"Registrato RIFIUTO per {nome_f} - {p_sel}")
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "R"), True)
                                 st.rerun()
-                        
                         st.divider()
 
-            with t2: # Parametri Vitali
-                with st.form("form_parametri"):
-                    st.write("### Rilevazione Parametri Vitali")
-                    c1, c2, c3 = st.columns(3)
-                    pa = c1.text_input("Pressione Art. (es: 120/80)")
-                    fc = c2.text_input("Frequenza Card. (bpm)")
-                    sat = c3.text_input("Saturazione O2 (%)")
-                    c4, c5 = st.columns(2)
-                    tc = c4.text_input("Temp. Corporea (°C)")
-                    gli = c5.text_input("Glicemia (mg/dL)")
-                    
-                    if st.form_submit_button("REGISTRA PARAMETRI"):
-                        nota_vit = f"💓 PARAMETRI: PA {pa} | FC {fc} | Sat {sat} | TC {tc} | Glicemia {gli}"
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_vit, "Infermiere", firma_op), True)
-                        st.success("Parametri salvati correttamente.")
+            with t2: # Parametri
+                with st.form("vit_inf"):
+                    pa, fc, sat = st.columns(3)
+                    p_val = pa.text_input("PA"); f_val = fc.text_input("FC"); s_val = sat.text_input("SatO2")
+                    if st.form_submit_button("SALVA PARAMETRI"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", firma_op), True)
                         st.rerun()
 
-            with t3: # Consegne Infermieristiche
-                with st.form("form_consegne_inf"):
-                    txt_cons = st.text_area("Inserisci la consegna clinica / osservazioni", height=150)
+            with t3: # Consegne
+                with st.form("cons_inf"):
+                    txt_c = st.text_area("Nota Clinica")
                     if st.form_submit_button("SALVA CONSEGNA"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), txt_cons, "Infermiere", firma_op), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", firma_op), True)
                         st.rerun()
 
-            with t_ai: # Relazione IA
-                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
-                st.subheader("🤖 Assistente IA: Sintesi Infermieristica")
-                giorni_ia = st.slider("Analizza dati degli ultimi (giorni):", 1, 30, 7)
-                if st.button("GENERA REPORT IA PER TURNISTI"):
-                    with st.spinner("L'IA sta riassumendo l'andamento clinico..."):
-                        report = genera_relazione_ia(p_id, p_sel, giorni_ia)
-                        st.info(report)
-                st.markdown("</div>", unsafe_allow_html=True)
-            with t2:
-                with st.form("vit"):
-                    pa,fc,sat,tc,gl=st.text_input("PA"),st.text_input("FC"),st.text_input("SatO2"),st.text_input("TC"),st.text_input("Glicemia")
-                    if st.form_submit_button("REGISTRA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💓 PA:{pa} FC:{fc} Sat:{sat} TC:{tc} Gl:{gl}", "Infermiere", firma_op), True)
+            with t4: # BRIEFING (Ultime 24 Ore)
+                st.subheader("📋 Briefing Turno (Last 24h)")
+                ieri = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
+                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri))
+                for d_b, op_b, nt_b in b_logs:
+                    bg = "#fff1f2" if "RIFIUTO" in nt_b or "⚠️" in nt_b else "#f8fafc"
+                    st.markdown(f"<div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:5px;'><small><b>{d_b} - {op_b}</b></small><br>{nt_b}</div>", unsafe_allow_html=True)
+                
+                with st.popover("➕ Nota Flash Briefing"):
+                    n_f = st.text_input("Urgenza")
+                    if st.button("PUBBLICA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"⚠️ [BRIEFING] {n_f}", "Infermiere", firma_op), True)
                         st.rerun()
-            with t3:
-                with st.form("ni"):
-                    txt = st.text_area("Consegna Clinica")
-                    if st.form_submit_button("SALVA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), txt, "Infermiere", firma_op), True)
-                        st.rerun()
-            with t_ai:
+
+            with t_ai: # IA
                 st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
-                st.subheader("🪄 Analisi Clinica IA")
-                g_rel = st.slider("Analizza ultimi (giorni):", 7, 180, 30, key="slider_inf")
-                if st.button("GENERA RELAZIONE PERIODICA", key="btn_inf_ia"):
-                    with st.spinner("Analisi in corso..."):
-                        res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
-                        st.markdown(res_ai)
+                if st.button("GENERA SINTESI IA"):
+                    st.write(genera_relazione_ia(p_id, p_sel, 7))
                 st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Psicologo":
