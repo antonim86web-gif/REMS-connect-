@@ -307,31 +307,29 @@ elif nav == "👥 Modulo Equipe":
                             st.success("Nota registrata con successo.")
                             st.rerun()
 
-            with t2:
-        st.subheader("💊 Monitoraggio Somministrazioni e Prescrizione")
+           with t2:
+            st.subheader("💊 Monitoraggio Somministrazioni e Prescrizione") # <-- 4 SPAZI RISPETTO AL WITH
 
-        # --- PARTE 1: IL MONITORAGGIO IN TEMPO REALE ---
-        st.markdown("#### 📊 Aderenza Terapia (Ultime 48h)")
-        
-        # Query per recuperare le smarcature degli infermieri
-        query_m = "SELECT data, nota, op FROM eventi WHERE id=? AND (nota LIKE '%Somministrato%' OR nota LIKE '%RIFIUTATO%') ORDER BY id_u DESC LIMIT 20"
-        dati_m = db_run(query_m, (p_id,))
+            # --- PARTE 1: IL MONITORAGGIO IN TEMPO REALE ---
+            st.markdown("#### 📊 Aderenza Terapia (Ultime 48h)")
+            
+            # Qui tutto il resto del codice deve avere lo stesso rientro...
+            query_m = "SELECT data, nota, op FROM eventi WHERE id=? AND (nota LIKE '%Somministrato%' OR nota LIKE '%RIFIUTATO%') ORDER BY id_u DESC LIMIT 20"
+            dati_m = db_run(query_m, (p_id,))
 
-        if dati_m:
-            tab_m = []
-            for d, n, o in dati_m:
-                st_icon = "✅" if "Somministrato" in n else "❌"
-                tab_m.append({
-                    "Data/Ora": d,
-                    "Esito": st_icon,
-                    "Dettaglio": n.replace("Somministrato: ", "").replace("RIFIUTATO: ", ""),
-                    "Infermiere": o
-                })
-            st.table(tab_m)
-        else:
-            st.info("ℹ️ Nessuna somministrazione recente registrata.")
-        
-        st.divider()
+            if dati_m:
+                tab_m = []
+                for d, n, o in dati_m:
+                    st_icon = "✅" if "Somministrato" in n else "❌"
+                    tab_m.append({
+                        "Data/Ora": d,
+                        "Esito": st_icon,
+                        "Dettaglio": n.replace("Somministrato: ", "").replace("RIFIUTATO: ", ""),
+                        "Infermiere": o
+                    })
+                st.table(tab_m)
+            else:
+                st.info("ℹ️ Nessuna somministrazione recente registrata.")
 
         
                 st.subheader("Gestione Terapia Farmacologica")
