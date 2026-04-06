@@ -1,26 +1,74 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
-import calendar
-from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
-from groq import Groq # <--- Per l'IA di Groq
+from datetime import datetime
+import io
 
-# Configurazione Groq
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+# --- 1. FUNZIONE ESECUZIONE DATABASE ---
+# Questa funzione è il motore: gestisce apertura, esecuzione e chiusura sicura.
+def db_run(query, params=(), commit=False):
+    conn = sqlite3.connect("rems.db", check_same_thread=False)
+    cur = conn.cursor()
+    try:
+        cur.execute(query, params)
+        if commit:
+            conn.commit()
+        return cur.fetchall()
+    except Exception as e:
+        st.error(f"Errore DB: {e}")
+        return []
+    finally:
+        conn.close()
 
-
-# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
+# --- 2. AGGIORNAMENTO STRUTTURA DATABASE (MIGRAZIONE) ---
+# Fondamentale per aggiungere colonne senza cancellare i dati esistenti
 def aggiorna_struttura_db():
-    conn = sqlite3.connect('rems_final_v12.db')
+    conn = sqlite3.connect("rems.db")
     c = conn.cursor()
-    # Colonne per eventi
-    try: c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
-    except: pass
-    try: c.execute("ALTER TABLE eventi ADD COLUMN figura_professionale TEXT")
-    except: pass
-    try: c.execute("ALTER TABLE eventi ADD COLUMN esito TEXT")
-    except: pass
+    
+    # Crea le tabelle se non esistono
+    c.execute('''CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)''')
+
+    # AGGIUNTA COLONNE MANCANTI (per evitare l'errore "no such column")
+    colonne_terapie = {
+        "orari": "TEXT",
+        "mat_nuovo": "INTEGER DEFAULT 0",
+        "pom_nuovo": "INTEGER DEFAULT 0",
+        "al_bisogno": "INTEGER DEFAULT 0"
+    }
+    
+    for colonna, tipo in colonne_terapie.items():
+        try:
+            c.execute(f"ALTER TABLE terapie ADD COLUMN {colonna} {tipo}")
+        except sqlite3.OperationalError:
+            # Se la colonna esiste già, ignoriamo l'errore
+            pass
+            
+    conn.commit()
+    conn.close()
+
+# --- 3. INIZIALIZZAZIONE ---
+# Eseguiamo l'aggiornamento appena l'app parte
+aggiorna_struttura_db()
+
+# Esempio di inizializzazione variabili di sessione per evitare AttributeError
+if 'ruolo_corr' not in st.session_state:
+    st.session_state.ruolo_corr = None
+if 'firma_op' not in st.session_state:
+    st.session_state.firma_op = "Anonimo"
+
+# --- 4. GESTIONE PAZIENTE SELEZIONATO ---
+# Supponiamo che tu abbia già una lista pazienti o la carichi qui
+pazienti_raw = db_run("SELECT id, nome FROM pazienti")
+lista_pazienti = {p[1]: p[0] for p in pazienti_raw} if pazienti_raw else {"Esempio Paziente": 1}
+
+st.sidebar.title("🏥 REMS Connect")
+p_sel = st.sidebar.selectbox("Seleziona Paziente", list(lista_pazienti.keys()))
+p_id = lista_pazienti[p_sel]
+firma_op = st.session_state.firma_op
+ruolo_corr = st.session_state.ruolo_corr
     
     # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
     try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
