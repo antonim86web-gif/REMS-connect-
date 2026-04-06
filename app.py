@@ -1,17 +1,16 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
+import hashlib
 import calendar
-from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
-import io
-from groq import Groq # <--- Per l'IA di Groq
+from datetime import datetime, timedelta, timezone
+from groq import Groq
 
-# Configurazione Groq
+# --- 1. CONFIGURAZIONE GROQ ---
+# Assicurati di avere la chiave nei secrets di Streamlit
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- 1. FUNZIONE ESECUZIONE DATABASE ---
-# Questa funzione è il motore: gestisce apertura, esecuzione e chiusura sicura.
+# --- 2. FUNZIONE ESECUZIONE DATABASE ---
 def db_run(query, params=(), commit=False):
     conn = sqlite3.connect("rems.db", check_same_thread=False)
     cur = conn.cursor()
@@ -26,81 +25,56 @@ def db_run(query, params=(), commit=False):
     finally:
         conn.close()
 
-# --- 2. AGGIORNAMENTO STRUTTURA DATABASE (MIGRAZIONE) ---
-# Fondamentale per aggiungere colonne senza cancellare i dati esistenti
+# --- 3. FUNZIONE AGGIORNAMENTO DB (UNIFICATA) ---
 def aggiorna_struttura_db():
     conn = sqlite3.connect("rems.db")
     c = conn.cursor()
-    # Creazione tabelle
+    
+    # Creazione tabelle base
     c.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)")
-    # Aggiornamento colonne (Allineamento identico a c.execute sopra)
-    try:
-        c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
-    except:
-        pass
-    try:
-        c.execute("ALTER TABLE terapie ADD COLUMN orari TEXT")
-    except:
-        pass
-    try:
-        c.execute("ALTER TABLE terapie ADD COLUMN mat_nuovo INTEGER DEFAULT 0")
-    except:
-        pass
-    try:
-        c.execute("ALTER TABLE terapie ADD COLUMN pom_nuovo INTEGER DEFAULT 0")
-    except:
-        pass
-    try:
-        c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
-    except:
-        pass
+
+    # Aggiornamento colonne (Tutte dentro la funzione, allineate correttamente)
+    colonne = [
+        ("pazienti", "stato", "TEXT DEFAULT 'ATTIVO'"),
+        ("terapie", "orari", "TEXT"),
+        ("terapie", "mat_nuovo", "INTEGER DEFAULT 0"),
+        ("terapie", "pom_nuovo", "INTEGER DEFAULT 0"),
+        ("terapie", "al_bisogno", "INTEGER DEFAULT 0"),
+        ("eventi", "tipo_evento", "TEXT"),
+        ("eventi", "figura_professionale", "TEXT"),
+        ("eventi", "esito", "TEXT")
+    ]
+    
+    for tabella, colonna, tipo in colonne:
+        try:
+            c.execute(f"ALTER TABLE {tabella} ADD COLUMN {colonna} {tipo}")
+        except:
+            pass # La colonna esiste già
+            
     conn.commit()
     conn.close()
 
-# --- 3. INIZIALIZZAZIONE ---
-# Eseguiamo l'aggiornamento appena l'app parte
+# --- 4. INIZIALIZZAZIONE ---
 aggiorna_struttura_db()
 
-# Esempio di inizializzazione variabili di sessione per evitare AttributeError
 if 'ruolo_corr' not in st.session_state:
     st.session_state.ruolo_corr = None
 if 'firma_op' not in st.session_state:
     st.session_state.firma_op = "Anonimo"
 
-# --- 4. GESTIONE PAZIENTE SELEZIONATO ---
-# Supponiamo che tu abbia già una lista pazienti o la carichi qui
-pazienti_raw = db_run("SELECT id, nome FROM pazienti")
+# --- 5. LOGICA SELEZIONE PAZIENTE ---
+pazienti_raw = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
 lista_pazienti = {p[1]: p[0] for p in pazienti_raw} if pazienti_raw else {"Esempio Paziente": 1}
 
 st.sidebar.title("🏥 REMS Connect")
 p_sel = st.sidebar.selectbox("Seleziona Paziente", list(lista_pazienti.keys()))
 p_id = lista_pazienti[p_sel]
+
+# Variabili pronte per l'uso
 firma_op = st.session_state.firma_op
 ruolo_corr = st.session_state.ruolo_corr
-    
-    # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
-    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
-    except: pass
-    
-    # --- NUOVE COLONNE TERAPIA PER ORARI SPECIFICI ---
-    try: c.execute("ALTER TABLE terapie ADD COLUMN mat_nuovo INTEGER DEFAULT 0")
-    except: pass
-    try: c.execute("ALTER TABLE terapie ADD COLUMN pom_nuovo INTEGER DEFAULT 0")
-    except: pass
-    try: c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
-    except: pass
-    
-    # Tabella Log per Tracciabilità Legale
-    c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
-                 id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
-                 data_ora TEXT, 
-                 utente TEXT, 
-                 azione TEXT, 
-                 dettaglio TEXT)""")
-    conn.commit()
-    conn.close()
 
 aggiorna_struttura_db()
 
