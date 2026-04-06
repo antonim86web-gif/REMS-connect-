@@ -346,14 +346,13 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"<div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap;'><b>🧠 VALUTAZIONE IA:</b><br><br>{relazione}</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
-            # 1. Definizione dei 5 Tab (Incluso Briefing e IA)
+            import calendar  # Risolve il NameError per il calendario
             t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 
-                # Recupero terapie attive
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 if not terapie_keep:
@@ -362,7 +361,6 @@ elif nav == "👥 Modulo Equipe":
                 for f in terapie_keep:
                     t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
                     
-                    # Filtro turno
                     mostra = False
                     if turno_attivo == "8:13 (Mattina)" and f[3] == 1: mostra = True
                     elif turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1: mostra = True
@@ -371,14 +369,14 @@ elif nav == "👥 Modulo Equipe":
                     if mostra:
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         
-                        # Recupero firme con Tag ID [ID] per evitare sovrascritture
                         mese_corrente = get_now_it().strftime('%m/%Y')
+                        # Recupero dati includendo l'operatore (op) e la data completa
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
                         
-                        f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
+                        # Creazione mappa dati per il calendario (giorno: {esito, operatore, orario})
+                        f_map = {int(d[0].split("/")[0]): {"d_estesa": d[0], "e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
                         
-                        import calendar
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
                         h = "<div class='scroll-giorni'>"
@@ -386,128 +384,64 @@ elif nav == "👥 Modulo Equipe":
                             info = f_map.get(d)
                             is_today = "q-oggi" if d == get_now_it().day else ""
                             esito_txt, col_t, bg_c = ("-", "#888", "white")
-                            if info:
-                                if info['e'] == "A": esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
-                                elif info['e'] == "R": esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
+                            testo_popup = f"Giorno {d}: Nessun dato"
                             
-                            h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t};'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
+                            if info:
+                                ora_s = info['d_estesa'].split(" ")[1] if " " in info['d_estesa'] else ""
+                                if info['e'] == "A":
+                                    esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
+                                    testo_popup = f"✅ ASSUNTO\nOre: {ora_s}\nOp: {info['o']}"
+                                elif info['e'] == "R":
+                                    esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
+                                    testo_popup = f"❌ RIFIUTATO\nOre: {ora_s}\nOp: {info['o']}"
+                            
+                            # L'attributo 'title' crea il pop-up al passaggio del mouse
+                            h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t}; cursor:help;' title='{testo_popup}'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
-                        # --- BOTTONI DI SMARCAMENTO CON FIRMA ---
-                        with st.popover(f"Registra Somministrazione: {nome_f}"):
-                            col_a, col_r = st.columns(2)
+                        with st.popover(f"Smarca {nome_f}"):
+                            c1, c2 = st.columns(2)
+                            op_sicuro = st.session_state.get('user', 'Operatore') # Recupero firma
                             
-                            # Recupero firma operatore di sicurezza
-                            operatore_attuale = st.session_state.get('user', 'Operatore Non Identificato')
-                            
-                            # Azione ASSUNTO
-                            if col_a.button("✅ ASSUNTO", key=f"btn_ok_{t_id_univoco}_{turno_attivo}"):
-                                # Costruiamo la nota con Tag ID, Nome Farmaco e Turno
+                            if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} {dose_f} ({turno_attivo})"
-                                
-                                # Esecuzione Query: passiamo 'operatore_attuale' come firma
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", operatore_attuale, "A"), True)
-                                
-                                scrivi_log("TERAPIA", f"Smarcato {nome_f} (ID:{t_id_univoco}) da {operatore_attuale}")
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", op_sicuro, "A"), True)
                                 st.rerun()
-                            
-                            # Azione RIFIUTATO
-                            if col_r.button("❌ RIFIUTO", key=f"btn_ko_{t_id_univoco}_{turno_attivo}"):
+                            if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
-                                
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", operatore_attuale, "R"), True)
-                                
-                                scrivi_log("TERAPIA", f"Rifiuto {nome_f} (ID:{t_id_univoco}) registrato da {operatore_attuale}")
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", op_sicuro, "R"), True)
                                 st.rerun()
+                        st.divider()
 
             with t2: # Parametri
                 with st.form("vit_inf"):
-                    pa, fc, sat = st.columns(3)
-                    p_val = pa.text_input("PA"); f_val = fc.text_input("FC"); s_val = sat.text_input("SatO2")
+                    c1, c2, c3 = st.columns(3)
+                    p_val = c1.text_input("PA"); f_val = c2.text_input("FC"); s_val = c3.text_input("SatO2")
                     if st.form_submit_button("SALVA PARAMETRI"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", firma_op), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", st.session_state.get('user', 'Op')), True)
                         st.rerun()
 
             with t3: # Consegne
                 with st.form("cons_inf"):
                     txt_c = st.text_area("Nota Clinica")
                     if st.form_submit_button("SALVA CONSEGNA"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", firma_op), True)
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", st.session_state.get('user', 'Op')), True)
                         st.rerun()
 
-            with t4: # --- BRIEFING POTENZIATO DA IA ---
-                st.subheader("📋 Briefing Clinico Intelligente")
-                
-                # 1. Recupero dati ultime 24 ore per l'IA
-                ieri_iso = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
-                dati_briefing = db_run("""SELECT ruolo, op, nota FROM eventi 
-                                        WHERE id=? AND data >= ? 
-                                        ORDER BY id_u DESC""", (p_id, ieri_iso))
-                
-                # 2. Pulsante per generare la sintesi IA
-                if st.button("🪄 GENERA SINTESI IA (LAST 24H)", key="btn_brief_ia"):
-                    if dati_briefing:
-                        testo_per_ia = "\n".join([f"[{r}] {o}: {n}" for r, o, n in dati_briefing])
-                        with st.spinner("L'IA sta analizzando i passaggi di consegna..."):
-                            try:
-                                prompt_briefing = f"""
-                                Analizza questi eventi delle ultime 24h per il paziente {p_sel}. 
-                                Crea un briefing rapidissimo per il cambio turno infermieristico:
-                                - CRITICITÀ (Rifiuti farmaci, urgenze, note OPSI)
-                                - ANDAMENTO (Comportamento, parametri)
-                                - DA MONITORARE (Cosa deve fare il turno montante)
-                                Sii professionale e sintetico.
-                                Dati: {testo_per_ia}
-                                """
-                                
-                                response = client.chat.completions.create(
-                                    model="llama-3.3-70b-versatile",
-                                    messages=[
-                                        {"role": "system", "content": "Sei il coordinatore clinico di una REMS. Fornisci briefing precisi."},
-                                        {"role": "user", "content": prompt_briefing}
-                                    ],
-                                )
-                                sintesi = response.choices[0].message.content
-                                st.markdown(f"<div class='ai-box' style='border-color:#2563eb;'>{sintesi}</div>", unsafe_allow_html=True)
-                            except Exception as e:
-                                st.error(f"Errore IA: {e}")
-                    else:
-                        st.warning("Nessun dato registrato nelle ultime 24 ore per generare la sintesi.")
-
-                st.divider()
-                
-                # 3. Visualizzazione Log Raw (Cronologia delle ultime 24h)
-                st.markdown("### 🕒 Cronologia Recente")
-                for d_b, op_b, nt_b in db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri_iso)):
-                    # Allerta visiva per rifiuti o note flash
+            with t4: # Briefing (24h)
+                st.subheader("📋 Briefing Turno (Last 24h)")
+                ieri = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
+                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri))
+                for d_b, op_b, nt_b in b_logs:
                     bg = "#fff1f2" if any(x in nt_b for x in ["RIFIUTO", "⚠️", "❌"]) else "#f8fafc"
-                    st.markdown(f"""
-                        <div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:8px;'>
-                            <small><b>{d_b} - {op_b}</b></small><br>{nt_b}
-                        </div>
-                    """, unsafe_allow_html=True)
-                
-                # Nota Flash per il briefing (sempre utile)
-                with st.popover("➕ Aggiungi Nota Flash Urgent"):
-                    n_f = st.text_input("Nota rapida per i colleghi")
-                    if st.button("PUBBLICA NEL BRIEFING", key="flash_brief"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"⚠️ [BRIEFING] {n_f}", "Infermiere", firma_op), True)
-                        st.rerun()
-                
-                with st.popover("➕ Nota Flash Briefing"):
-                    n_f = st.text_input("Urgenza")
-                    if st.button("PUBBLICA"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"⚠️ [BRIEFING] {n_f}", "Infermiere", firma_op), True)
-                        st.rerun()
+                    st.markdown(f"<div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:5px;'><small><b>{d_b} - {op_b}</b></small><br>{nt_b}</div>", unsafe_allow_html=True)
 
-            with t_ai: # IA
-                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
-                if st.button("GENERA SINTESI IA"):
-                    st.write(genera_relazione_ia(p_id, p_sel, 7))
-                st.markdown("</div>", unsafe_allow_html=True)
+            with t_ai: # Relazione IA
+                st.subheader("🤖 Sintesi IA")
+                if st.button("GENERA REPORT"):
+                    with st.spinner("Analisi..."):
+                        report = genera_relazione_ia(p_id, p_sel, 7)
+                        st.markdown(f"<div style='background:#f0f7ff; border-left:5px solid #2563eb; padding:15px; border-radius:8px; color:#1e3a8a; white-space:pre-wrap;'><b>SINTESI IA:</b><br><br>{report}</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
