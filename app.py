@@ -7,11 +7,11 @@ from datetime import datetime, timedelta, timezone
 from groq import Groq
 
 # --- 1. CONFIGURAZIONE GROQ ---
-# Assicurati di avere la chiave nei secrets di Streamlit
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- 2. FUNZIONE ESECUZIONE DATABASE ---
+# --- 2. FUNZIONE ESECUZIONE DATABASE (CORRETTA) ---
 def db_run(query, params=(), commit=False):
+    # Usiamo 'rems.db' come database principale
     conn = sqlite3.connect("rems.db", check_same_thread=False)
     cur = conn.cursor()
     try:
@@ -20,22 +20,23 @@ def db_run(query, params=(), commit=False):
             conn.commit()
         return cur.fetchall()
     except Exception as e:
-        st.error(f"Errore DB: {e}")
+        # Questo ci dirà esattamente cosa non va se fallisce
+        st.error(f"Errore critico DB: {e}")
         return []
     finally:
         conn.close()
 
-# --- 3. FUNZIONE AGGIORNAMENTO DB (UNIFICATA) ---
+# --- 3. FUNZIONE AGGIORNAMENTO DB (COPIA QUESTA) ---
 def aggiorna_struttura_db():
     conn = sqlite3.connect("rems.db")
     c = conn.cursor()
     
-    # Creazione tabelle base
+    # Crea tabelle base
     c.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)")
 
-    # Aggiornamento colonne (Tutte dentro la funzione, allineate correttamente)
+    # Aggiornamento colonne (TUTTE INSIEME)
     colonne = [
         ("pazienti", "stato", "TEXT DEFAULT 'ATTIVO'"),
         ("terapie", "orari", "TEXT"),
@@ -51,32 +52,35 @@ def aggiorna_struttura_db():
         try:
             c.execute(f"ALTER TABLE {tabella} ADD COLUMN {colonna} {tipo}")
         except:
-            pass # La colonna esiste già
+            pass # Colonna già esistente
             
     conn.commit()
     conn.close()
 
-# --- 4. INIZIALIZZAZIONE ---
+# --- 4. ESECUZIONE AGGIORNAMENTO ---
+# Chiamiamo la funzione subito per riparare il DB
 aggiorna_struttura_db()
 
+# --- 5. INIZIALIZZAZIONE SESSIONE ---
 if 'ruolo_corr' not in st.session_state:
     st.session_state.ruolo_corr = None
 if 'firma_op' not in st.session_state:
-    st.session_state.firma_op = "Anonimo"
+    st.session_state.firma_op = "Operatore"
 
-# --- 5. LOGICA SELEZIONE PAZIENTE ---
+# --- 6. RECUPERO DATI PAZIENTE ---
 pazienti_raw = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
-lista_pazienti = {p[1]: p[0] for p in pazienti_raw} if pazienti_raw else {"Esempio Paziente": 1}
+if not pazienti_raw:
+    # Se il DB è vuoto, inseriamo un paziente di test per non far crashare l'app
+    db_run("INSERT INTO pazienti (nome, stato) VALUES (?, ?)", ("Esempio Paziente", "ATTIVO"), True)
+    pazienti_raw = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
 
-st.sidebar.title("🏥 REMS Connect")
+lista_pazienti = {p[1]: p[0] for p in pazienti_raw}
 p_sel = st.sidebar.selectbox("Seleziona Paziente", list(lista_pazienti.keys()))
 p_id = lista_pazienti[p_sel]
 
-# Variabili pronte per l'uso
-firma_op = st.session_state.firma_op
+# Variabili pronte per il resto del codice
 ruolo_corr = st.session_state.ruolo_corr
-
-aggiorna_struttura_db()
+firma_op = st.session_state.firma_op
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
