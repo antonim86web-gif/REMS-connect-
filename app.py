@@ -32,26 +32,33 @@ def aggiorna_struttura_db():
     conn = sqlite3.connect("rems.db")
     c = conn.cursor()
     
-    # Crea le tabelle se non esistono
+    # 1. Creazione Tabelle Base (Allineamento a 4 spazi)
     c.execute('''CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)''')
 
-    # AGGIUNTA COLONNE MANCANTI (per evitare l'errore "no such column")
-    colonne_terapie = {
-        "orari": "TEXT",
-        "mat_nuovo": "INTEGER DEFAULT 0",
-        "pom_nuovo": "INTEGER DEFAULT 0",
-        "al_bisogno": "INTEGER DEFAULT 0"
-    }
+    # 2. Aggiornamento Colonne (TUTTE ALLINEATE PERFETTAMENTE)
+    try:
+        c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE terapie ADD COLUMN orari TEXT")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE terapie ADD COLUMN mat_nuovo INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE terapie ADD COLUMN pom_nuovo INTEGER DEFAULT 0")
+    except:
+        pass
+    try:
+        c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
+    except:
+        pass
     
-    for colonna, tipo in colonne_terapie.items():
-        try:
-            c.execute(f"ALTER TABLE terapie ADD COLUMN {colonna} {tipo}")
-        except sqlite3.OperationalError:
-            # Se la colonna esiste già, ignoriamo l'errore
-            pass
-            
     conn.commit()
     conn.close()
 
