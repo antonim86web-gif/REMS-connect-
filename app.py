@@ -351,34 +351,28 @@ elif nav == "👥 Modulo Equipe":
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+                # 1. Recupero firma "REALE" dall'interfaccia o dalla sessione
+                nome_loggato = st.session_state.get('user', st.session_state.get('username', 'Operatore'))
                 
+                turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 for f in terapie_keep:
                     t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
                     
-                    # Logica Filtro Turno
                     mostra = (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or \
                              (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or \
                              (turno_attivo == "Al bisogno" and f[5] == 1)
                     
                     if mostra:
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
-                        
                         mese_corrente = get_now_it().strftime('%m/%Y')
-                        # Recupero firme: data (0), esito (1), op (2)
+                        
+                        # Recupero dati: Data (0), Esito (1), Operatore (2)
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
                         
-                        # Creazione mappa con salvataggio dati per il popup
-                        f_map = {}
-                        for d in firme:
-                            try:
-                                giorno = int(d[0].split("/")[0])
-                                f_map[giorno] = {"full_date": d[0], "esito": d[1], "operatore": d[2] if d[2] else "Operatore"}
-                            except: continue
-                        
+                        f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
                         h = "<div class='scroll-giorni'>"
@@ -386,35 +380,35 @@ elif nav == "👥 Modulo Equipe":
                             info = f_map.get(d)
                             is_today = "q-oggi" if d == get_now_it().day else ""
                             esito_txt, col_t, bg_c = ("-", "#888", "white")
-                            testo_popup = f"Giorno {d}: Nessun dato"
+                            t_pop = f"Giorno {d}: Libero"
                             
                             if info:
-                                ora_s = info['full_date'].split(" ")[1] if " " in info['full_date'] else "--:--"
-                                nome_op = info['operatore']
-                                if info['esito'] == "A":
+                                ora_s = info['full'].split(" ")[1] if " " in info['full'] else ""
+                                op_f = info['o'] if info['o'] else "Non firmato"
+                                if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
-                                    testo_popup = f"✅ ASSUNTO\n🕒 Ore: {ora_s}\n👤 Firma: {nome_op}"
-                                elif info['esito'] == "R":
+                                    t_pop = f"✅ ASSUNTO\nOre: {ora_s}\nFirma: {op_f}"
+                                elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
-                                    testo_popup = f"❌ RIFIUTATO\n🕒 Ore: {ora_s}\n👤 Firma: {nome_op}"
+                                    t_pop = f"❌ RIFIUTATO\nOre: {ora_s}\nFirma: {op_f}"
                             
-                            h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t}; cursor:help;' title='{testo_popup}'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
+                            # Rimosso il punto interrogativo (cursor:default) e reso il popup attivo su tutto il quadrato
+                            h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t}; cursor:default; width:100%; height:100%;' title='{t_pop}'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
+                        
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
                         with st.popover(f"Smarca {nome_f}"):
-                            # Recupero firma attiva dalla sessione di login
-                            firma_corrente = st.session_state.get('user', st.session_state.get('username', 'Utente Rems'))
-                            
                             c1, c2 = st.columns(2)
+                            # Smarcamento con firma sicura
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} {dose_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_corrente, "A"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_loggato, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_corrente, "R"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_loggato, "R"), True)
                                 st.rerun()
                         st.divider()
 
