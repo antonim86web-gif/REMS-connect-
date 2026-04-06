@@ -392,18 +392,19 @@ elif nav == "👥 Modulo Equipe":
                 st.subheader("💊 Gestione Terapia Farmacologica")
                 
                 # --- VISUALIZZAZIONE TERAPIE ATTUALI ---
-                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-                if terapie_attuali:
-            # riga 397: DEVE ESSERE PIÙ A DESTRA DI 'if'
+                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
+        
+        if terapie_attuali:
             for t in terapie_attuali:
-                c1, c2 = st.columns([4, 1])
-                # t[6] è la data che abbiamo aggiunto nella SELECT
+                c1, c2 = st.columns([0.8, 0.2])
+                # t[6] è la data che abbiamo aggiunto
                 info_ter = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'})"
                 c1.info(info_ter)
-                
                 if c2.button("🗑️", key=f"del_med_{t[0]}"):
                     db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
                     st.rerun()
+        else:
+            st.write("Nessuna terapia attiva.")
                 
                 st.divider()
 
