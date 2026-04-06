@@ -335,7 +335,7 @@ elif nav == "👥 Modulo Equipe":
                             st.rerun()
 
             with t2: # Tab Terapia
-    st.subheader("Gestione Terapia Farmacologica")
+                st.subheader("Gestione Terapia Farmacologica")
     # Carichiamo le terapie usando i nomi delle colonne corretti
     terapie = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
     
@@ -350,6 +350,7 @@ elif nav == "👥 Modulo Equipe":
             if st.button(f"Elimina {t[1]}", key=f"del_t_{t[0]}"):
                 db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
                 st.rerun()
+    
 
     st.divider()
     with st.expander("➕ Prescrivi Nuovo Farmaco"):
