@@ -8,22 +8,39 @@ from groq import Groq # <--- Per l'IA di Groq
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-#from fpdf import FPDF
+from fpdf import FPDF
 
-def genera_pdf_paziente(p_nome, eventi):
+def genera_pdf_clinico(p_nome, dati_clinici):
     pdf = FPDF()
     pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Intestazione Professionale
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(190, 10, f"Diario Clinico: {p_nome}", ln=True, align='C')
+    pdf.cell(0, 10, "REMS-CONNECT - DIARIO CLINICO", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, f"Paziente: {p_nome}", ln=True, align='L')
+    pdf.set_font("Arial", 'I', 9)
+    pdf.cell(0, 10, f"Generato il: {get_now_it().strftime('%d/%m/%Y %H:%M')}", ln=True, align='L')
+    pdf.ln(5)
+    pdf.line(10, 45, 200, 45)
     pdf.ln(10)
-    pdf.set_font("Arial", size=10)
-    for data, ruolo, op, nota in eventi:
+
+    # Ciclo sui dati del diario
+    for data, op, nota in dati_clinici:
         pdf.set_font("Arial", 'B', 10)
-        pdf.cell(190, 7, f"{data} - {op} ({ruolo})", ln=True)
+        # Riga Intestazione Nota (Data e Operatore)
+        pdf.set_fill_color(240, 240, 240)
+        pdf.cell(0, 7, f"Data: {data} | Operatore: {op}", ln=True, fill=True)
+        
+        # Testo della Nota
         pdf.set_font("Arial", size=10)
-        pdf.multi_cell(190, 7, f"{nota}")
-        pdf.ln(2)
-    return pdf.output(dest='S').encode('latin-1')
+        # Multi_cell gestisce l'andata a capo automatica per note lunghe
+        pdf.multi_cell(0, 7, f"{nota}")
+        pdf.ln(4)
+        
+    # Restituisce il PDF come pacchetto di byte
+    return pdf.output(dest='S')
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
