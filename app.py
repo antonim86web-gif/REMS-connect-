@@ -442,6 +442,16 @@ elif nav == "👥 Modulo Equipe":
             with t4:
                 st.subheader("📋 Briefing Intelligente (IA)")
                 
+                # --- TEST DI DEBUG (Aggiungi queste 3 righe qui) ---
+                conteggio_totale = db_run("SELECT count(*) FROM eventi WHERE id=?", (p_id,))
+                st.write(f"🔍 **DEBUG DATABASE:** Trovate in totale `{conteggio_totale[0][0]}` note storiche per questo ID Paziente ({p_id}).")
+                # --------------------------------------------------
+
+                # Ora segue il resto del codice del briefing...
+                raw_data = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
+                # ... (il resto del codice che abbiamo scritto prima)
+                st.subheader("📋 Briefing Intelligente (IA)")
+                
                 # 1. Recupero dati: prendiamo le ultime 100 note per questo specifico paziente
                 raw_data = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
                 
