@@ -812,13 +812,28 @@ elif nav == "⚙️ Admin":
 
     with t_diar:
         lista_p = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
-        filtro_p = st.selectbox("Filtra per Paziente:", ["TUTTI"] + [p[1] for p in lista_p])
-        query_log = "SELECT e.data, e.ruolo, e.op, e.nota, p.nome FROM eventi e JOIN pazienti p ON e.id = p.id"
+        filtro_p = st.selectbox("Filtra per Paziente:", ["*TUTTI*"] + [p[1] for p in lista_p])
+        
+        # Recuperiamo anche e.id_u per poter eliminare la riga specifica
+        query_log = "SELECT e.data, e.ruolo, e.op, e.nota, p.nome, e.id_u FROM eventi e JOIN pazienti p ON e.id = p.id"
         params_log = []
-        if filtro_p != "TUTTI": query_log += " WHERE p.nome = ?"; params_log.append(filtro_p)
+        
+        if filtro_p != "*TUTTI*":
+            query_log += " WHERE p.nome = ?"
+            params_log.append(filtro_p)
+            
         tutti_log = db_run(query_log + " ORDER BY e.id_u DESC LIMIT 100", tuple(params_log))
-        for ldt, lru, lop, lnt, lpnome in tutti_log:
-            st.text(f"[{ldt}] {lpnome} | {lop} ({lru}): {lnt}")
+        
+        for ldt, lru, lop, lnt, lpnome, lidu in tutti_log:
+            c1, c2 = st.columns([0.85, 0.15])
+            # Mostriamo il testo dell'evento
+            c1.write(f"**[{ldt}]** {lpnome} | {lop} ({lru}): {lnt}")
+            
+            # Tasto Elimina per l'Admin
+            if c2.button("🗑️", key=f"del_adm_{lidu}"):
+                db_run("DELETE FROM eventi WHERE id_u=?", (lidu,), True)
+                st.rerun()
+            st.divider()
 
     with t_log:
         logs_audit = db_run("SELECT data_ora, utente, azione, dettaglio FROM logs_sistema ORDER BY id_log DESC LIMIT 200")
