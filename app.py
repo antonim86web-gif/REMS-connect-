@@ -58,7 +58,7 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
         pdf.ln(4)
         
     # Restituisce il PDF come pacchetto di byte
-    return pdf.output(dest='S')
+    return pdf.output()
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
