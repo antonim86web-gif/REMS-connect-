@@ -442,57 +442,65 @@ elif nav == "👥 Modulo Equipe":
             with t4:
                 st.subheader("📋 Briefing Intelligente (IA)")
                 
-                # 1. Recuperiamo le ultime 50 note del paziente per essere sicuri di coprire le 24h
-                tutte_le_note = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 50", (p_id,))
+                # 1. Recupero dati: prendiamo le ultime 100 note per questo specifico paziente
+                raw_data = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
                 
-                # 2. Filtro temporale manuale (più robusto di SQL per le stringhe)
                 b_logs = []
-                adesso = get_now_it()
-                limite_24h = adesso - timedelta(hours=24)
+                now = get_now_it()
+                h24 = now - timedelta(hours=24)
 
-                for d_str, op_b, nt_b in tutte_le_note:
-                    try:
-                        # Gestiamo i vari formati possibili nel tuo DB
-                        for fmt in ("%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M"):
-                            try:
-                                data_dt = datetime.strptime(d_str, fmt)
-                                if data_dt >= limite_24h:
-                                    b_logs.append((d_str, op_b, nt_b))
-                                break # Se ha funzionato il primo formato, esce dal ciclo for fmt
-                            except: continue
-                    except: continue
+                if raw_data:
+                    for d_str, op_b, nt_b in raw_data:
+                        try:
+                            # Proviamo a convertire i formati data usati nel tuo sistema
+                            dt = None
+                            for fmt in ("%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M"):
+                                try:
+                                    dt = datetime.strptime(d_str, fmt)
+                                    break
+                                except: continue
+                            
+                            # Filtriamo solo le note scritte nelle ultime 24 ore
+                            if dt and dt >= h24:
+                                b_logs.append((d_str, op_b, nt_b))
+                        except: continue
 
+                # --- INTERFACCIA DI GENERAZIONE ---
                 if b_logs:
-                    st.success(f"Trovate {len(b_logs)} note cliniche nelle ultime 24 ore.")
+                    st.success(f"📈 Trovate {len(b_logs)} attività nelle ultime 24 ore.")
                     
-                    if st.button("🤖 GENERA RIASSUNTO TURNO (IA)", type="primary"):
-                        # Prepariamo il testo cronologico per l'IA
-                        testo_input = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
+                    if st.button("🤖 GENERA RIASSUNTO TURNO", type="primary", use_container_width=True):
+                        # Prepariamo il testo cronologico (dal più vecchio al più nuovo) per l'IA
+                        context_ia = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
                         
-                        with st.spinner("L'IA sta analizzando i dati..."):
-                            # Usiamo la tua funzione IA con la prompt per il cambio turno
-                            prompt_cambio_turno = (
-                                "Sei un assistente sanitario esperto. Riassumi le seguenti note cliniche "
-                                "per il cambio turno tra infermieri. Sii sintetico, indica se ci sono "
-                                f"stati problemi urgenti o rifiuti di farmaci:\n\n{testo_input}"
+                        with st.spinner("L'IA sta sintetizzando le consegne..."):
+                            # Prompt strutturata per un briefing professionale
+                            prompt_cmd = (
+                                "Agisci come un infermiere coordinatore. Riassumi le note cliniche delle ultime 24 ore "
+                                "per il briefing di cambio turno. Elenca in modo chiaro: \n"
+                                "1. Somministrazioni eseguite e eventuali rifiuti farmaci\n"
+                                "2. Variazioni rilevanti dei parametri vitali\n"
+                                "3. Note cliniche o eventi comportamentali di rilievo.\n"
+                                f"DATI DA ANALIZZARE:\n{context_ia}"
                             )
                             
-                            # Chiamata alla funzione IA (passiamo una nota finta per triggerare la prompt custom)
-                            sunto = genera_relazione_ia(p_id, "BRIEFING", 1, custom_prompt=prompt_cambio_turno)
+                            # Chiamata alla tua funzione IA
+                            sunto = genera_relazione_ia(p_id, "BRIEFING", 1, custom_prompt=prompt_cmd)
                             
-                            st.markdown(f"""
-                            <div style='background-color:#f0f7ff; border-left:5px solid #007bff; padding:15px; border-radius:8px; color:#1e3a8a;'>
-                                <b>Riassunto del Turno:</b><br>{sunto}
-                            </div>
-                            """, unsafe_allow_html=True)
+                            st.info("### 📝 Sunto IA del Turno")
+                            st.write(sunto)
+                            st.divider()
                     
-                    st.divider()
-                    st.caption("Dettaglio delle ultime note:")
-                    for d, o, n in b_logs:
-                        with st.expander(f"🕒 {d} - {o}"):
-                            st.write(n)
+                    # Mostriamo le note grezze sotto per validazione umana
+                    with st.expander("🔍 Visualizza note dettagliate (ultime 24h)"):
+                        for d, o, n in b_logs:
+                            st.write(f"**{d}** - *{o}*: {n}")
                 else:
-                    st.info("Nessuna nota registrata nelle ultime 24 ore per questo paziente.")
+                    # Questo avviso apparirà se il filtro non trova note recenti
+                    st.warning("⚠️ Nessuna nota trovata nelle ultime 24 ore.")
+                    st.info("💡 Prova a smarcare un farmaco o inserire una consegna ora per testare il briefing.")
+
+        
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
