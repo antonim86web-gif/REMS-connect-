@@ -8,7 +8,22 @@ from groq import Groq # <--- Per l'IA di Groq
 
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+from fpdf import FPDF
 
+def genera_pdf_paziente(p_nome, eventi):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(190, 10, f"Diario Clinico: {p_nome}", ln=True, align='C')
+    pdf.ln(10)
+    pdf.set_font("Arial", size=10)
+    for data, ruolo, op, nota in eventi:
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(190, 7, f"{data} - {op} ({ruolo})", ln=True)
+        pdf.set_font("Arial", size=10)
+        pdf.multi_cell(190, 7, f"{nota}")
+        pdf.ln(2)
+    return pdf.output(dest='S').encode('latin-1')
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def aggiorna_struttura_db():
@@ -278,9 +293,21 @@ if nav == "🗺️ Mappa Posti Letto":
 
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
-    for pid, nome in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
-        with st.expander(f"📁 SCHEDA PAZIENTE: {nome}"): 
-            render_postits(pid)
+    p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
+    
+    for pid, nome in p_lista:
+        with st.expander(f"📁 SCHEDA: {nome}"):
+            # Recupero eventi per il PDF e la visualizzazione
+            eventi = db_run("SELECT data, ruolo, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (pid,))
+            
+            col1, col2 = st.columns([4, 1])
+            with col2:
+                if eventi:
+                    pdf_data = genera_pdf_paziente(nome, eventi)
+                    st.download_button(f"📥 Scarica PDF", data=pdf_data, file_name=f"diario_{nome}.pdf", mime="application/pdf", key=f"pdf_{pid}")
+            
+            with col1:
+                render_postits(pid)
 
 elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
@@ -307,27 +334,37 @@ elif nav == "👥 Modulo Equipe":
                             st.success("Nota registrata con successo.")
                             st.rerun()
 
-            with t2:
-                st.subheader("Gestione Terapia Farmacologica")
-                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-                if terapie_attuali:
-                    for t in terapie_attuali:
-                        c1, c2 = st.columns([4, 1])
-                        c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
-                        if c2.button("🗑️", key=f"del_{t[0]}"):
-                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                            st.rerun()
-                
-                with st.expander("➕ Prescrivi Nuovo Farmaco"):
-                    with st.form("nuova_terapia"):
-                        f_nome = st.text_input("Nome Farmaco")
-                        f_dose = st.text_input("Dosaggio")
-                        col1, col2, col3 = st.columns(3)
-                        m_n, p_n, a_b = col1.checkbox("M"), col2.checkbox("P"), col3.checkbox("Bisogno")
-                        if st.form_submit_button("CONFERMA PRESCRIZIONE"):
-                            db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)",
-                                   (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0), True)
-                            st.rerun()
+            with t2: # Tab Terapia
+    st.subheader("Gestione Terapia Farmacologica")
+    # Carichiamo le terapie usando i nomi delle colonne corretti
+    terapie = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+    
+    for t in terapie:
+        with st.container():
+            st.markdown(f"""
+            <div style='background:#f1f5f9; padding:10px; border-radius:8px; border-left:5px solid #1e3a8a; margin-bottom:5px;'>
+                <b>💊 {t[1]}</b> - {t[2]} <br>
+                <small>Mattina: {'✅' if t[3] else '❌'} | Pomeriggio: {'✅' if t[4] else '❌'} | Al bisogno: {'✅' if t[5] else '❌'}</small>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button(f"Elimina {t[1]}", key=f"del_t_{t[0]}"):
+                db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                st.rerun()
+
+    st.divider()
+    with st.expander("➕ Prescrivi Nuovo Farmaco"):
+        with st.form("nuova_t"):
+            f_n = st.text_input("Farmaco")
+            d_n = st.text_input("Dose")
+            c1, c2, c3 = st.columns(3)
+            m = c1.checkbox("Mattina")
+            p = c2.checkbox("Pomeriggio")
+            b = c3.checkbox("Al bisogno")
+            if st.form_submit_button("REGISTRA PRESCRIZIONE"):
+                db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)", 
+                       (p_id, f_n, d_n, int(m), int(p), int(b)), True)
+                st.success("Farmaco aggiunto!")
+                st.rerun()
 
             with t3:
                 st.subheader("Esame Obiettivo")
