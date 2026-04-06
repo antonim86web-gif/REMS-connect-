@@ -336,25 +336,25 @@ elif nav == "👥 Modulo Equipe":
                     with st.spinner("L'intelligenza artificiale sta analizzando i diari..."):
                         res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
                         # Sostituisci: st.write(report) o st.info(report) con questo:
+                        st.markdown(f"""
+                        <div style="
+                        background-color: #f0f7ff; 
+                        border: 1px solid #2563eb; 
+                        border-left: 5px solid #2563eb;
+                        padding: 15px; 
+                        border-radius: 8px; 
+                        color: #1e3a8a;
+                        font-size: 0.95rem;
+                        line-height: 1.6;
+                        margin: 10px 0;
+                        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+                        white-space: pre-wrap;
+                        ">
+                        <b style="color: #2563eb;">🤖 SINTESI IA GENERATA:</b><br><br>
+                        {report}
+                        </div>
+                        """, unsafe_allow_html=True)    
 
-st.markdown(f"""
-    <div style="
-        background-color: #f0f7ff; 
-        border: 1px solid #2563eb; 
-        border-left: 5px solid #2563eb;
-        padding: 15px; 
-        border-radius: 8px; 
-        color: #1e3a8a;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin: 10px 0;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
-        white-space: pre-wrap;
-    ">
-        <b style="color: #2563eb;">🤖 SINTESI IA GENERATA:</b><br><br>
-        {report}
-    </div>
-""", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
             # 1. Definizione dei 5 Tab (Incluso Briefing e IA)
