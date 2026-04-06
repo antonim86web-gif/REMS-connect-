@@ -347,26 +347,26 @@ elif nav == "👥 Modulo Equipe":
 
         elif ruolo_corr == "Infermiere":
             import calendar 
+            from datetime import timedelta
             t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
             
+            # --- TEST DI IDENTIFICAZIONE SINCRONIZZATO ---
+            # Cerchiamo il nome che vedi nella sidebar (ALEX MARS) in tutte le variabili possibili
+            nome_reale = st.session_state.get('username') or \
+                         st.session_state.get('user') or \
+                         st.session_state.get('utente') or \
+                         "Operatore" 
+
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                
-                # --- RECUPERO IDENTITÀ REALE (Nome e Cognome) ---
-                # Proviamo tutte le varianti usate di solito nei sistemi Streamlit
-                nome_reale = st.session_state.get('username') or \
-                             st.session_state.get('user') or \
-                             st.session_state.get('nome_completo') or \
-                             st.session_state.get('name') or \
-                             "Operatore Non Identificato"
-                
-                st.info(f"👤 Operatore in turno: **{nome_reale}**")
+                st.markdown(f"✍️ Firma attiva: **{nome_reale}**") # Verifica qui se appare ALEX MARS
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 for f in terapie_keep:
                     t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
+                    # Filtro visibilità in base al turno selezionato
                     mostra = (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or \
                              (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or \
                              (turno_attivo == "Al bisogno" and f[5] == 1)
@@ -375,52 +375,47 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Recupero firme filtrate per ID farmaco e Turno specifico
+                        # Recupero firme filtrate per ID farmaco E Turno specifico
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%({turno_attivo})%", f"%/{mese_corrente}%"))
                         
                         f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # --- CALENDARIO CON FIRMA VISIBILE ---
+                        # --- CALENDARIO CON FIRMA NEL QUADRATINO ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 6px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
-                            esito_txt, col_t, bg_c, firma_quadratino = ("-", "#888", "white", "")
+                            esito_txt, col_t, bg_c, firma_q = ("-", "#888", "white", "")
                             
                             if info:
-                                firma_quadratino = info['o'] if info['o'] else "N.D."
-                                if info['e'] == "A":
-                                    esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
-                                elif info['e'] == "R":
-                                    esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
+                                firma_q = info['o'] if info['o'] else ""
+                                if info['e'] == "A": esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
+                                elif info['e'] == "R": esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
-                            # Quadratino largo per Nome e Cognome
                             h += f"""
                             <div style='min-width: 85px; height: 85px; background: {bg_c}; color: {col_t}; 
                                 {is_today} border-radius: 6px; display: flex; flex-direction: column; 
-                                align-items: center; justify-content: center; font-size: 0.75rem; 
-                                box-shadow: 1px 1px 3px rgba(0,0,0,0.1);'>
-                                <div style='font-weight: bold; color: #555;'>{d}</div>
+                                align-items: center; justify-content: center; font-size: 0.75rem;'>
+                                <div style='font-weight: bold;'>{d}</div>
                                 <div style='font-size: 1.2rem; font-weight: bold;'>{esito_txt}</div>
-                                <div style='font-size: 0.55rem; color: #333; margin-top: 4px; text-align: center; 
-                                    line-height: 1.1; width: 95%; overflow: hidden; font-weight: 600;'>{firma_quadratino}</div>
+                                <div style='font-size: 0.55rem; color: #333; margin-top: 4px; text-align: center; font-weight: 600;'>{firma_q}</div>
                             </div>"""
-                        
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
+                        # Tasti di smarcatura (Sostituiscono il popup se preferisci, o restano dentro)
                         with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
-                                nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
+                                nota_ins = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "A"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, "Infermiere", nome_reale, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
-                                nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
+                                nota_ins = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "R"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
 
