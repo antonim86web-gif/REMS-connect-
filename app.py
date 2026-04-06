@@ -441,32 +441,50 @@ elif nav == "👥 Modulo Equipe":
 
             with t4:
                 st.subheader("📋 Briefing Intelligente (IA)")
-                # Recupero note ultime 24 ore per l'IA
-                ieri = (get_now_it() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M")
-                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u ASC", (p_id, ieri))
                 
+                # 1. Recupero TUTTE le note del paziente (poi filtriamo in Python per sicurezza)
+                # È più affidabile filtrare le ultime 24h dopo averle scaricate
+                tutte_le_note = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
+                
+                # 2. Filtriamo le ultime 24 ore in Python usando oggetti datetime reali
+                b_logs = []
+                adesso = get_now_it()
+                limite_24h = adesso - timedelta(days=1)
+
+                for d_str, op_b, nt_b in tutte_le_note:
+                    try:
+                        # Convertiamo la stringa del DB (es: "06/04/2026 11:30") in oggetto datetime
+                        data_dt = datetime.strptime(d_str, "%d/%m/%Y %H:%M")
+                        if data_dt >= limite_24h:
+                            b_logs.append((d_str, op_b, nt_b))
+                    except:
+                        # Se il formato è diverso (es: YYYY-MM-DD), proviamo l'altro
+                        try:
+                            data_dt = datetime.strptime(d_str, "%Y-%m-%d %H:%M")
+                            if data_dt >= limite_24h:
+                                b_logs.append((d_str, op_b, nt_b))
+                        except:
+                            continue
+
                 if b_logs:
+                    st.success(f"Trovate {len(b_logs)} note nelle ultime 24 ore.")
+                    
                     if st.button("🤖 GENERA RIASSUNTO TURNO (IA)"):
-                        testo_input = "\n".join([f"[{d}] {o}: {n}" for d, o, n in b_logs])
+                        # Invertiamo per avere l'ordine cronologico (dal più vecchio al più recente)
+                        testo_input = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
+                        
                         with st.spinner("Analisi in corso..."):
-                            # Chiamata alla tua funzione IA esistente con prompt personalizzato
-                            prompt_b = f"Riassumi queste note cliniche ultime 24h per cambio turno. Evidenzia criticità:\n{testo_input}"
+                            prompt_b = f"Agisci come un coordinatore infermieristico. Riassumi queste note delle ultime 24h per il cambio turno, evidenziando parametri anomali o rifiuti farmaci:\n{testo_input}"
                             sunto = genera_relazione_ia(p_id, "BRIEFING", 1, custom_prompt=prompt_b)
                             st.markdown(f"<div style='background:#f0fdf4; border-left:5px solid #16a34a; padding:15px; border-radius:8px; color:#166534;'>{sunto}</div>", unsafe_allow_html=True)
                     
                     st.divider()
                     st.caption("Ultime note registrate:")
-                    for d, o, n in reversed(b_logs):
-                        st.write(f"**{d} - {o}**: {n}")
+                    for d, o, n in b_logs:
+                        with st.expander(f"🕒 {d} - {o}"):
+                            st.write(n)
                 else:
-                    st.info("Nessun dato nelle ultime 24 ore.")
-
-            with t_ai:
-                st.subheader("🤖 Relazione IA Settimanale")
-                if st.button("Analisi ultimi 7 giorni"):
-                    with st.spinner("L'IA sta lavorando..."):
-                        relazione = genera_relazione_ia(p_id, p_sel, 7)
-                        st.markdown(f"<div style='background:#f8fafc; border-left:5px solid #1e3a8a; padding:15px; border-radius:8px;'>{relazione}</div>", unsafe_allow_html=True)
+                    st.info("Nessuna nota registrata nelle ultime 24 ore (o formato data non riconosciuto).")
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
