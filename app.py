@@ -327,7 +327,7 @@ elif nav == "📊 Monitoraggio":
     for pid, nome in p_lista:
         with st.expander(f"📁 SCHEDA: {nome}"):
             
-            # --- MODIFICA LA QUERY PER USARE I FILTRI ---
+            # --- QUERY FILTRATA (Collega i box di ricerca ai dati) ---
             query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
             params = [pid]
             
@@ -339,7 +339,28 @@ elif nav == "📊 Monitoraggio":
                 params.append(f"%{f_op}%")
                 params.append(f"%{f_op}%")
             
+            # Eseguiamo la ricerca con i filtri applicati
             eventi = db_run(query + " ORDER BY id_u DESC", tuple(params))
+            
+            # --- VISUALIZZAZIONE ---
+            col1, col2 = st.columns([4, 1])
+            
+            with col2:
+                # Usiamo gli stessi eventi filtrati anche per il PDF
+                if eventi:
+                    # Prepariamo i dati per il PDF (servono 3 colonne: data, op, nota)
+                    eventi_pdf = [(e[0], e[2], e[3]) for e in eventi]
+                    pdf_data = genera_pdf_clinico(nome, eventi_pdf)
+                    st.download_button(label="📄 PDF", data=pdf_data, file_name=f"diario_{nome}.pdf", mime="application/pdf", key=f"pdf_{pid}")
+
+            with col1:
+                if eventi:
+                    for e in eventi:
+                        st.markdown(f"**{e[0]}** - *{e[1]} ({e[2]})*")
+                        st.write(e[3])
+                        st.divider()
+                else:
+                    st.info("Nessuna nota trovata con questi filtri.")
 
 elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
