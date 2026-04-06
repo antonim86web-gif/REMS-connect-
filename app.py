@@ -31,13 +31,11 @@ def db_run(query, params=(), commit=False):
 def aggiorna_struttura_db():
     conn = sqlite3.connect("rems.db")
     c = conn.cursor()
-    
-    # 1. Creazione Tabelle Base (Allineamento a 4 spazi)
-    c.execute('''CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)''')
-
-    # 2. Aggiornamento Colonne (TUTTE ALLINEATE PERFETTAMENTE)
+    # Creazione tabelle
+    c.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)")
+    c.execute("CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)")
+    # Aggiornamento colonne (Allineamento identico a c.execute sopra)
     try:
         c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
     except:
@@ -58,7 +56,6 @@ def aggiorna_struttura_db():
         c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
     except:
         pass
-    
     conn.commit()
     conn.close()
 
