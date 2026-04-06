@@ -448,7 +448,6 @@ elif nav == "👥 Modulo Equipe":
                     q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
                 
                 dati_pdf = db_run(q_pdf, (p_id,))
-                st.write("Debug Ruoli presenti:", db_run("SELECT DISTINCT ruolo FROM eventi WHERE id=?", (p_id,)))
 
                 if dati_pdf:
                     try:
