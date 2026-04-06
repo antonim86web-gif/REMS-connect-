@@ -442,42 +442,43 @@ elif nav == "👥 Modulo Equipe":
             with t4:
                 st.subheader("📋 Briefing Intelligente (IA)")
                 
-                # 1. Recupero delle ultime 20 note (Terapie + Consegne + Parametri)
-                # Un numero equilibrato per analizzare l'ultimo turno e mezzo circa
+                # 1. Recupero delle ultime 20 attività
                 b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
                 
                 if b_logs:
                     st.success(f"✅ Recuperate le ultime {len(b_logs)} attività dal diario clinico.")
                     
                     if st.button("🤖 GENERA RIASSUNTO TURNO (IA)", type="primary", use_container_width=True):
-                        # Prepariamo il testo cronologico (dal più vecchio al più nuovo)
-                        context_ia = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
+                        # Prepariamo le note in ordine cronologico
+                        testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
                         
-                        with st.spinner("Analisi clinica in corso sulle ultime 20 attività..."):
-                            prompt_cmd = (
-                                "Sei un infermiere coordinatore. Analizza queste ultime 20 attività cliniche "
-                                "per il passaggio di consegne. Riassumi in modo professionale:\n"
-                                "1. 💊 TERAPIA: Somministrazioni effettuate e eventuali RIFIUTI.\n"
-                                "2. 💓 PARAMETRI: Valori registrati (PA, FC, SatO2).\n"
-                                "3. 📝 NOTE CLINICHE: Eventi comportamentali o variazioni dello stato di salute.\n\n"
-                                f"DATI DA ELABORARE:\n{context_ia}"
+                        with st.spinner("L'IA sta analizzando i dati..."):
+                            # COSTRUIAMO IL MESSAGGIO UNIFICATO (Evita il TypeError)
+                            istruzioni_ia = (
+                                "RIASSUNTO BRIEFING TURNO: "
+                                "Analizza queste ultime 20 note e crea un sunto professionale per il cambio turno, "
+                                "dividendo in: 1. Terapie e Rifiuti, 2. Parametri, 3. Note comportamentali.\n\n"
+                                f"DATI:\n{testo_note}"
                             )
                             
-                            # Chiamata alla tua funzione IA
-                            sunto = genera_relazione_ia(p_id, "BRIEFING_20", 1, custom_prompt=prompt_cmd)
-                            
-                            st.info("### 📝 Riassunto IA (Ultime 20 attività)")
-                            st.write(sunto)
-                            st.divider()
+                            # USIAMO SOLO I 3 PARAMETRI CHE LA TUA FUNZIONE CONOSCE
+                            try:
+                                # p_id, il nostro testo speciale, 1 giorno
+                                sunto = genera_relazione_ia(p_id, istruzioni_ia, 1)
+                                
+                                st.info("### 📝 Riassunto IA (Ultime 20 attività)")
+                                st.write(sunto)
+                                st.divider()
+                            except Exception as e:
+                                st.error(f"Errore nella generazione: {e}")
                     
-                    # Elenco delle note per controllo rapido
+                    # Visualizzazione note per sicurezza
                     with st.expander("🔍 Controlla i dati originali (Ultime 20)"):
                         for d, o, n in b_logs:
                             st.markdown(f"**{d}** - *{o}*<br>{n}", unsafe_allow_html=True)
                             st.divider()
                 else:
                     st.warning("⚠️ Nessun dato trovato nel diario eventi.")
-
         
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
