@@ -442,73 +442,41 @@ elif nav == "👥 Modulo Equipe":
             with t4:
                 st.subheader("📋 Briefing Intelligente (IA)")
                 
-                # --- TEST DI DEBUG (Aggiungi queste 3 righe qui) ---
-                conteggio_totale = db_run("SELECT count(*) FROM eventi WHERE id=?", (p_id,))
-                st.write(f"🔍 **DEBUG DATABASE:** Trovate in totale `{conteggio_totale[0][0]}` note storiche per questo ID Paziente ({p_id}).")
-                # --------------------------------------------------
-
-                # Ora segue il resto del codice del briefing...
-                raw_data = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
-                # ... (il resto del codice che abbiamo scritto prima)
-                st.subheader("📋 Briefing Intelligente (IA)")
+                # 1. Recupero delle ultime 20 note (Terapie + Consegne + Parametri)
+                # Un numero equilibrato per analizzare l'ultimo turno e mezzo circa
+                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
                 
-                # 1. Recupero dati: prendiamo le ultime 100 note per questo specifico paziente
-                raw_data = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 100", (p_id,))
-                
-                b_logs = []
-                now = get_now_it()
-                h24 = now - timedelta(hours=24)
-
-                if raw_data:
-                    for d_str, op_b, nt_b in raw_data:
-                        try:
-                            # Proviamo a convertire i formati data usati nel tuo sistema
-                            dt = None
-                            for fmt in ("%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M"):
-                                try:
-                                    dt = datetime.strptime(d_str, fmt)
-                                    break
-                                except: continue
-                            
-                            # Filtriamo solo le note scritte nelle ultime 24 ore
-                            if dt and dt >= h24:
-                                b_logs.append((d_str, op_b, nt_b))
-                        except: continue
-
-                # --- INTERFACCIA DI GENERAZIONE ---
                 if b_logs:
-                    st.success(f"📈 Trovate {len(b_logs)} attività nelle ultime 24 ore.")
+                    st.success(f"✅ Recuperate le ultime {len(b_logs)} attività dal diario clinico.")
                     
-                    if st.button("🤖 GENERA RIASSUNTO TURNO", type="primary", use_container_width=True):
-                        # Prepariamo il testo cronologico (dal più vecchio al più nuovo) per l'IA
+                    if st.button("🤖 GENERA RIASSUNTO TURNO (IA)", type="primary", use_container_width=True):
+                        # Prepariamo il testo cronologico (dal più vecchio al più nuovo)
                         context_ia = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
                         
-                        with st.spinner("L'IA sta sintetizzando le consegne..."):
-                            # Prompt strutturata per un briefing professionale
+                        with st.spinner("Analisi clinica in corso sulle ultime 20 attività..."):
                             prompt_cmd = (
-                                "Agisci come un infermiere coordinatore. Riassumi le note cliniche delle ultime 24 ore "
-                                "per il briefing di cambio turno. Elenca in modo chiaro: \n"
-                                "1. Somministrazioni eseguite e eventuali rifiuti farmaci\n"
-                                "2. Variazioni rilevanti dei parametri vitali\n"
-                                "3. Note cliniche o eventi comportamentali di rilievo.\n"
-                                f"DATI DA ANALIZZARE:\n{context_ia}"
+                                "Sei un infermiere coordinatore. Analizza queste ultime 20 attività cliniche "
+                                "per il passaggio di consegne. Riassumi in modo professionale:\n"
+                                "1. 💊 TERAPIA: Somministrazioni effettuate e eventuali RIFIUTI.\n"
+                                "2. 💓 PARAMETRI: Valori registrati (PA, FC, SatO2).\n"
+                                "3. 📝 NOTE CLINICHE: Eventi comportamentali o variazioni dello stato di salute.\n\n"
+                                f"DATI DA ELABORARE:\n{context_ia}"
                             )
                             
                             # Chiamata alla tua funzione IA
-                            sunto = genera_relazione_ia(p_id, "BRIEFING", 1, custom_prompt=prompt_cmd)
+                            sunto = genera_relazione_ia(p_id, "BRIEFING_20", 1, custom_prompt=prompt_cmd)
                             
-                            st.info("### 📝 Sunto IA del Turno")
+                            st.info("### 📝 Riassunto IA (Ultime 20 attività)")
                             st.write(sunto)
                             st.divider()
                     
-                    # Mostriamo le note grezze sotto per validazione umana
-                    with st.expander("🔍 Visualizza note dettagliate (ultime 24h)"):
+                    # Elenco delle note per controllo rapido
+                    with st.expander("🔍 Controlla i dati originali (Ultime 20)"):
                         for d, o, n in b_logs:
-                            st.write(f"**{d}** - *{o}*: {n}")
+                            st.markdown(f"**{d}** - *{o}*<br>{n}", unsafe_allow_html=True)
+                            st.divider()
                 else:
-                    # Questo avviso apparirà se il filtro non trova note recenti
-                    st.warning("⚠️ Nessuna nota trovata nelle ultime 24 ore.")
-                    st.info("💡 Prova a smarcare un farmaco o inserire una consegna ora per testare il briefing.")
+                    st.warning("⚠️ Nessun dato trovato nel diario eventi.")
 
         
         elif ruolo_corr == "Psicologo":
