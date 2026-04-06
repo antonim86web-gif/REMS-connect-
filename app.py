@@ -321,28 +321,96 @@ elif nav == "👥 Modulo Equipe":
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
-            t1, t2, t3, t4 = st.tabs(["📝 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🧠 ANALISI CLINICA IA"])
+            # 1. DEFINIZIONE TAB MEDICO
+            t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
 
-with t1:
-    st.subheader("Inserimento Nota in Diario Clinico")
-    # ... qui SOLO il codice del diario ...
+            with t1:
+                st.subheader("Inserimento Nota in Diario Clinico")
+                with st.form("form_diario_med"):
+                    nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
+                    if st.form_submit_button("REGISTRA NOTA CLINICA"):
+                        if nota_med:
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
+                            st.success("Nota registrata!")
+                            st.rerun()
 
-with t2:
-    st.subheader("💊 Gestione Terapia Farmacologica")
-    # ... qui SOLO il codice della terapia e prescrizione ...
-    # Assicurati che TUTTO il codice del form di prescrizione sia indentato qui sotto
+            with t2:
+                st.subheader("💊 Gestione Terapia Farmacologica")
+                
+                # --- VISUALIZZAZIONE TERAPIE ATTUALI ---
+                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+                if terapie_attuali:
+                    for t in terapie_attuali:
+                        c1, c2 = st.columns([4, 1])
+                        c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
+                        if c2.button("🗑️", key=f"del_med_{t[0]}"):
+                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                            st.rerun()
+                
+                st.divider()
 
-with t3:
-    st.subheader("🩺 Esame Obiettivo e Parametri")
-    # ... qui SOLO i parametri ...
+                # --- TABELLA SMARCATURE (Quello che vede il medico) ---
+                st.markdown("### 📊 Registro Somministrazioni Infermieristiche")
+                res_smarc = db_run("""
+                    SELECT data, nota, op FROM eventi 
+                    WHERE id=? AND (esito='A' OR esito='R' OR nota LIKE '✔️%' OR nota LIKE '❌%') 
+                    ORDER BY id_u DESC LIMIT 15
+                """, (p_id,))
+                
+                if res_smarc:
+                    df_smarc = pd.DataFrame(res_smarc, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
+                    st.dataframe(df_smarc, use_container_width=True)
+                else:
+                    st.info("Nessuna somministrazione registrata nelle ultime ore.")
 
-with t4:
-    st.subheader("🧠 Analisi Clinica con IA (Briefing)")
-    # Qui reinseriamo la funzione del briefing che avevamo fatto funzionare
-    if st.button("GENERA BRIEFING IA", key="btn_briefing_final"):
-        with st.spinner("L'intelligenza artificiale sta analizzando i dati..."):
-            testo_ia = genera_relazione_ia(p_id) # Usa la tua funzione Groq
-            st.markdown(testo_ia)
+                st.divider()
+
+                # --- FORM NUOVA PRESCRIZIONE ---
+                with st.expander("➕ Prescrivi Nuovo Farmaco"):
+                    with st.form("nuova_terapia_med"):
+                        f_nome = st.text_input("Nome Farmaco")
+                        f_dose = st.text_input("Dosaggio")
+                        col1, col2, col3 = st.columns(3)
+                        m_n, p_n, a_b = col1.checkbox("Mattina"), col2.checkbox("Pomeriggio"), col3.checkbox("Al bisogno")
+                        if st.form_submit_button("CONFERMA PRESCRIZIONE"):
+                            if f_nome:
+                                db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)",
+                                       (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0), True)
+                                st.rerun()
+
+            with t3:
+                st.subheader("🩺 Esame Obiettivo e Parametri")
+                # Recupero ultimi parametri inseriti
+                ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id_u DESC LIMIT 5", (p_id,))
+                if ultimi_p:
+                    for d, n in ultimi_p:
+                        st.write(f"**{d}**: {n}")
+                
+                with st.form("esame_ob_med"):
+                    e_o = st.text_area("Descrizione esame obiettivo e stato mentale...")
+                    if st.form_submit_button("SALVA ESAME OBIETTIVO"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
+                        st.rerun()
+
+            with t4:
+                st.subheader("🤖 Analisi Clinica IA (Briefing Medico)")
+                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
+                
+                if b_logs:
+                    if st.button("🤖 GENERA RELAZIONE CLINICA AGGIORNATA", type="primary"):
+                        testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
+                        with st.spinner("L'IA sta analizzando il caso clinico..."):
+                            prompt = f"Agisci come Psichiatra. Analizza queste note e genera una sintesi clinica: {testo_note}"
+                            # Uso la funzione IA che abbiamo testato prima
+                            relazione = genera_relazione_ia(p_id, prompt, 1) 
+                            st.markdown(f"<div class='ai-box'>{relazione}</div>", unsafe_allow_html=True)
+                else:
+                    st.warning("Dati insufficienti per l'analisi IA.")
+
+        # --- SEZIONE INFERMIERE (Allineata correttamente) ---
+        elif ruolo_corr == "Infermiere":
 
         elif ruolo_corr == "Infermiere":
             import calendar 
