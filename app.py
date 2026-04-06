@@ -294,13 +294,14 @@ elif nav == "👥 Modulo Equipe":
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
         if st.session_state.ruolo == 'Psichiatra':
-    st.title(f"👨‍⚕️ Dashboard Medico: {p_sel}")
+    st.title(f"👨‍⚕️ Dashboard Medico: {p_sel}") # <--- DEVE ESSERE RIENTRATO QUI
     
-    # 4 Tab separati per un'organizzazione perfetta da perito
+    # Anche tutto il resto sotto deve essere allineato a questa colonna
     t1, t2, t3, t4 = st.tabs(["📝 DIARIO CLINICO", "🤖 RELAZIONE IA", "💊 TERAPIA", "📊 REPORT PDF"])
 
-    # --- TAB 1: DIARIO CLINICO (Solo visualizzazione note) ---
     with t1:
+        st.subheader("Note Cronologiche Recenti")
+        # ... e così via
         st.subheader("Note Cronologiche Recenti")
         diario = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
         if diario:
