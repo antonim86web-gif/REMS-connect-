@@ -321,81 +321,28 @@ elif nav == "👥 Modulo Equipe":
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
-            t1, t2, t3, t_ai = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
+            t1, t2, t3, t4 = st.tabs(["📝 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🧠 ANALISI CLINICA IA"])
 
-            with t1:
-                st.subheader("Inserimento Nota in Diario Clinico")
-                with st.form("form_diario_med"):
-                    nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
-                    if st.form_submit_button("REGISTRA NOTA CLINICA"):
-                        if nota_med:
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
-                            st.success("Nota registrata con successo.")
-                            st.rerun()
+with t1:
+    st.subheader("Inserimento Nota in Diario Clinico")
+    # ... qui SOLO il codice del diario ...
 
-            with t2:
-                st.subheader("💊 Gestione Terapia Farmacologica")
-            
-            # 1. Recupero Terapie dal DB (usando p_id dalla sidebar)
-            terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-            
-            if terapie_attuali:
-                for t in terapie_attuali:
-                    t_id_u, f_nome, f_dose, m_n, p_n, a_b = t
-                    col1, col2 = st.columns([4, 1])
-                    
-                    with col1:
-                        st.markdown(f"""
-                        <div style='background:#f8fafc; padding:10px; border-radius:8px; border-left:5px solid #1e3a8a; margin-bottom:5px;'>
-                            <b>{f_nome}</b> - {f_dose} <br>
-                            <small>M: {'✅' if m_n else '❌'} | P: {'✅' if p_n else '❌'} | Bisogno: {'✅' if a_b else '❌'}</small>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col2:
-                        if st.button("🗑️", key=f"del_t_{t_id_u}"):
-                            db_run("DELETE FROM terapie WHERE id_u=?", (t_id_u,), True)
-                            st.rerun()
-            else:
-                st.info("Nessuna terapia attiva per questo paziente.")
+with t2:
+    st.subheader("💊 Gestione Terapia Farmacologica")
+    # ... qui SOLO il codice della terapia e prescrizione ...
+    # Assicurati che TUTTO il codice del form di prescrizione sia indentato qui sotto
 
-            st.divider()
-            
-            # 2. Modulo Inserimento Nuova Terapia
-            with st.expander("➕ Prescrivi Nuovo Farmaco"):
-                with st.form("form_nuova_t"):
-                    f_n = st.text_input("Nome Farmaco")
-                    d_n = st.text_input("Dosaggio (es: 2mg)")
-                    c1, c2, c3 = st.columns(3)
-                    m = c1.checkbox("Mattina")
-                    p = c2.checkbox("Pomeriggio")
-                    b = c3.checkbox("Al bisogno")
-                    
-                    if st.form_submit_button("CONFERMA PRESCRIZIONE"):
-                        if f_n and d_n:
-                            db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)", 
-                                   (p_id, f_n, d_n, int(m), int(p), int(b)), True)
-                            st.success(f"Prescritto: {f_n}")
-                            st.rerun()
-                        else:
-                            st.error("Inserisci nome e dosaggio!")
+with t3:
+    st.subheader("🩺 Esame Obiettivo e Parametri")
+    # ... qui SOLO i parametri ...
 
-            with t3:
-                st.subheader("Esame Obiettivo")
-                with st.form("esame_ob"):
-                    e_o = st.text_area("Descrizione esame obiettivo e stato mentale...")
-                    if st.form_submit_button("SALVA ESAME OBIETTIVO"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
-                        st.rerun()
-
-            with t_ai:
-                st.subheader("🤖 Analisi Clinica IA")
-                if st.button("GENERA RELAZIONE CLINICA"):
-                    with st.spinner("Analisi in corso..."):
-                        relazione = genera_relazione_ia(p_id, p_sel, 7)
-                        st.markdown(f"<div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap;'><b>🧠 VALUTAZIONE IA:</b><br><br>{relazione}</div>", unsafe_allow_html=True)
+with t4:
+    st.subheader("🧠 Analisi Clinica con IA (Briefing)")
+    # Qui reinseriamo la funzione del briefing che avevamo fatto funzionare
+    if st.button("GENERA BRIEFING IA", key="btn_briefing_final"):
+        with st.spinner("L'intelligenza artificiale sta analizzando i dati..."):
+            testo_ia = genera_relazione_ia(p_id) # Usa la tua funzione Groq
+            st.markdown(testo_ia)
 
         elif ruolo_corr == "Infermiere":
             import calendar 
