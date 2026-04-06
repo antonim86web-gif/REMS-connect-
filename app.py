@@ -375,71 +375,13 @@ elif nav == "👥 Modulo Equipe":
 
     # --- TAB 4: REPORT PDF (Il tuo archivio storico) ---
     with t4:
-        st.subheader("📊 Report Storico e Mensile")
+        st.subheader("Archivio Documentale PDF")
         st.write("Genera il file PDF completo delle somministrazioni e degli eventi per la cartella clinica.")
         
-        # Pulsante per generare il PDF
-        if st.button("📄 GENERA REPORT PDF", type="primary", use_container_width=True):
-            try:
-                from fpdf import FPDF
-                import io
-                from datetime import datetime
+        if st.button("📄 GENERA REPORT MENSILE (PDF)"):
+            # Qui si aggancerà la funzione fpdf2 che abbiamo visto
+            st.info("Funzione di stampa in fase di attivazione...")
 
-                # 1. Recupero dei dati dal database (Tutte le somministrazioni e rifiuti)
-                query_pdf = """
-                    SELECT data, nota, op 
-                    FROM eventi 
-                    WHERE id=? AND (nota LIKE '%Somministrato%' OR nota LIKE '%RIFIUTATO%')
-                    ORDER BY id_u DESC
-                """
-                record_per_pdf = db_run(query_pdf, (p_id,))
-
-                if record_per_pdf:
-                    with st.spinner("Creazione del documento in corso..."):
-                        # 2. Configurazione PDF (Orizzontale per farci stare i dati)
-                        pdf = FPDF(orientation='L', unit='mm', format='A4')
-                        pdf.add_page()
-                        pdf.set_font("Arial", "B", 16)
-                        
-                        # Intestazione
-                        pdf.cell(0, 10, f"SCHEDA SOMMINISTRAZIONI: {p_sel}", ln=True, align="C")
-                        pdf.set_font("Arial", "I", 10)
-                        pdf.cell(0, 10, f"Documento generato il: {datetime.now().strftime('%d/%m/%Y %H:%M')}", ln=True, align="C")
-                        pdf.ln(10)
-
-                        # Testata Tabella
-                        pdf.set_font("Arial", "B", 10)
-                        pdf.set_fill_color(200, 220, 255)
-                        pdf.cell(40, 8, "DATA/ORA", 1, 0, 'C', True)
-                        pdf.cell(160, 8, "DETTAGLIO TERAPIA / ESITO", 1, 0, 'L', True)
-                        pdf.cell(60, 8, "OPERATORE", 1, 1, 'C', True)
-
-                        # Righe Tabella
-                        pdf.set_font("Arial", "", 9)
-                        for d, n, o in record_per_pdf:
-                            # Multi-cell per le note lunghe
-                            pdf.cell(40, 8, str(d), 1, 0, 'C')
-                            pdf.cell(160, 8, str(n), 1, 0, 'L')
-                            pdf.cell(60, 8, str(o), 1, 1, 'C')
-
-                        # 3. Preparazione Download (Senza salvare su disco per evitare crash)
-                        pdf_bytes = pdf.output(dest='S').encode('latin-1', errors='replace')
-                        
-                        st.success("✅ PDF Generato con successo!")
-                        st.download_button(
-                            label="📥 Scarica Report PDF",
-                            data=pdf_bytes,
-                            file_name=f"Report_Terapia_{p_sel}_{datetime.now().strftime('%m_%Y')}.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
-                else:
-                    st.warning("⚠️ Nessun dato di somministrazione trovato per questo paziente.")
-            
-            except Exception as e:
-                st.error(f"Errore durante la generazione del PDF: {e}")
-                st.info("Assicurati che la libreria 'fpdf2' sia installata.")
-                
         elif ruolo_corr == "Infermiere":
             import calendar 
             from datetime import timedelta
