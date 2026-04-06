@@ -375,13 +375,38 @@ elif nav == "👥 Modulo Equipe":
 
     # --- TAB 4: REPORT PDF (Il tuo archivio storico) ---
     with t4:
-        st.subheader("Archivio Documentale PDF")
-        st.write("Genera il file PDF completo delle somministrazioni e degli eventi per la cartella clinica.")
-        
-        if st.button("📄 GENERA REPORT MENSILE (PDF)"):
-            # Qui si aggancerà la funzione fpdf2 che abbiamo visto
-            st.info("Funzione di stampa in fase di attivazione...")
+    st.subheader("📊 Report Storico")
+    if st.button("📄 GENERA PDF ORA"):
+        try:
+            from fpdf import FPDF
+            import io
 
+            # 1. Recupero dati dal DB (così siamo sicuri di cosa stampiamo)
+            dati = db_run("SELECT data, nota, op FROM eventi WHERE id=?", (p_id,))
+
+            # 2. Creazione PDF in memoria
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, f"Report Clinico: {p_sel}", ln=True)
+            
+            for d, n, o in dati:
+                pdf.set_font("Arial", "", 10)
+                pdf.multi_cell(0, 10, f"{d} - {o}: {n}")
+
+            # 3. Trasformazione in formato scaricabile senza crash
+            pdf_output = pdf.output(dest='S').encode('latin-1') 
+            
+            st.download_button(
+                label="📥 Scarica il PDF generato",
+                data=pdf_output,
+                file_name=f"Report_{p_sel}.pdf",
+                mime="application/pdf"
+            )
+            st.success("PDF pronto per il download!")
+
+        except Exception as e:
+            st.error(f"Errore critico PDF: {e}")
         elif ruolo_corr == "Infermiere":
             import calendar 
             from datetime import timedelta
