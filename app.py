@@ -294,7 +294,7 @@ elif nav == "👥 Modulo Equipe":
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
     if st.session_state.ruolo == 'Psichiatra':
-    st.title(f"👨‍⚕️ Dashboard Medico: {p_sel}") # <--- DEVE ESSERE RIENTRATO QUI
+        st.title(f"👨‍⚕️ Dashboard Medico: {p_sel}") # <--- DEVE ESSERE RIENTRATO QUI
     
     # Anche tutto il resto sotto deve essere allineato a questa colonna
     t1, t2, t3, t4 = st.tabs(["📝 DIARIO CLINICO", "🤖 RELAZIONE IA", "💊 TERAPIA", "📊 REPORT PDF"])
