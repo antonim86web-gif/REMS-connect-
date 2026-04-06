@@ -389,7 +389,7 @@ elif nav == "👥 Modulo Equipe":
                             st.rerun()
 
             with t2:
-                st.subheader("💊 Gestione Terapia Farmacologica")
+        st.subheader("💊 Gestione Terapia Farmacologica")
         
         # 1. Recupero dati (Prendiamo 7 colonne)
         ter_att = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
@@ -408,8 +408,9 @@ elif nav == "👥 Modulo Equipe":
         
         if not ter_att:
             st.warning("Nessuna terapia attiva trovata.")
-                # --- FORM NUOVA PRESCRIZIONE ---
-                with st.expander("➕ Prescrivi Nuovo Farmaco"):
+
+        # --- ORA L'EXPANDER È ALLINEATO CORRETTAMENTE ---
+        with st.expander("➕ Prescrivi Nuovo Farmaco"):
                     with st.form("nuova_terapia_med"):
                         f_nome = st.text_input("Nome Farmaco")
                         f_dose = st.text_input("Dosaggio")
