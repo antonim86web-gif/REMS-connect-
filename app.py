@@ -352,9 +352,12 @@ elif nav == "👥 Modulo Equipe":
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
                 
-                # --- RECUPERO IDENTITÀ DAL LOGIN ---
-                # Cerchiamo 'username' che è quella che contiene il nome completo nei tuoi log
-                nome_reale = st.session_state.get('username', 'Operatore non identificato')
+                # --- SISTEMA DI RILEVAMENTO IDENTITÀ (Sincronizzato con Diario) ---
+                # Cerchiamo in tutte le variabili possibili del tuo sistema di login
+                nome_reale = st.session_state.get('username') or \
+                             st.session_state.get('user') or \
+                             st.session_state.get('utente_nome') or \
+                             "Operatore" 
                 
                 st.markdown(f"👤 Operatore Loggato: **{nome_reale}**")
                 
@@ -378,27 +381,30 @@ elif nav == "👥 Modulo Equipe":
                         f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 5px;'>"
+                        # --- CALENDARIO CON FIRMA INTEGRATA NEL QUADRATINO ---
+                        h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 6px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
-                            esito_txt, col_t, bg_c, firma_visibile = ("-", "#888", "white", "")
+                            esito_txt, col_t, bg_c, firma_sotto = ("-", "#888", "white", "")
                             
                             if info:
-                                firma_visibile = info['o'] if info['o'] else "N.D."
+                                # Qui appare Nome e Cognome recuperati dal DB
+                                firma_sotto = info['o'] if info['o'] else "N.D."
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
                                 elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
-                            # Quadratino con FIRMA COMPLETA (testo piccolo ma visibile)
                             h += f"""
-                            <div style='min-width: 65px; height: 75px; background: {bg_c}; color: {col_t}; 
-                                {is_today} border-radius: 5px; display: flex; flex-direction: column; 
-                                align-items: center; justify-content: center; font-size: 0.7rem; box-shadow: 1px 1px 3px rgba(0,0,0,0.1);'>
+                            <div style='min-width: 80px; height: 85px; background: {bg_c}; color: {col_t}; 
+                                {is_today} border-radius: 6px; display: flex; flex-direction: column; 
+                                align-items: center; justify-content: center; font-size: 0.75rem; 
+                                box-shadow: 1px 1px 3px rgba(0,0,0,0.1);'>
                                 <div style='font-weight: bold; color: #555;'>{d}</div>
-                                <div style='font-size: 1.1rem; font-weight: bold;'>{esito_txt}</div>
-                                <div style='font-size: 0.5rem; color: #333; margin-top: 2px; text-align: center; line-height: 0.9; width: 100%; overflow: hidden;'>{firma_visibile}</div>
+                                <div style='font-size: 1.2rem; font-weight: bold;'>{esito_txt}</div>
+                                <div style='font-size: 0.55rem; color: #333; margin-top: 4px; text-align: center; 
+                                    line-height: 1; width: 95%; overflow: hidden; font-weight: 500;'>{firma_sotto}</div>
                             </div>"""
                         
                         st.markdown(h + "</div>", unsafe_allow_html=True)
@@ -416,7 +422,25 @@ elif nav == "👥 Modulo Equipe":
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
-            with t4: # Briefing (24h)
+
+            with t2: # Tab Parametri
+                with st.form("vit_inf"):
+                    c1, c2, c3 = st.columns(3)
+                    p_val = c1.text_input("PA"); f_val = c2.text_input("FC"); s_val = c3.text_input("SatO2")
+                    if st.form_submit_button("SALVA PARAMETRI"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", nome_reale), True)
+                        st.rerun()
+
+            with t3: # Tab Consegne
+                with st.form("cons_inf"):
+                    txt_c = st.text_area("Nota Clinica")
+                    if st.form_submit_button("SALVA CONSEGNA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", nome_reale), True)
+                        st.rerun()
+
+            with t4: # Tab Briefing
                 st.subheader("📋 Briefing Turno (Last 24h)")
                 ieri = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
                 b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri))
@@ -424,10 +448,10 @@ elif nav == "👥 Modulo Equipe":
                     bg = "#fff1f2" if any(x in nt_b for x in ["RIFIUTO", "⚠️", "❌"]) else "#f8fafc"
                     st.markdown(f"<div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:5px;'><small><b>{d_b} - {op_b}</b></small><br>{nt_b}</div>", unsafe_allow_html=True)
 
-            with t_ai: # Relazione IA
+            with t_ai: # Tab IA
                 st.subheader("🤖 Sintesi IA")
                 if st.button("GENERA REPORT"):
-                    with st.spinner("Analisi..."):
+                    with st.spinner("Analisi in corso..."):
                         report = genera_relazione_ia(p_id, p_sel, 7)
                         st.markdown(f"<div style='background:#f0f7ff; border-left:5px solid #2563eb; padding:15px; border-radius:8px; color:#1e3a8a; white-space:pre-wrap;'><b>SINTESI IA:</b><br><br>{report}</div>", unsafe_allow_html=True)
 
