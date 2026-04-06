@@ -293,7 +293,7 @@ elif nav == "👥 Modulo Equipe":
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
-        if st.session_state.ruolo == 'Psichiatra':
+    if st.session_state.ruolo == 'Psichiatra':
     st.title(f"👨‍⚕️ Dashboard Medico: {p_sel}") # <--- DEVE ESSERE RIENTRATO QUI
     
     # Anche tutto il resto sotto deve essere allineato a questa colonna
