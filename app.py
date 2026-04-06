@@ -293,81 +293,93 @@ elif nav == "👥 Modulo Equipe":
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
-        if ruolo_corr == "Psichiatra":
-            t1, t2, t3, t_ai = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
+        if st.session_state.ruolo == 'Psichiatra':
+    st.title(f"👨‍⚕️ Dashboard Medico: {p_sel}")
+    
+    # 4 Tab separati per un'organizzazione perfetta da perito
+    t1, t2, t3, t4 = st.tabs(["📝 DIARIO CLINICO", "🤖 RELAZIONE IA", "💊 TERAPIA", "📊 REPORT PDF"])
 
-            with t1:
-                st.subheader("Inserimento Nota in Diario Clinico")
-                with st.form("form_diario_med"):
-                    nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
-                    if st.form_submit_button("REGISTRA NOTA CLINICA"):
-                        if nota_med:
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
-                            st.success("Nota registrata con successo.")
-                            st.rerun()
+    # --- TAB 1: DIARIO CLINICO (Solo visualizzazione note) ---
+    with t1:
+        st.subheader("Note Cronologiche Recenti")
+        diario = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
+        if diario:
+            for d, o, n in diario:
+                with st.expander(f"📅 {d} - Operatore: {o}"):
+                    st.write(n)
+        else:
+            st.warning("Nessuna nota presente nel diario.")
 
-           with t2:
-            st.subheader("💊 Monitoraggio Somministrazioni e Prescrizione") # <-- 4 SPAZI RISPETTO AL WITH
-
-            # --- PARTE 1: IL MONITORAGGIO IN TEMPO REALE ---
-            st.markdown("#### 📊 Aderenza Terapia (Ultime 48h)")
-            
-            # Qui tutto il resto del codice deve avere lo stesso rientro...
-            query_m = "SELECT data, nota, op FROM eventi WHERE id=? AND (nota LIKE '%Somministrato%' OR nota LIKE '%RIFIUTATO%') ORDER BY id_u DESC LIMIT 20"
-            dati_m = db_run(query_m, (p_id,))
-
-            if dati_m:
-                tab_m = []
-                for d, n, o in dati_m:
-                    st_icon = "✅" if "Somministrato" in n else "❌"
-                    tab_m.append({
-                        "Data/Ora": d,
-                        "Esito": st_icon,
-                        "Dettaglio": n.replace("Somministrato: ", "").replace("RIFIUTATO: ", ""),
-                        "Infermiere": o
-                    })
-                st.table(tab_m)
-            else:
-                st.info("ℹ️ Nessuna somministrazione recente registrata.")
-
+    # --- TAB 2: RELAZIONE IA (Generatore intelligente) ---
+    with t2:
+        st.subheader("Generatore Relazione Psichiatrica IA")
+        st.write("L'intelligenza artificiale analizzerà le ultime 30 note per scrivere una relazione clinica.")
         
-                st.subheader("Gestione Terapia Farmacologica")
-                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-                if terapie_attuali:
-                    for t in terapie_attuali:
-                        c1, c2 = st.columns([4, 1])
-                        c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
-                        if c2.button("🗑️", key=f"del_{t[0]}"):
-                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                            st.rerun()
-                
-                with st.expander("➕ Prescrivi Nuovo Farmaco"):
-                    with st.form("nuova_terapia"):
-                        f_nome = st.text_input("Nome Farmaco")
-                        f_dose = st.text_input("Dosaggio")
-                        col1, col2, col3 = st.columns(3)
-                        m_n, p_n, a_b = col1.checkbox("M"), col2.checkbox("P"), col3.checkbox("Bisogno")
-                        if st.form_submit_button("CONFERMA PRESCRIZIONE"):
-                            db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)",
-                                   (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0), True)
-                            st.rerun()
+        if st.button("🪄 GENERA RELAZIONE ORA", type="primary", use_container_width=True):
+            note_per_ia = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 30", (p_id,))
+            if note_per_ia:
+                with st.spinner("Analisi clinica in corso..."):
+                    context_ia = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(note_per_ia)])
+                    prompt_ia = (
+                        "Agisci come uno Psichiatra esperto in ambito REMS. "
+                        "Analizza i seguenti dati clinici e scrivi una relazione sintetica "
+                        "ma esaustiva sullo stato mentale del paziente e l'andamento del ricovero.\n\n"
+                        f"DATI:\n{context_ia}"
+                    )
+                    # Usiamo il trucco dei 3 parametri per la tua funzione
+                    sunto_ia = genera_relazione_ia(p_id, prompt_ia, 1)
+                    st.info("### 📝 Bozza Relazione Clinica")
+                    st.write(sunto_ia)
+            else:
+                st.warning("Dati insufficienti per l'analisi.")
 
-            with t3:
-                st.subheader("Esame Obiettivo")
-                with st.form("esame_ob"):
-                    e_o = st.text_area("Descrizione esame obiettivo e stato mentale...")
-                    if st.form_submit_button("SALVA ESAME OBIETTIVO"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
-                        st.rerun()
+    # --- TAB 3: TERAPIA (Monitoraggio + Nuova Prescrizione) ---
+    with t3:
+        st.subheader("Gestione Terapia Farmacologica")
+        
+        # Monitoraggio in tempo reale (Cruscotto)
+        st.markdown("#### 📊 Stato Somministrazioni (Ultime 48h)")
+        query_m = "SELECT data, nota, op FROM eventi WHERE id=? AND (nota LIKE '%Somministrato%' OR nota LIKE '%RIFIUTATO%') ORDER BY id_u DESC LIMIT 20"
+        dati_m = db_run(query_m, (p_id,))
+        if dati_m:
+            tab_m = [{"Data": d, "Esito": "✅" if "Somministrato" in n else "❌", "Dettaglio": n.replace("Somministrato: ", "").replace("RIFIUTATO: ", ""), "Operatore": o} for d, n, o in dati_m]
+            st.table(tab_m)
+        else:
+            st.info("Nessuna somministrazione registrata di recente.")
+        
+        st.divider()
 
-            with t_ai:
-                st.subheader("🤖 Analisi Clinica IA")
-                if st.button("GENERA RELAZIONE CLINICA"):
-                    with st.spinner("Analisi in corso..."):
-                        relazione = genera_relazione_ia(p_id, p_sel, 7)
-                        st.markdown(f"<div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap;'><b>🧠 VALUTAZIONE IA:</b><br><br>{relazione}</div>", unsafe_allow_html=True)
+        # Visualizzazione e eliminazione farmaci attivi
+        st.markdown("#### 💊 Prescrizioni Attive")
+        terapie = db_run("SELECT id_u, farmaco, dose, orari FROM terapie WHERE id_p=?", (p_id,))
+        if terapie:
+            for tid, f, d, o in terapie:
+                c1, c2, c3 = st.columns([3, 2, 1])
+                c1.write(f"**{f}** ({d})")
+                c2.write(f"Orari: {o}")
+                if c3.button("🗑️", key=f"del_med_{tid}"):
+                    db_run("DELETE FROM terapie WHERE id_u=?", (tid,), True)
+                    st.rerun()
+        
+        # Form per nuova prescrizione
+        with st.expander("➕ Aggiungi Nuovo Farmaco"):
+            with st.form("form_med_terapia"):
+                nf = st.text_input("Farmaco")
+                nd = st.text_input("Dose")
+                no = st.text_input("Orari")
+                if st.form_submit_button("REGISTRA PRESCRIZIONE"):
+                    db_run("INSERT INTO terapie (id_p, farmaco, dose, orari) VALUES (?,?,?,?)", (p_id, nf, nd, no), True)
+                    st.success("Terapia salvata!")
+                    st.rerun()
+
+    # --- TAB 4: REPORT PDF (Il tuo archivio storico) ---
+    with t4:
+        st.subheader("Archivio Documentale PDF")
+        st.write("Genera il file PDF completo delle somministrazioni e degli eventi per la cartella clinica.")
+        
+        if st.button("📄 GENERA REPORT MENSILE (PDF)"):
+            # Qui si aggancerà la funzione fpdf2 che abbiamo visto
+            st.info("Funzione di stampa in fase di attivazione...")
 
         elif ruolo_corr == "Infermiere":
             import calendar 
