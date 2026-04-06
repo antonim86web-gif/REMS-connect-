@@ -9,6 +9,9 @@ from groq import Groq # <--- Per l'IA di Groq
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 from fpdf import FPDF
+from io
+
+import io # <--- Assicurati di avere questo import in alto!
 
 def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf = FPDF()
@@ -18,34 +21,25 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     # Intestazione
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, "REMS-CONNECT - REPORT CLINICO", ln=True, align='C')
-    
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 8, f"Paziente: {p_nome}", ln=True)
-    pdf.set_font("Arial", 'I', 10)
-    pdf.cell(0, 8, f"Tipo: {tipo_rep} | Data: {get_now_it().strftime('%d/%m/%Y %H:%M')}", ln=True)
-    pdf.ln(5)
-    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
     pdf.ln(10)
 
     for data, op, nota in dati_clinici:
-        # --- PULIZIA TESTO (Per evitare l'errore Unicode) ---
-        # Trasformiamo le emoji in testo semplice o le rimuoviamo per il PDF
-        nota_pulita = str(nota).encode('latin-1', 'replace').decode('latin-1')
-        op_pulito = str(op).encode('latin-1', 'replace').decode('latin-1')
+        # Pulizia totale caratteri
+        nota_p = str(nota).encode('latin-1', 'replace').decode('latin-1')
+        op_p = str(op).encode('latin-1', 'replace').decode('latin-1')
         
         pdf.set_font("Arial", 'B', 10)
         pdf.set_fill_color(240, 240, 240)
-        pdf.cell(0, 7, f"Data: {data} | Op: {op_pulito}", ln=True, fill=True)
-        
+        pdf.cell(0, 7, f"Data: {data} | Op: {op_p}", ln=True, fill=True)
         pdf.set_font("Arial", size=10)
-        # Usiamo la nota pulita qui
-        pdf.multi_cell(0, 7, nota_pulita)
-        pdf.ln(4)
-        pdf.multi_cell(0, 7, nota_pulita)
+        pdf.multi_cell(0, 7, nota_p)
         pdf.ln(4)
         
-    # Restituisce il PDF come pacchetto di byte (SINGOLO RETURN)
-    return pdf.output()
+    # --- IL TRUCCO INFALLIBILE: Esporta come Byte String ---
+    pdf_output = pdf.output() # In fpdf2 questo restituisce bytearray o bytes
+    return bytes(pdf_output)  # Lo trasformiamo in bytes puri
         
     
 
