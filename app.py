@@ -9,10 +9,9 @@ from groq import Groq
 # --- 1. CONFIGURAZIONE GROQ ---
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- 2. FUNZIONE ESECUZIONE DATABASE (CORRETTA) ---
+# --- 2. FUNZIONE ESECUZIONE DATABASE (Punta a rems_final_v12.db) ---
 def db_run(query, params=(), commit=False):
-    # Usiamo 'rems.db' come database principale
-    conn = sqlite3.connect("rems.db", check_same_thread=False)
+    conn = sqlite3.connect("rems_final_v12.db", check_same_thread=False)
     cur = conn.cursor()
     try:
         cur.execute(query, params)
@@ -20,23 +19,22 @@ def db_run(query, params=(), commit=False):
             conn.commit()
         return cur.fetchall()
     except Exception as e:
-        # Questo ci dirà esattamente cosa non va se fallisce
-        st.error(f"Errore critico DB: {e}")
+        st.error(f"Errore DB: {e}")
         return []
     finally:
         conn.close()
 
-# --- 3. FUNZIONE AGGIORNAMENTO DB (COPIA QUESTA) ---
+# --- 3. FUNZIONE AGGIORNAMENTO STRUTTURA (Riparazione automatica) ---
 def aggiorna_struttura_db():
-    conn = sqlite3.connect("rems.db")
+    conn = sqlite3.connect("rems_final_v12.db")
     c = conn.cursor()
     
-    # Crea tabelle base
+    # Creazione tabelle base se mancano
     c.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY, nome TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS eventi (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT)")
     c.execute("CREATE TABLE IF NOT EXISTS terapie (id_u INTEGER PRIMARY KEY AUTOINCREMENT, id_p INTEGER, farmaco TEXT, dose TEXT)")
 
-    # Aggiornamento colonne (TUTTE INSIEME)
+    # Lista di riparazione: aggiunge le colonne mancanti
     colonne = [
         ("pazienti", "stato", "TEXT DEFAULT 'ATTIVO'"),
         ("terapie", "orari", "TEXT"),
@@ -52,33 +50,39 @@ def aggiorna_struttura_db():
         try:
             c.execute(f"ALTER TABLE {tabella} ADD COLUMN {colonna} {tipo}")
         except:
-            pass # Colonna già esistente
+            pass # La colonna esiste già, tutto ok
             
     conn.commit()
     conn.close()
 
-# --- 4. ESECUZIONE AGGIORNAMENTO ---
-# Chiamiamo la funzione subito per riparare il DB
+# --- 4. ESECUZIONE RIPARAZIONE ALL'AVVIO ---
 aggiorna_struttura_db()
 
-# --- 5. INIZIALIZZAZIONE SESSIONE ---
+# Inizializzazione Sessione
 if 'ruolo_corr' not in st.session_state:
     st.session_state.ruolo_corr = None
 if 'firma_op' not in st.session_state:
     st.session_state.firma_op = "Operatore"
 
-# --- 6. RECUPERO DATI PAZIENTE ---
+# --- 5. SIDEBAR PULITA ---
+st.sidebar.title("🏥 REMS Connect")
+
+# Recupero pazienti attivi
 pazienti_raw = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
 if not pazienti_raw:
-    # Se il DB è vuoto, inseriamo un paziente di test per non far crashare l'app
+    # Se il DB è nuovo/vuoto, inseriamo un paziente di test
     db_run("INSERT INTO pazienti (nome, stato) VALUES (?, ?)", ("Esempio Paziente", "ATTIVO"), True)
     pazienti_raw = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO'")
 
-lista_pazienti = {p[1]: p[0] for p in pazienti_raw}
-p_sel = st.sidebar.selectbox("Seleziona Paziente", list(lista_pazienti.keys()))
-p_id = lista_pazienti[p_sel]
+lista_p = {p[1]: p[0] for p in pazienti_raw}
+p_sel = st.sidebar.selectbox("Seleziona Paziente", list(lista_p.keys()))
+p_id = lista_p[p_sel]
 
-# Variabili pronte per il resto del codice
+if st.sidebar.button("LOGOUT"):
+    st.session_state.clear()
+    st.rerun()
+
+# Variabili per il resto dell'app
 ruolo_corr = st.session_state.ruolo_corr
 firma_op = st.session_state.firma_op
 
