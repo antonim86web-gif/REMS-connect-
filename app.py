@@ -426,46 +426,21 @@ elif nav == "👥 Modulo Equipe":
                 else:
                     st.warning("Dati insufficienti per l'analisi IA.")
 
+            # --- AREA PDF (SOTTO I TAB MA DENTRO IL RUOLO MEDICO) ---
             st.divider()
-st.subheader("📥 Esportazione Selettiva PDF")
-
-# 1. Selezione del tipo di report
-tipo_report = st.radio(
-    "Cosa vuoi includere nel PDF?",
-    ["Tutto il Diario", "Solo Terapie/Somministrazioni", "Solo Consegne Infermieristiche"],
-    horizontal=True
-)
-
-# 2. Costruzione della Query in base alla scelta
-if tipo_report == "Solo Terapie/Somministrazioni":
-    # Filtra per le note che iniziano con l'emoji della pillola o contengono "SOMMINISTRAZIONE"
-    query_filtro = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '💊%' OR op LIKE 'SOMMINISTRAZIONE%') ORDER BY id_u DESC"
-elif tipo_report == "Solo Consegne Infermieristiche":
-    # Filtra per il ruolo Infermiere o note specifiche di consegna
-    query_filtro = "SELECT data, op, nota FROM eventi WHERE id=? AND ruolo='Infermiere' ORDER BY id_u DESC"
-else:
-    # Tutto il diario
-    query_filtro = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
-
-# 3. Recupero dati filtrati
-dati_filtrati = db_run(query_filtro, (p_id,))
-
-if dati_filtrati:
-    try:
-        # Generazione PDF
-        pdf_output = genera_pdf_clinico(p_sel, dati_filtrati)
-        
-        st.download_button(
-            label=f"📄 SCARICA PDF: {tipo_report.upper()}",
-            data=pdf_output,
-            file_name=f"Report_{p_sel}_{tipo_report.replace(' ', '_')}.pdf",
-            mime="application/pdf",
-            key="btn_pdf_filtrato"
-        )
-    except Exception as e:
-        st.error(f"Errore: {e}")
-else:
-    st.warning(f"Nessun dato trovato per la categoria: {tipo_report}")
+            with st.expander("📄 ESPORTAZIONE PDF"):
+                tipo_rep = st.radio("Seleziona tipo report:", ["Diario Completo", "Solo Terapie", "Solo Consegne"], horizontal=True)
+                if tipo_rep == "Solo Terapie":
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '💊%' OR op LIKE 'SOMMINISTRAZIONE%') ORDER BY id_u DESC"
+                elif tipo_rep == "Solo Consegne":
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND ruolo='Infermiere' ORDER BY id_u DESC"
+                else:
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
+                
+                dati_pdf = db_run(q_pdf, (p_id,))
+                if dati_pdf and st.button("GENERA PDF"):
+                    pdf_b = genera_pdf_clinico(p_sel, dati_pdf, tipo_rep)
+                    st.download_button("📥 Scarica PDF", data=pdf_b, file_name=f"Report_{p_sel}.pdf", mime="application/pdf")
         
 
 
