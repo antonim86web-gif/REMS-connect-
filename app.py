@@ -308,6 +308,34 @@ elif nav == "👥 Modulo Equipe":
                             st.rerun()
 
             with t2:
+        st.subheader("💊 Monitoraggio Somministrazioni e Prescrizione")
+
+        # --- PARTE 1: IL MONITORAGGIO IN TEMPO REALE ---
+        st.markdown("#### 📊 Aderenza Terapia (Ultime 48h)")
+        
+        # Query per recuperare le smarcature degli infermieri
+        query_m = "SELECT data, nota, op FROM eventi WHERE id=? AND (nota LIKE '%Somministrato%' OR nota LIKE '%RIFIUTATO%') ORDER BY id_u DESC LIMIT 20"
+        dati_m = db_run(query_m, (p_id,))
+
+        if dati_m:
+            tab_m = []
+            for d, n, o in dati_m:
+                st_icon = "✅" if "Somministrato" in n else "❌"
+                tab_m.append({
+                    "Data/Ora": d,
+                    "Esito": st_icon,
+                    "Dettaglio": n.replace("Somministrato: ", "").replace("RIFIUTATO: ", ""),
+                    "Infermiere": o
+                })
+            st.table(tab_m)
+        else:
+            st.info("ℹ️ Nessuna somministrazione recente registrata.")
+        
+        st.divider()
+
+        # --- PARTE 2: IL TUO CODICE ESISTENTE PER LA GESTIONE TERAPIA ---
+        st.markdown("#### ✍️ Modifica Prescrizione Attiva")
+        # Qui incolla (o mantieni) il codice che già avevi per inserire i farmaci...
                 st.subheader("Gestione Terapia Farmacologica")
                 terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 if terapie_attuali:
