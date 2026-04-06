@@ -426,6 +426,48 @@ elif nav == "👥 Modulo Equipe":
                 else:
                     st.warning("Dati insufficienti per l'analisi IA.")
 
+            st.divider()
+st.subheader("📥 Esportazione Selettiva PDF")
+
+# 1. Selezione del tipo di report
+tipo_report = st.radio(
+    "Cosa vuoi includere nel PDF?",
+    ["Tutto il Diario", "Solo Terapie/Somministrazioni", "Solo Consegne Infermieristiche"],
+    horizontal=True
+)
+
+# 2. Costruzione della Query in base alla scelta
+if tipo_report == "Solo Terapie/Somministrazioni":
+    # Filtra per le note che iniziano con l'emoji della pillola o contengono "SOMMINISTRAZIONE"
+    query_filtro = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '💊%' OR op LIKE 'SOMMINISTRAZIONE%') ORDER BY id_u DESC"
+elif tipo_report == "Solo Consegne Infermieristiche":
+    # Filtra per il ruolo Infermiere o note specifiche di consegna
+    query_filtro = "SELECT data, op, nota FROM eventi WHERE id=? AND ruolo='Infermiere' ORDER BY id_u DESC"
+else:
+    # Tutto il diario
+    query_filtro = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
+
+# 3. Recupero dati filtrati
+dati_filtrati = db_run(query_filtro, (p_id,))
+
+if dati_filtrati:
+    try:
+        # Generazione PDF
+        pdf_output = genera_pdf_clinico(p_sel, dati_filtrati)
+        
+        st.download_button(
+            label=f"📄 SCARICA PDF: {tipo_report.upper()}",
+            data=pdf_output,
+            file_name=f"Report_{p_sel}_{tipo_report.replace(' ', '_')}.pdf",
+            mime="application/pdf",
+            key="btn_pdf_filtrato"
+        )
+    except Exception as e:
+        st.error(f"Errore: {e}")
+else:
+    st.warning(f"Nessun dato trovato per la categoria: {tipo_report}")
+        
+
 
         elif ruolo_corr == "Infermiere":
             import calendar 
