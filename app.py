@@ -348,16 +348,16 @@ elif nav == "👥 Modulo Equipe":
         elif ruolo_corr == "Infermiere":
             import calendar 
             from datetime import timedelta
-            t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING", "🤖 RELAZIONE IA"])
+            t1, t2, t3, t4, t_ai = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA", "🤖 RELAZIONE IA"])
             
-            # --- RECUPERO FIRMA DAL TUO SISTEMA ---
-            # Usiamo la stessa logica della tua riga 223
+            # --- IDENTIFICAZIONE DINAMICA DAL TUO LOGIN ---
             u = st.session_state.user_session
-            nome_reale = f"{u['nome']} {u['cognome']}" # Es: "Alex Mars"
+            nome_reale = f"{u['nome']} {u['cognome']}"
+            ruolo_reale = u['ruolo']
 
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                st.caption(f"👤 Operatore: **{nome_reale}** ({u['ruolo']})")
+                st.info(f"👤 Operatore: **{nome_reale}** | Turno attivo")
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
@@ -372,22 +372,22 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Recupero firme dal DB
+                        # Recupero firme dal DB con filtro su Turno e Farmaco
                         firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
                                        (p_id, f"%[{t_id_univoco}]%", f"%({turno_attivo})%", f"%/{mese_corrente}%"))
                         
                         f_map = {int(d[0].split("/")[0]): {"e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # --- CALENDARIO ---
+                        # --- CALENDARIO CON FIRMA ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 6px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
-                            esito_txt, col_t, bg_c, firma_q = ("-", "#888", "white", "")
+                            esito_txt, col_t, bg_c, firma_quadratino = ("-", "#888", "white", "")
                             
                             if info:
-                                firma_q = info['o'] # Qui apparirà Nome e Cognome
+                                firma_quadratino = info['o']
                                 if info['e'] == "A": esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
                                 elif info['e'] == "R": esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
                             
@@ -397,56 +397,76 @@ elif nav == "👥 Modulo Equipe":
                                 align-items: center; justify-content: center; font-size: 0.75rem;'>
                                 <div style='font-weight: bold;'>{d}</div>
                                 <div style='font-size: 1.2rem; font-weight: bold;'>{esito_txt}</div>
-                                <div style='font-size: 0.55rem; color: #333; margin-top: 4px; text-align: center; font-weight: 600;'>{firma_q}</div>
+                                <div style='font-size: 0.55rem; color: #333; margin-top: 4px; text-align: center; font-weight: 600;'>{firma_quadratino}</div>
                             </div>"""
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
                         with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
-                                nota_ins = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
+                                nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, u['ruolo'], nome_reale, "A"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "A"), True)
                                 st.rerun()
                             if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
-                                nota_ins = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
+                                nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
-                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_ins, u['ruolo'], nome_reale, "R"), True)
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
 
-            with t2: # Tab Parametri
-                with st.form("vit_inf"):
+            with t2:
+                st.subheader("💓 Rilevazione Parametri Vitali")
+                with st.form("form_p_inf"):
                     c1, c2, c3 = st.columns(3)
-                    p_val = c1.text_input("PA"); f_val = c2.text_input("FC"); s_val = c3.text_input("SatO2")
-                    if st.form_submit_button("SALVA PARAMETRI"):
+                    p_v = c1.text_input("PA (Pressione)")
+                    f_v = c2.text_input("FC (Frequenza)")
+                    s_v = c3.text_input("SatO2")
+                    if st.form_submit_button("REGISTRA PARAMETRI"):
+                        nota_p = f"💓 Parametri: PA {p_v}, FC {f_v}, Sat {s_v}"
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", nome_reale), True)
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_p, ruolo_reale, nome_reale), True)
+                        st.success("Parametri salvati!")
                         st.rerun()
 
-            with t3: # Tab Consegne
-                with st.form("cons_inf"):
-                    txt_c = st.text_area("Nota Clinica")
-                    if st.form_submit_button("SALVA CONSEGNA"):
+            with t3:
+                st.subheader("📝 Consegne Cliniche")
+                with st.form("form_c_inf"):
+                    txt_c = st.text_area("Inserisci diario clinico...")
+                    if st.form_submit_button("SALVA NOTA"):
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 [CONSEGNA] {txt_c}", "Infermiere", nome_reale), True)
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 {txt_c}", ruolo_reale, nome_reale), True)
+                        st.success("Nota registrata!")
                         st.rerun()
 
-            with t4: # Tab Briefing
-                st.subheader("📋 Briefing Turno (Last 24h)")
-                ieri = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
-                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u DESC", (p_id, ieri))
-                for d_b, op_b, nt_b in b_logs:
-                    bg = "#fff1f2" if any(x in nt_b for x in ["RIFIUTO", "⚠️", "❌"]) else "#f8fafc"
-                    st.markdown(f"<div style='background:{bg}; border-left:5px solid #1e3a8a; padding:10px; margin-bottom:5px; border-radius:5px;'><small><b>{d_b} - {op_b}</b></small><br>{nt_b}</div>", unsafe_allow_html=True)
+            with t4:
+                st.subheader("📋 Briefing Intelligente (IA)")
+                # Recupero note ultime 24 ore per l'IA
+                ieri = (get_now_it() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M")
+                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND data >= ? ORDER BY id_u ASC", (p_id, ieri))
+                
+                if b_logs:
+                    if st.button("🤖 GENERA RIASSUNTO TURNO (IA)"):
+                        testo_input = "\n".join([f"[{d}] {o}: {n}" for d, o, n in b_logs])
+                        with st.spinner("Analisi in corso..."):
+                            # Chiamata alla tua funzione IA esistente con prompt personalizzato
+                            prompt_b = f"Riassumi queste note cliniche ultime 24h per cambio turno. Evidenzia criticità:\n{testo_input}"
+                            sunto = genera_relazione_ia(p_id, "BRIEFING", 1, custom_prompt=prompt_b)
+                            st.markdown(f"<div style='background:#f0fdf4; border-left:5px solid #16a34a; padding:15px; border-radius:8px; color:#166534;'>{sunto}</div>", unsafe_allow_html=True)
+                    
+                    st.divider()
+                    st.caption("Ultime note registrate:")
+                    for d, o, n in reversed(b_logs):
+                        st.write(f"**{d} - {o}**: {n}")
+                else:
+                    st.info("Nessun dato nelle ultime 24 ore.")
 
-            with t_ai: # Tab IA
-                st.subheader("🤖 Sintesi IA")
-                if st.button("GENERA REPORT"):
-                    with st.spinner("Analisi in corso..."):
-                        report = genera_relazione_ia(p_id, p_sel, 7)
-                        st.markdown(f"<div style='background:#f0f7ff; border-left:5px solid #2563eb; padding:15px; border-radius:8px; color:#1e3a8a; white-space:pre-wrap;'><b>SINTESI IA:</b><br><br>{report}</div>", unsafe_allow_html=True)
-
+            with t_ai:
+                st.subheader("🤖 Relazione IA Settimanale")
+                if st.button("Analisi ultimi 7 giorni"):
+                    with st.spinner("L'IA sta lavorando..."):
+                        relazione = genera_relazione_ia(p_id, p_sel, 7)
+                        st.markdown(f"<div style='background:#f8fafc; border-left:5px solid #1e3a8a; padding:15px; border-radius:8px;'>{relazione}</div>", unsafe_allow_html=True)
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
