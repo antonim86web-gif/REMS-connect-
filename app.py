@@ -351,14 +351,10 @@ elif nav == "👥 Modulo Equipe":
             
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
-                
-                # --- RECUPERO IDENTITÀ REALE ---
-                # Cerchiamo nell'ordine: nome utente, login o (se proprio vuoto) il ruolo
-                nome_reale = st.session_state.get('username', st.session_state.get('user', 'Utente non loggato'))
-                
-                st.markdown(f"👤 Operatore: **{nome_reale}**")
+                nome_reale = st.session_state.get('username', st.session_state.get('user', 'Operatore'))
                 
                 turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+                
                 terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 
                 for f in terapie_keep:
@@ -371,31 +367,29 @@ elif nav == "👥 Modulo Equipe":
                         st.markdown(f"### 💊 {nome_f} <small>({dose_f})</small>", unsafe_allow_html=True)
                         mese_corrente = get_now_it().strftime('%m/%Y')
                         
-                        # Recupero dati per il calendario
-                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND data LIKE ?", 
-                                       (p_id, f"%[{t_id_univoco}]%", f"%/{mese_corrente}%"))
+                        # --- FIX: FILTRO PER TAG ID + TURNO SPECIFICO ---
+                        # Cerchiamo solo le firme che contengono sia l'ID che il turno selezionato
+                        firme = db_run("SELECT data, esito, op FROM eventi WHERE id=? AND nota LIKE ? AND nota LIKE ? AND data LIKE ?", 
+                                       (p_id, f"%[{t_id_univoco}]%", f"%({turno_attivo})%", f"%/{mese_corrente}%"))
                         
-                        f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0] and "/" in d[0]}
+                        f_map = {int(d[0].split("/")[0]): {"full": d[0], "e": d[1], "o": d[2]} for d in firme if d[0]}
                         num_giorni = calendar.monthrange(get_now_it().year, get_now_it().month)[1]
                         
-                        # --- CALENDARIO CON TOOLTIP PULITO ---
                         h = "<div style='display: flex; overflow-x: auto; padding: 10px; gap: 5px;'>"
                         for d in range(1, num_giorni + 1):
                             info = f_map.get(d)
                             is_today = "border: 2px solid #2563eb;" if d == get_now_it().day else "border: 1px solid #ddd;"
                             esito_txt, col_t, bg_c = ("-", "#888", "white")
-                            t_pop = f"Giorno {d}: Libero"
+                            t_pop = f"Giorno {d}: Libero ({turno_attivo})"
                             
                             if info:
                                 ora_s = info['full'].split(" ")[1] if " " in info['full'] else "--:--"
-                                # Mostra il nome salvato nel DB per quel giorno
-                                op_f = info['o'] if info['o'] else "N.D."
                                 if info['e'] == "A":
                                     esito_txt, col_t, bg_c = ("A", "#15803d", "#dcfce7")
-                                    t_pop = f"✅ ASSUNTO | Ore: {ora_s} | Op: {op_f}"
+                                    t_pop = f"✅ {turno_attivo} | Ore: {ora_s} | Op: {info['o']}"
                                 elif info['e'] == "R":
                                     esito_txt, col_t, bg_c = ("R", "#b91c1c", "#fee2e2")
-                                    t_pop = f"❌ RIFIUTATO | Ore: {ora_s} | Op: {op_f}"
+                                    t_pop = f"❌ {turno_attivo} | Ore: {ora_s} | Op: {info['o']}"
                             
                             h += f"<div title='{t_pop}' style='min-width: 40px; height: 50px; background: {bg_c}; color: {col_t}; {is_today} border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: default; font-size: 0.8rem;'><div style='font-weight: bold;'>{d}</div><div style='font-size: 1rem;'>{esito_txt}</div></div>"
                         
@@ -404,8 +398,8 @@ elif nav == "👥 Modulo Equipe":
                         with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
                             if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
+                                # La nota include il turno tra parentesi per distinguerlo nella ricerca
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
-                                # Inseriamo NOME_REALE nella colonna OP
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "A"), True)
                                 st.rerun()
@@ -415,7 +409,6 @@ elif nav == "👥 Modulo Equipe":
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
-
             with t4: # Briefing (24h)
                 st.subheader("📋 Briefing Turno (Last 24h)")
                 ieri = (get_now_it() - timedelta(days=1)).strftime("%d/%m/%Y %H:%M")
