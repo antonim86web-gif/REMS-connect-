@@ -393,17 +393,34 @@ elif nav == "👥 Modulo Equipe":
                             h += f"<div class='quadratino {is_today}' style='background:{bg_c}; color:{col_t};'><div class='q-num'>{d}</div><div class='q-esito'>{esito_txt}</div></div>"
                         st.markdown(h + "</div>", unsafe_allow_html=True)
                         
-                        with st.popover(f"Smarca {nome_f}"):
-                            c1, c2 = st.columns(2)
-                            if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
+                        # --- BOTTONI DI SMARCAMENTO CON FIRMA ---
+                        with st.popover(f"Registra Somministrazione: {nome_f}"):
+                            col_a, col_r = st.columns(2)
+                            
+                            # Recupero firma operatore di sicurezza
+                            operatore_attuale = st.session_state.get('user', 'Operatore Non Identificato')
+                            
+                            # Azione ASSUNTO
+                            if col_a.button("✅ ASSUNTO", key=f"btn_ok_{t_id_univoco}_{turno_attivo}"):
+                                # Costruiamo la nota con Tag ID, Nome Farmaco e Turno
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} {dose_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "A"), True)
+                                
+                                # Esecuzione Query: passiamo 'operatore_attuale' come firma
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", operatore_attuale, "A"), True)
+                                
+                                scrivi_log("TERAPIA", f"Smarcato {nome_f} (ID:{t_id_univoco}) da {operatore_attuale}")
                                 st.rerun()
-                            if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
+                            
+                            # Azione RIFIUTATO
+                            if col_r.button("❌ RIFIUTO", key=f"btn_ko_{t_id_univoco}_{turno_attivo}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} {dose_f} ({turno_attivo})"
-                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", firma_op, "R"), True)
+                                
+                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
+                                       (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, "Infermiere", operatore_attuale, "R"), True)
+                                
+                                scrivi_log("TERAPIA", f"Rifiuto {nome_f} (ID:{t_id_univoco}) registrato da {operatore_attuale}")
                                 st.rerun()
-                        st.divider()
 
             with t2: # Parametri
                 with st.form("vit_inf"):
