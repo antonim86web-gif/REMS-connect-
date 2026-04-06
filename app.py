@@ -442,7 +442,8 @@ elif nav == "👥 Modulo Equipe":
                 if tipo_rep == "Solo Terapie":
                     q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' OR op LIKE '%SOMMINISTRAZIONE%') ORDER BY id_u DESC"
                 elif tipo_rep == "Solo Consegne":
-                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND ruolo = 'infermiere' ORDER BY id_u DESC"
+                    # Usiamo LOWER per ignorare maiuscole/minuscole e cerchiamo corrispondenze parziali
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (LOWER(ruolo) LIKE '%infermiere%' OR ruolo = 'Infermiere') ORDER BY id_u DESC"
                 else:
                     q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
                 
