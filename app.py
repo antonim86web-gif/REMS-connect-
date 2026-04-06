@@ -424,16 +424,6 @@ elif nav == "👥 Modulo Equipe":
                                 st.rerun()
                         st.divider()
 
-            with t2: # Tab Parametri (Manteniamo la firma corretta anche qui)
-                with st.form("vit_inf"):
-                    c1, c2, c3 = st.columns(3)
-                    p_val = c1.text_input("PA"); f_val = c2.text_input("FC"); s_val = c3.text_input("SatO2")
-                    if st.form_submit_button("SALVA PARAMETRI"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"💓 PA:{p_val} FC:{f_val} Sat:{s_val}", "Infermiere", nome_reale), True)
-                        st.rerun()
-            # ... (Resto dei tab T3, T4, T_AI rimangono uguali)
-
             with t2: # Tab Parametri
                 with st.form("vit_inf"):
                     c1, c2, c3 = st.columns(3)
