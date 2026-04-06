@@ -293,7 +293,7 @@ elif nav == "👥 Modulo Equipe":
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
         now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
 
-        if ruolo_corr == "Medico/Psichiatra":
+     if ruolo_corr == "Medico/Psichiatra":
             t1, t2, t3, t_ai = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
 
             with t1:
@@ -319,7 +319,6 @@ elif nav == "👥 Modulo Equipe":
                         c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
                         if c2.button("🗑️", key=f"del_{t[0]}"):
                             db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                            scrivi_log("TERAPIA", f"Eliminato farmaco ID {t[0]} per {p_sel}")
                             st.rerun()
                 
                 st.divider()
@@ -347,22 +346,15 @@ elif nav == "👥 Modulo Equipe":
                         st.rerun()
 
             with t_ai:
-                st.markdown("<div class='ai-box'>", unsafe_allow_html=True)
                 st.subheader("🤖 Assistente Clinico IA")
-                st.write("Analisi sintetica dell'andamento clinico e comportamentale dell'ultima settimana.")
-                
                 if st.button("GENERA RELAZIONE CLINICA AVANZATA"):
-                    with st.spinner("Analisi dei diari multidisciplinari in corso..."):
-                        # Chiamata alla funzione IA
-                        relazione = genera_relazione_ia(p_id, p_sel, 7) # Analisi ultimi 7 giorni
-                        
-                        # Visualizzazione "Blindata" (non esce dai bordi)
+                    with st.spinner("Analisi dei diari in corso..."):
+                        relazione = genera_relazione_ia(p_id, p_sel, 7) 
                         st.markdown(f"""
-                            <div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap; margin-top:20px;'>
-                                <b style='color:#a855f7;'>🧠 VALUTAZIONE CLINICA IA (ULTIMI 7 GG):</b><br><br>{relazione}
+                            <div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap;'>
+                                <b>🧠 VALUTAZIONE CLINICA IA:</b><br><br>{relazione}
                             </div>
                         """, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
             # 1. Definizione dei 5 Tab (Incluso Briefing e IA)
