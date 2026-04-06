@@ -91,7 +91,6 @@ st.markdown("""
     .ai-box { background: #f8fafc; border: 2px solid #a855f7; border-radius: 15px; padding: 25px; margin-top: 10px; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.2); }
     .alert-sidebar { background: #ef4444; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: 800; margin: 10px 5px; border: 2px solid white; animation: pulse 2s infinite; }
     @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
-
     .cal-table { width:100%; border-collapse: collapse; table-layout: fixed; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .cal-table th { background: #f1f5f9; padding: 10px; color: #1e3a8a; font-weight: 800; border: 1px solid #e2e8f0; font-size: 0.85rem; }
     .cal-table td { border: 1px solid #e2e8f0; vertical-align: top; height: 150px; padding: 5px; position: relative; overflow: visible !important; }
@@ -112,7 +111,6 @@ st.markdown("""
     .role-psicologo { background-color: #faf5ff; border-color: #a855f7; }
     .role-sociale { background-color: #fff7ed; border-color: #f97316; }
     .role-opsi { background-color: #f1f5f9; border-color: #0f172a; border-style: dashed; }
-
     .scroll-giorni { display: flex; overflow-x: auto; gap: 4px; padding: 8px; background: #fdfdfd; }
     .quadratino { 
         min-width: 38px; height: 50px; border-radius: 4px; border: 1px solid #eee; 
@@ -122,7 +120,6 @@ st.markdown("""
     .q-num { font-size: 7px; color: #999; }
     .q-esito { font-size: 11px; font-weight: 900; }
     .q-op { font-size: 6px; color: #444; }
-
     .therapy-container { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
     .cassa-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 20px; }
     .saldo-txt { font-size: 2.2rem; font-weight: 900; color: #166534; }
@@ -336,25 +333,25 @@ elif nav == "👥 Modulo Equipe":
                     with st.spinner("L'intelligenza artificiale sta analizzando i diari..."):
                         res_ai = genera_relazione_ia(p_id, p_sel, g_rel)
                         # Sostituisci: st.write(report) o st.info(report) con questo:
-                        st.markdown(f"""
-                        <div style="
-                        background-color: #f0f7ff; 
-                        border: 1px solid #2563eb; 
-                        border-left: 5px solid #2563eb;
-                        padding: 15px; 
-                        border-radius: 8px; 
-                        color: #1e3a8a;
-                        font-size: 0.95rem;
-                        line-height: 1.6;
-                        margin: 10px 0;
-                        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
-                        white-space: pre-wrap;
-                        ">
-                        <b style="color: #2563eb;">🤖 SINTESI IA GENERATA:</b><br><br>
-                        {report}
-                        </div>
-                        """, unsafe_allow_html=True)    
 
+st.markdown(f"""
+    <div style="
+        background-color: #f0f7ff; 
+        border: 1px solid #2563eb; 
+        border-left: 5px solid #2563eb;
+        padding: 15px; 
+        border-radius: 8px; 
+        color: #1e3a8a;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 10px 0;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+        white-space: pre-wrap;
+    ">
+        <b style="color: #2563eb;">🤖 SINTESI IA GENERATA:</b><br><br>
+        {report}
+    </div>
+""", unsafe_allow_html=True)
 
         elif ruolo_corr == "Infermiere":
             # 1. Definizione dei 5 Tab (Incluso Briefing e IA)
