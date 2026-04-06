@@ -319,7 +319,7 @@ elif nav == "📊 Monitoraggio":
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1:
-        f_data = st.text_input("📅 Filtra per Data (es: 2026-04)", placeholder="AAAA-MM-GG")
+        f_data = st.text_input("📅 Filtra per Data (es: 2026-04)", placeholder="GG-MM-AAAA")
     with c2:
         f_op = st.text_input("👤 Filtra Operatore/Ruolo", placeholder="Es: Rossi o Infermiere")
     st.markdown("---")
