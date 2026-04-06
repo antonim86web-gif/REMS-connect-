@@ -272,9 +272,9 @@ if conta_oggi > 0:
 opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"]
 if u['ruolo'] == "Admin": opts.append("⚙️ Admin")
 nav = st.sidebar.radio("NAVIGAZIONE", opts)
-if st.sidebar.button("LOGOUT"): 
-    scrivi_log("LOGOUT", "Uscita dal sistema")
-    st.session_state.user_session = None; 
+# Usa una chiave univoca per evitare il DuplicateElementId
+if st.sidebar.button("LOGOUT", key="logout_sidebar_unique"):
+    st.session_state.clear()
     st.rerun()
 st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
