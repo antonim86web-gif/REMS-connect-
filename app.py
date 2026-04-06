@@ -440,59 +440,24 @@ elif nav == "👥 Modulo Equipe":
                         st.rerun()
 
             with t4:
-                st.subheader("📋 Briefing Intelligente (IA)")
-                
-                # 1. Recuperiamo le ultime 50 note del paziente per essere sicuri di coprire le 24h
-                tutte_le_note = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 50", (p_id,))
-                
-                # 2. Filtro temporale manuale (più robusto di SQL per le stringhe)
-                b_logs = []
-                adesso = get_now_it()
-                limite_24h = adesso - timedelta(hours=24)
+                st.subheader("Esame Obiettivo e Stato Mentale")
+                with st.form("esame_ob"):
+                    e_o = st.text_area("Descrizione esame obiettivo, vigilanza, orientamento, contatto...")
+                    if st.form_submit_button("SALVA ESAME OBIETTIVO"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Medico", firma_op), True)
+                        st.rerun()
 
-                for d_str, op_b, nt_b in tutte_le_note:
-                    try:
-                        # Gestiamo i vari formati possibili nel tuo DB
-                        for fmt in ("%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M"):
-                            try:
-                                data_dt = datetime.strptime(d_str, fmt)
-                                if data_dt >= limite_24h:
-                                    b_logs.append((d_str, op_b, nt_b))
-                                break # Se ha funzionato il primo formato, esce dal ciclo for fmt
-                            except: continue
-                    except: continue
-
-                if b_logs:
-                    st.success(f"Trovate {len(b_logs)} note cliniche nelle ultime 24 ore.")
-                    
-                    if st.button("🤖 GENERA RIASSUNTO TURNO (IA)", type="primary"):
-                        # Prepariamo il testo cronologico per l'IA
-                        testo_input = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
-                        
-                        with st.spinner("L'IA sta analizzando i dati..."):
-                            # Usiamo la tua funzione IA con la prompt per il cambio turno
-                            prompt_cambio_turno = (
-                                "Sei un assistente sanitario esperto. Riassumi le seguenti note cliniche "
-                                "per il cambio turno tra infermieri. Sii sintetico, indica se ci sono "
-                                f"stati problemi urgenti o rifiuti di farmaci:\n\n{testo_input}"
-                            )
-                            
-                            # Chiamata alla funzione IA (passiamo una nota finta per triggerare la prompt custom)
-                            sunto = genera_relazione_ia(p_id, "BRIEFING", 1, custom_prompt=prompt_cambio_turno)
-                            
-                            st.markdown(f"""
-                            <div style='background-color:#f0f7ff; border-left:5px solid #007bff; padding:15px; border-radius:8px; color:#1e3a8a;'>
-                                <b>Riassunto del Turno:</b><br>{sunto}
+            with t_ai:
+                st.subheader("🤖 Assistente Clinico IA")
+                if st.button("GENERA RELAZIONE CLINICA AVANZATA"):
+                    with st.spinner("Analisi dei diari in corso..."):
+                        relazione = genera_relazione_ia(p_id, p_sel, 7) 
+                        st.markdown(f"""
+                            <div style='background:#fdf4ff; border-left:5px solid #a855f7; padding:15px; border-radius:8px; color:#581c87; white-space:pre-wrap;'>
+                                <b>🧠 VALUTAZIONE CLINICA IA:</b><br><br>{relazione}
                             </div>
-                            """, unsafe_allow_html=True)
-                    
-                    st.divider()
-                    st.caption("Dettaglio delle ultime note:")
-                    for d, o, n in b_logs:
-                        with st.expander(f"🕒 {d} - {o}"):
-                            st.write(n)
-                else:
-                    st.info("Nessuna nota registrata nelle ultime 24 ore per questo paziente.")
+                        """, unsafe_allow_html=True)
         elif ruolo_corr == "Psicologo":
             t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
             with t1:
