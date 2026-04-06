@@ -9,7 +9,7 @@ from groq import Groq # <--- Per l'IA di Groq
 # Configurazione Groq
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 from fpdf import FPDF
-from io
+import io
 
 import io # <--- Assicurati di avere questo import in alto!
 
