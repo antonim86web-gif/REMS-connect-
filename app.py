@@ -58,28 +58,23 @@ def aggiorna_struttura_db():
     except: pass
     
     # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
-    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
-    except: pass
-    
-    # --- NUOVE COLONNE TERAPIA PER ORARI SPECIFICI ---
-    try: c.execute("ALTER TABLE terapie ADD COLUMN mat_nuovo INTEGER DEFAULT 0")
-    except: pass
-    try: c.execute("ALTER TABLE terapie ADD COLUMN pom_nuovo INTEGER DEFAULT 0")
-    except: pass
-    try: c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
-    except: pass
-    
-    # Tabella Log per Tracciabilità Legale
-    c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
-                 id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
-                 data_ora TEXT, 
-                 utente TEXT, 
-                 azione TEXT, 
-                 dettaglio TEXT)""")
+    # --- AGGIORNAMENTO STRUTTURA DB (Esegui questo blocco per risolvere l'errore) ---
+def ripara_db_prescrizioni():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Aggiungiamo le colonne mancanti alla tabella terapie
+    try:
+        c.execute("ALTER TABLE terapie ADD COLUMN medico TEXT DEFAULT 'Sistema'")
+    except:
+        pass # La colonna esiste già
+    try:
+        c.execute("ALTER TABLE terapie ADD COLUMN data_prescrizione TEXT DEFAULT 'Storico'")
+    except:
+        pass # La colonna esiste già
     conn.commit()
     conn.close()
 
-aggiorna_struttura_db()
+ripara_db_prescrizioni() # Lo lanciamo all'avvio
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
