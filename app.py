@@ -13,40 +13,28 @@ import io
 
 import io # <--- Assicurati di avere questo import in alto!
 
-def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # Intestazione
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "REMS-CONNECT - REPORT CLINICO", ln=True, align='C')
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, f"Paziente: {p_nome}", ln=True)
-    pdf.ln(10)
+DB_NAME = "rems_final_v12.db"
 
-    for data, op, nota in dati_clinici:
-        # Pulizia totale caratteri
-        nota_p = str(nota).encode('latin-1', 'replace').decode('latin-1')
-        op_p = str(op).encode('latin-1', 'replace').decode('latin-1')
-        
-        pdf.set_font("Arial", 'B', 10)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(0, 7, f"Data: {data} | Op: {op_p}", ln=True, fill=True)
-        pdf.set_font("Arial", size=10)
-        pdf.multi_cell(0, 7, nota_p)
-        pdf.ln(4)
-        
-    # --- IL TRUCCO INFALLIBILE: Esporta come Byte String ---
-    pdf_output = pdf.output() # In fpdf2 questo restituisce bytearray o bytes
-    return bytes(pdf_output)  # Lo trasformiamo in bytes puri
-        
-    
+# 2. FUNZIONE DI RIPARAZIONE (Aggiunge le colonne se mancano)
+def ripara_db_prescrizioni():
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            c = conn.cursor()
+            # Aggiungiamo le colonne mancanti alla tabella terapie
+            try:
+                c.execute("ALTER TABLE terapie ADD COLUMN medico TEXT DEFAULT 'Sistema'")
+            except:
+                pass # La colonna esiste già
+            try:
+                c.execute("ALTER TABLE terapie ADD COLUMN data_prescrizione TEXT DEFAULT 'Storico'")
+            except:
+                pass # La colonna esiste già
+            conn.commit()
+    except Exception as e:
+        st.error(f"Errore riparazione DB: {e}")
 
-
-
-# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
-def aggiorna_struttura_db():
+# 3. LANCIAMO LA RIPARAZIONE
+ripara_db_prescrizioni()
     conn = sqlite3.connect('rems_final_v12.db')
     c = conn.cursor()
     # Colonne per eventi
