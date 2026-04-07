@@ -389,7 +389,7 @@ elif nav == "👥 Modulo Equipe":
                             st.rerun()
 
             with t2:
-        st.subheader("💊 Gestione Terapia Farmacologica")
+                st.subheader("💊 Gestione Terapia Farmacologica")
         
         # 1. Recupero dati (Prendiamo 7 colonne)
         ter_att = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
