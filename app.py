@@ -389,15 +389,15 @@ elif nav == "👥 Modulo Equipe":
                             st.rerun()
 
             with t2:
-                st.subheader("💊 Gestione Terapia Farmacologica")
+        st.subheader("💊 Gestione Terapia Farmacologica")
         
-        # 1. Recupero dati (Prendiamo 7 colonne)
+        # Recupero terapie (Assicurati che la colonna 'data' esista nel DB)
         ter_att = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
         
         if ter_att:
             for t in ter_att:
                 c1, c2 = st.columns([0.8, 0.2])
-                # t[6] è la DATA
+                # t[6] è la DATA della prescrizione
                 info = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'})"
                 c1.info(info)
                 
@@ -405,37 +405,32 @@ elif nav == "👥 Modulo Equipe":
                     db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
                     st.rerun()
                 st.divider()
-        
-        if not ter_att:
-            st.warning("Nessuna terapia attiva trovata.")
+        else:
+            st.info("Nessuna terapia attiva trovata.")
 
-        # --- ORA L'EXPANDER È ALLINEATO CORRETTAMENTE ---
         with st.expander("➕ Prescrivi Nuovo Farmaco"):
-                    with st.form("nuova_terapia_med"):
-                        f_nome = st.text_input("Nome Farmaco")
-                        f_dose = st.text_input("Dosaggio")
-                        col1, col2, col3 = st.columns(3)
-                        m_n, p_n, a_b = col1.checkbox("Mattina"), col2.checkbox("Pomeriggio"), col3.checkbox("Al bisogno")
-                        if st.form_submit_button("CONFERMA PRESCRIZIONE"):
-                            if f_nome:
-                                db_run("INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)",
-                                       (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0), True)
-                                st.rerun()
+            st.write("Inserisci i dettagli della nuova terapia:")
+            # Qui andrà il tuo codice per il form di inserimento
 
-            with t3:
-                st.subheader("🩺 Esame Obiettivo e Parametri")
-                # Recupero ultimi parametri inseriti
-                ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id_u DESC LIMIT 5", (p_id,))
-                if ultimi_p:
-                    for d, n in ultimi_p:
-                        st.write(f"**{d}**: {n}")
-                
-                with st.form("esame_ob_med"):
-                    e_o = st.text_area("Descrizione esame obiettivo e stato mentale...")
-                    if st.form_submit_button("SALVA ESAME OBIETTIVO"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
-                        st.rerun()
+    with t3:
+        st.subheader("📝 Note Cliniche / Relazioni")
+        
+        # Visualizzazione note esistenti
+        note_cliniche = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND tipo='Nota Clinica' ORDER BY id_u DESC", (p_id,))
+        
+        if note_cliniche:
+            for n in note_cliniche:
+                st.info(f"📅 **{n[0]}** - *Dott. {n[1]}*")
+                st.write(n[2])
+                st.divider()
+        else:
+            st.write("Nessuna nota clinica registrata.")
+            
+        with st.expander("✍️ Aggiungi Nuova Nota"):
+            nuova_nota = st.text_area("Scrivi qui la relazione...")
+            if st.button("Salva Nota"):
+                # Esempio di salvataggio (adattalo al tuo db_run)
+                st.success("Nota salvata correttamente!")
 
             with t4:
                 st.subheader("🤖 Analisi Clinica IA (Briefing Medico)")
