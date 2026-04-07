@@ -13,28 +13,40 @@ import io
 
 import io # <--- Assicurati di avere questo import in alto!
 
-DB_NAME = "rems_final_v12.db"
+def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Intestazione
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "REMS-CONNECT - REPORT CLINICO", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 8, f"Paziente: {p_nome}", ln=True)
+    pdf.ln(10)
 
-# 2. FUNZIONE DI RIPARAZIONE (Aggiunge le colonne se mancano)
-def ripara_db_prescrizioni():
-    try:
-        with sqlite3.connect(DB_NAME) as conn:
-            c = conn.cursor()
-            # Aggiungiamo le colonne mancanti alla tabella terapie
-            try:
-                c.execute("ALTER TABLE terapie ADD COLUMN medico TEXT DEFAULT 'Sistema'")
-            except:
-                pass # La colonna esiste già
-            try:
-                c.execute("ALTER TABLE terapie ADD COLUMN data_prescrizione TEXT DEFAULT 'Storico'")
-            except:
-                pass # La colonna esiste già
-            conn.commit()
-    except Exception as e:
-        st.error(f"Errore riparazione DB: {e}")
+    for data, op, nota in dati_clinici:
+        # Pulizia totale caratteri
+        nota_p = str(nota).encode('latin-1', 'replace').decode('latin-1')
+        op_p = str(op).encode('latin-1', 'replace').decode('latin-1')
+        
+        pdf.set_font("Arial", 'B', 10)
+        pdf.set_fill_color(240, 240, 240)
+        pdf.cell(0, 7, f"Data: {data} | Op: {op_p}", ln=True, fill=True)
+        pdf.set_font("Arial", size=10)
+        pdf.multi_cell(0, 7, nota_p)
+        pdf.ln(4)
+        
+    # --- IL TRUCCO INFALLIBILE: Esporta come Byte String ---
+    pdf_output = pdf.output() # In fpdf2 questo restituisce bytearray o bytes
+    return bytes(pdf_output)  # Lo trasformiamo in bytes puri
+        
+    
 
-# 3. LANCIAMO LA RIPARAZIONE
-ripara_db_prescrizioni()
+
+
+# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
+def aggiorna_struttura_db():
     conn = sqlite3.connect('rems_final_v12.db')
     c = conn.cursor()
     # Colonne per eventi
@@ -46,23 +58,28 @@ ripara_db_prescrizioni()
     except: pass
     
     # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
-    # --- AGGIORNAMENTO STRUTTURA DB (Esegui questo blocco per risolvere l'errore) ---
-def ripara_db_prescrizioni():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    # Aggiungiamo le colonne mancanti alla tabella terapie
-    try:
-        c.execute("ALTER TABLE terapie ADD COLUMN medico TEXT DEFAULT 'Sistema'")
-    except:
-        pass # La colonna esiste già
-    try:
-        c.execute("ALTER TABLE terapie ADD COLUMN data_prescrizione TEXT DEFAULT 'Storico'")
-    except:
-        pass # La colonna esiste già
+    try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
+    except: pass
+    
+    # --- NUOVE COLONNE TERAPIA PER ORARI SPECIFICI ---
+    try: c.execute("ALTER TABLE terapie ADD COLUMN mat_nuovo INTEGER DEFAULT 0")
+    except: pass
+    try: c.execute("ALTER TABLE terapie ADD COLUMN pom_nuovo INTEGER DEFAULT 0")
+    except: pass
+    try: c.execute("ALTER TABLE terapie ADD COLUMN al_bisogno INTEGER DEFAULT 0")
+    except: pass
+    
+    # Tabella Log per Tracciabilità Legale
+    c.execute("""CREATE TABLE IF NOT EXISTS logs_sistema (
+                 id_log INTEGER PRIMARY KEY AUTOINCREMENT, 
+                 data_ora TEXT, 
+                 utente TEXT, 
+                 azione TEXT, 
+                 dettaglio TEXT)""")
     conn.commit()
     conn.close()
 
-ripara_db_prescrizioni() # Lo lanciamo all'avvio
+aggiorna_struttura_db()
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
@@ -358,7 +375,7 @@ elif nav == "👥 Modulo Equipe":
 
         if ruolo_corr == "Psichiatra":
             # 1. DEFINIZIONE TAB MEDICO
-            t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI IA"])
+            t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
 
             with t1:
                 st.subheader("Inserimento Nota in Diario Clinico")
@@ -367,69 +384,24 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("REGISTRA NOTA CLINICA"):
                         if nota_med:
                             db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 {nota_med}", "Psichiatra", firma_op), True)
+                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
                             st.success("Nota registrata!")
                             st.rerun()
 
             with t2:
                 st.subheader("💊 Gestione Terapia Farmacologica")
                 
-                # --- VISUALIZZAZIONE TERAPIE ATTUALI CON FIRMA MEDICO ---
-                # Ho aggiunto la selezione di 'medico' e 'data_prescrizione' dalla tabella
-                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, medico, data_prescrizione FROM terapie WHERE p_id=?", (p_id,))
-                
+                # --- VISUALIZZAZIONE TERAPIE ATTUALI ---
+                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 if terapie_attuali:
                     for t in terapie_attuali:
-                        with st.container():
-                            c1, c2 = st.columns([4, 1])
-                            # Mostriamo chi ha prescritto e quando
-                            info_prescrizione = f"Prescritto da: {t[6]} il {t[7]}" if t[6] else "Prescrizione antecedente"
-                            
-                            c1.info(f"**{t[1]}** - {t[2]} \n\n (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'}) \n\n *{info_prescrizione}*")
-                            
-                            if c2.button("🗑️ Elimina", key=f"del_med_{t[0]}"):
-                                db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                                scrivi_log("ELIMINAZIONE FARMACO", f"Rimosso {t[1]} per paziente ID {p_id}")
-                                st.rerun()
+                        c1, c2 = st.columns([4, 1])
+                        c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
+                        if c2.button("🗑️", key=f"del_med_{t[0]}"):
+                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                            st.rerun()
                 
                 st.divider()
-
-                # --- FORM NUOVA PRESCRIZIONE CON TRACCIABILITÀ ---
-                with st.expander("➕ Prescrivi Nuovo Farmaco", expanded=True):
-                    with st.form("nuova_terapia_med"):
-                        f_nome = st.text_input("Nome Farmaco (es. Depakin, Serenase)")
-                        f_dose = st.text_input("Dosaggio (es. 500mg, 15 gtt)")
-                        
-                        st.write("**Orari di somministrazione:**")
-                        col1, col2, col3 = st.columns(3)
-                        m_n = col1.checkbox("Mattina (8:13)")
-                        p_n = col2.checkbox("Pomeriggio (16:20)")
-                        a_b = col3.checkbox("Al bisogno")
-                        
-                        if st.form_submit_button("CONFERMA E FIRMA PRESCRIZIONE"):
-                            if f_nome and f_dose:
-                                ora_presc = get_now_it().strftime("%d/%m/%Y %H:%M")
-                                # Inseriamo il farmaco includendo FIRMA e DATA/ORA
-                                try:
-                                    db_run("""INSERT INTO terapie 
-                                           (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, medico, data_prescrizione) 
-                                           VALUES (?,?,?,?,?,?,?,?)""",
-                                           (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0, firma_op, ora_presc), True)
-                                    
-                                    # Registriamo l'atto medico anche nel diario clinico automatico
-                                    nota_auto = f"💊 NUOVA PRESCRIZIONE: {f_nome} {f_dose} (M:{m_n}, P:{p_n}, AB:{a_b})"
-                                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                           (p_id, ora_presc, nota_auto, "Psichiatra", firma_op), True)
-                                    
-                                    st.success(f"Farmaco {f_nome} registrato correttamente!")
-                                    st.rerun()
-                                except Exception as e:
-                                    # Se le colonne non esistono ancora nel DB, le creiamo al volo
-                                    db_run("ALTER TABLE terapie ADD COLUMN medico TEXT", commit=True)
-                                    db_run("ALTER TABLE terapie ADD COLUMN data_prescrizione TEXT", commit=True)
-                                    st.warning("Database aggiornato. Riprova il salvataggio.")
-                            else:
-                                st.error("Inserire nome farmaco e dosaggio!")
 
                 # --- TABELLA SMARCATURE (Quello che vede il medico) ---
                 st.markdown("### 📊 Registro Somministrazioni Infermieristiche")
