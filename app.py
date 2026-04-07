@@ -375,7 +375,7 @@ elif nav == "👥 Modulo Equipe":
 
         if ruolo_corr == "Psichiatra":
             # 1. DEFINIZIONE TAB MEDICO
-            t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
+            t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI IA"])
 
             with t1:
                 st.subheader("Inserimento Nota in Diario Clinico")
@@ -384,24 +384,69 @@ elif nav == "👥 Modulo Equipe":
                     if st.form_submit_button("REGISTRA NOTA CLINICA"):
                         if nota_med:
                             db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
+                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 {nota_med}", "Psichiatra", firma_op), True)
                             st.success("Nota registrata!")
                             st.rerun()
 
             with t2:
                 st.subheader("💊 Gestione Terapia Farmacologica")
                 
-                # --- VISUALIZZAZIONE TERAPIE ATTUALI ---
-                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+                # --- VISUALIZZAZIONE TERAPIE ATTUALI CON FIRMA MEDICO ---
+                # Ho aggiunto la selezione di 'medico' e 'data_prescrizione' dalla tabella
+                terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, medico, data_prescrizione FROM terapie WHERE p_id=?", (p_id,))
+                
                 if terapie_attuali:
                     for t in terapie_attuali:
-                        c1, c2 = st.columns([4, 1])
-                        c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
-                        if c2.button("🗑️", key=f"del_med_{t[0]}"):
-                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                            st.rerun()
+                        with st.container():
+                            c1, c2 = st.columns([4, 1])
+                            # Mostriamo chi ha prescritto e quando
+                            info_prescrizione = f"Prescritto da: {t[6]} il {t[7]}" if t[6] else "Prescrizione antecedente"
+                            
+                            c1.info(f"**{t[1]}** - {t[2]} \n\n (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'}) \n\n *{info_prescrizione}*")
+                            
+                            if c2.button("🗑️ Elimina", key=f"del_med_{t[0]}"):
+                                db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                                scrivi_log("ELIMINAZIONE FARMACO", f"Rimosso {t[1]} per paziente ID {p_id}")
+                                st.rerun()
                 
                 st.divider()
+
+                # --- FORM NUOVA PRESCRIZIONE CON TRACCIABILITÀ ---
+                with st.expander("➕ Prescrivi Nuovo Farmaco", expanded=True):
+                    with st.form("nuova_terapia_med"):
+                        f_nome = st.text_input("Nome Farmaco (es. Depakin, Serenase)")
+                        f_dose = st.text_input("Dosaggio (es. 500mg, 15 gtt)")
+                        
+                        st.write("**Orari di somministrazione:**")
+                        col1, col2, col3 = st.columns(3)
+                        m_n = col1.checkbox("Mattina (8:13)")
+                        p_n = col2.checkbox("Pomeriggio (16:20)")
+                        a_b = col3.checkbox("Al bisogno")
+                        
+                        if st.form_submit_button("CONFERMA E FIRMA PRESCRIZIONE"):
+                            if f_nome and f_dose:
+                                ora_presc = get_now_it().strftime("%d/%m/%Y %H:%M")
+                                # Inseriamo il farmaco includendo FIRMA e DATA/ORA
+                                try:
+                                    db_run("""INSERT INTO terapie 
+                                           (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, medico, data_prescrizione) 
+                                           VALUES (?,?,?,?,?,?,?,?)""",
+                                           (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0, firma_op, ora_presc), True)
+                                    
+                                    # Registriamo l'atto medico anche nel diario clinico automatico
+                                    nota_auto = f"💊 NUOVA PRESCRIZIONE: {f_nome} {f_dose} (M:{m_n}, P:{p_n}, AB:{a_b})"
+                                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                                           (p_id, ora_presc, nota_auto, "Psichiatra", firma_op), True)
+                                    
+                                    st.success(f"Farmaco {f_nome} registrato correttamente!")
+                                    st.rerun()
+                                except Exception as e:
+                                    # Se le colonne non esistono ancora nel DB, le creiamo al volo
+                                    db_run("ALTER TABLE terapie ADD COLUMN medico TEXT", commit=True)
+                                    db_run("ALTER TABLE terapie ADD COLUMN data_prescrizione TEXT", commit=True)
+                                    st.warning("Database aggiornato. Riprova il salvataggio.")
+                            else:
+                                st.error("Inserire nome farmaco e dosaggio!")
 
                 # --- TABELLA SMARCATURE (Quello che vede il medico) ---
                 st.markdown("### 📊 Registro Somministrazioni Infermieristiche")
