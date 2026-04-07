@@ -377,75 +377,75 @@ elif nav == "👥 Modulo Equipe":
             # 1. DEFINIZIONE TAB MEDICO
             t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
 
-            with t1:
-                st.subheader("Inserimento Nota in Diario Clinico")
-                with st.form("form_diario_med"):
-                    nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
-                    if st.form_submit_button("REGISTRA NOTA CLINICA"):
-                        if nota_med:
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
-                            st.success("Nota registrata!")
-                            st.rerun()
+        # --- MODULO PDF ONNIPRESENTE ---
+        # Recuperiamo gli eventi per generare il PDF al volo
+        eventi_pdf = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (p_id,))
+        if eventi_pdf:
+            pdf_data = genera_pdf_clinico(nome_paziente, eventi_pdf)
+            st.download_button(
+                label="📥 SCARICA DIARIO CLINICO PDF", 
+                data=pdf_data, 
+                file_name=f"diario_{nome_paziente}.pdf", 
+                mime="application/pdf", 
+                key=f"pdf_top_{p_id}",
+                use_container_width=True
+            )
+        st.divider()
 
-            with t2:
-        st.subheader("💊 Gestione Terapia Farmacologica")
-        
-        # Recupero terapie (Assicurati che la colonna 'data' esista nel DB)
-        ter_att = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
-        
-        if ter_att:
-            for t in ter_att:
-                c1, c2 = st.columns([0.8, 0.2])
-                # t[6] è la DATA della prescrizione
-                info = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'})"
-                c1.info(info)
-                
-                if c2.button("🗑️", key=f"del_med_{t[0]}"):
-                    db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                    st.rerun()
-                st.divider()
-        else:
-            st.info("Nessuna terapia attiva trovata.")
+        with t1:
+            st.subheader("Inserimento Nota in Diario Clinico")
+            with st.form("form_diario_med"):
+                nota_med = st.text_area("Valutazione clinica, colloqui, variazioni...", height=200)
+                if st.form_submit_button("REGISTRA NOTA CLINICA"):
+                    if nota_med:
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
+                        st.success("Nota registrata!")
+                        st.rerun()
 
-        with st.expander("➕ Prescrivi Nuovo Farmaco"):
-            st.write("Inserisci i dettagli della nuova terapia:")
-            # Qui andrà il tuo codice per il form di inserimento
-
-    with t3:
-        st.subheader("📝 Note Cliniche / Relazioni")
-        
-        # Visualizzazione note esistenti
-        note_cliniche = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND tipo='Nota Clinica' ORDER BY id_u DESC", (p_id,))
-        
-        if note_cliniche:
-            for n in note_cliniche:
-                st.info(f"📅 **{n[0]}** - *Dott. {n[1]}*")
-                st.write(n[2])
-                st.divider()
-        else:
-            st.write("Nessuna nota clinica registrata.")
+        with t2:
+            st.subheader("💊 Gestione Terapia Farmacologica")
+            # Query con 7 colonne (l'ultima è 'data')
+            ter_att = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno, data FROM terapie WHERE p_id=?", (p_id,))
             
-        with st.expander("✍️ Aggiungi Nuova Nota"):
-            nuova_nota = st.text_area("Scrivi qui la relazione...")
-            if st.button("Salva Nota"):
-                # Esempio di salvataggio (adattalo al tuo db_run)
-                st.success("Nota salvata correttamente!")
+            if ter_att:
+                for t in ter_att:
+                    c1, c2 = st.columns([0.8, 0.2])
+                    # t[6] mostra Giorno/Mese/Anno
+                    info = f"🗓️ **{t[6]}** | 💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'})"
+                    c1.info(info)
+                    if c2.button("🗑️", key=f"del_med_{t[0]}"):
+                        db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                        st.rerun()
+                    st.divider()
+            else:
+                st.info("Nessuna terapia attiva trovata.")
 
-            with t4:
-                st.subheader("🤖 Analisi Clinica IA (Briefing Medico)")
-                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
-                
-                if b_logs:
-                    if st.button("🤖 GENERA RELAZIONE CLINICA AGGIORNATA", type="primary"):
-                        testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
-                        with st.spinner("L'IA sta analizzando il caso clinico..."):
-                            prompt = f"Agisci come Psichiatra. Analizza queste note e genera una sintesi clinica: {testo_note}"
-                            # Uso la funzione IA che abbiamo testato prima
-                            relazione = genera_relazione_ia(p_id, prompt, 1) 
-                            st.markdown(f"<div class='ai-box'>{relazione}</div>", unsafe_allow_html=True)
-                else:
-                    st.warning("Dati insufficienti per l'analisi IA.")
+            with st.expander("➕ Prescrivi Nuovo Farmaco"):
+                st.write("Inserisci i dettagli della nuova terapia:")
+                # Qui aggiungi i tuoi campi di input per il database
+
+        with t3:
+            st.subheader("📝 Note Cliniche / Relazioni")
+            note_cliniche = db_run("SELECT data, op, nota FROM eventi WHERE id=? AND tipo='Nota Clinica' ORDER BY id_u DESC", (p_id,))
+            if note_cliniche:
+                for n in note_cliniche:
+                    st.info(f"📅 **{n[0]}** - *Dott. {n[1]}*")
+                    st.write(n[2])
+                    st.divider()
+            else:
+                st.write("Nessuna nota clinica registrata.")
+
+        with t4:
+            st.subheader("🤖 Analisi Clinica IA")
+            b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
+            if b_logs:
+                if st.button("🤖 GENERA RELAZIONE CLINICA", type="primary"):
+                    testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
+                    with st.spinner("L'IA sta analizzando il caso..."):
+                        prompt = f"Agisci come Psichiatra. Analizza queste note: {testo_note}"
+                        relazione = genera_relazione_ia(p_id, prompt, 1) 
+                        st.markdown(f"<div class='ai-box'>{relazione}</div>", unsafe_allow_html=True)
 
             # --- AREA PDF (SOTTO I TAB MA DENTRO IL RUOLO MEDICO) ---
             st.divider()
