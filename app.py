@@ -435,23 +435,24 @@ elif nav == "📊 Monitoraggio":
             with c1:
                 st.write("**🔍 Filtri di Ricerca:**")
                 
-                # 1. Aggiungiamo i selettori di data (fondamentali per evitare NameError)
+                # 1. Selettori di data
                 cd1, cd2 = st.columns(2)
                 d_inizio = cd1.date_input("Dal:", value=None, key=f"start_{p_id}")
                 d_fine = cd2.date_input("Al:", value=None, key=f"end_{p_id}")
                 
-                # 2. Gestione termine di ricerca e tasto rapido
-                termine = ""
-                if st.button("💊 Mostra Solo Terapie (A/R)", key=f"t_{p_id}"):
-                    termine = "A" # Funziona se nel DB cerchiamo in OR su nota/esito
-
-                termine = st.text_input("Cerca farmaco o esito (A/R):", value=termine, key=f"txt_{p_id}")
+                # 2. Input testo e tasto rapido
+                if st.button("💊 Mostra Solo Terapie", key=f"btn_t_{p_id}"):
+                    st.session_state[f"search_{p_id}"] = "A"
+                
+                valore_ricerca = st.session_state.get(f"search_{p_id}", "")
+                termine = st.text_input("Cerca farmaco o nota:", value=valore_ricerca, key=f"txt_{p_id}")
+                st.session_state[f"search_{p_id}"] = termine
 
                 # 3. Chiamata al DB
                 t_search = f"%{termine}%" if termine else None
                 diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, t_search))
                 
-                # 4. Filtro temporale lato Python
+                # 4. Filtro temporale
                 if diario and (d_inizio or d_fine):
                     from datetime import datetime
                     filtered = []
@@ -460,26 +461,38 @@ elif nav == "📊 Monitoraggio":
                             dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
                             if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
                                 filtered.append(r)
-                        except: 
-                            filtered.append(r)
+                        except: filtered.append(r)
                     diario = filtered
 
-                # 5. FILTRO TERAPIE (La parte che ti dava errore)
+                # 5. Filtro per STAMPA SOLO TERAPIA
                 if termine in ["A", "R"]:
-                    # Questa riga DEVE essere rientrata (indentata) rispetto all'if sopra
                     diario = [r for r in diario if r[4]]
 
-                # 6. VISUALIZZAZIONE DEI RISULTATI (Se non aggiungi questo, non vedi nulla!)
+                # 6. Visualizzazione a video
                 if diario:
-                    st.write(f"Record trovati: {len(diario)}")
-                    for d, ruolo, o, n, esito in diario[:50]:
+                    for d, ruolo, o, n, esito in diario[:30]:
                         if esito:
-                            st.success(f"💊 **{d}** - {n} | Esito: **{esito}** ({o})")
+                            st.success(f"💊 **{d}** - {n} ({esito})")
                         else:
-                            st.write(f"📝 {d} ({o}): {n}")
+                            st.write(f"📝 {d}: {n}")
                 else:
-                    st.warning("Nessun dato trovato con questi filtri.")
-                # 5. Visualizzazione Risultati
+                    st.warning("Nessun dato trovato.")
+
+            # --- IL TASTO PDF TORNA QUI ---
+            with c2:
+                st.write("**📄 Esportazione:**")
+                if diario:
+                    # Usiamo la lista 'diario' già filtrata sopra
+                    pdf_bytes = genera_pdf_clinico(p_nome, diario)
+                    st.download_button(
+                        label="📥 SCARICA PDF FILTRATO",
+                        data=pdf_bytes,
+                        file_name=f"Report_{p_nome}.pdf",
+                        mime="application/pdf",
+                        key=f"dl_btn_{p_id}"
+                    )
+                else:
+                    st.info("Applica filtri per generare il PDF.")
                 
 
 elif nav == "📅 Agenda Dinamica":
