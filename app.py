@@ -72,12 +72,11 @@ def db_run(query, params=None, commit=False):
         if params is None: params = []
         q = query.upper()
 
-        # 1. UTENTI
+        # --- LETTURA ---
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 2. PAZIENTI
         elif "FROM PAZIENTI" in q:
             res = supabase.table("pazienti").select("*").order("nome").execute()
             if res.data:
@@ -86,40 +85,54 @@ def db_run(query, params=None, commit=False):
                 return [[r["id"], r["nome"]] for r in res.data]
             return []
 
-        # 3. EVENTI
         elif "FROM EVENTI" in q:
             p_id = params[0]
             qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
             if len(params) > 1 and params[1]:
-                if params[1] == "SOLO_TERAPIA":
+                term = params[1]
+                if term == "SOLO_TERAPIA":
                     qb = qb.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                 else:
-                    qb = qb.or_(f"nota.ilike.%{params[1]}%,esito.ilike.%{params[1]}%")
+                    qb = qb.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
             res = qb.order("id", desc=True).limit(100).execute()
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
-        # 4. TERAPIE
-        # 4. GESTIONE TERAPIE (Versione Ultra-Resistente)
         elif "FROM TERAPIE" in q:
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
             if res.data:
-                final_data = []
+                final_t = []
                 for r in res.data:
-                    # Recupero sicuro delle colonne: se non esistono, mette 0 o "-"
-                    t_id = r.get('id_t') or r.get('id')
-                    farmaco = r.get('farmaco', 'Sconosciuto')
+                    t_id = r.get('id') or r.get('id_t') or 0
+                    farm = r.get('farmaco', 'Sconosciuto')
                     dose = r.get('dose', '-')
-                    # Qui gestiamo l'errore 'not_somm'
-                    n_somm = r.get('not_somm') or r.get('not_som') or 0
-                    p_nuovo = r.get('pax_nuovo') or 0
-                    al_bis = r.get('al_bisogno') or 0
-                    
-                    final_data.append([t_id, farmaco, dose, n_somm, p_nuovo, al_bis])
-                return final_data
+                    # Gestione errore not_somm
+                    n_som = r.get('not_somm') if r.get('not_somm') is not None else r.get('not_som', 0)
+                    p_nuo = r.get('pax_nuovo') or 0
+                    al_bi = r.get('al_bisogno') or 0
+                    final_t.append([t_id, farm, dose, n_som, p_nuo, al_bi])
+                return final_t
             return []
 
+        # --- SCRITTURA ---
+        if commit:
+            if "INSERT INTO EVENTI" in q:
+                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                if len(params) > 5: pay["esito"] = params[5]
+                supabase.table("eventi").insert(pay).execute()
+            
+            elif "INSERT INTO TERAPIE" in q:
+                pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], 
+                       "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
+                supabase.table("terapie").insert(pay).execute()
+            
+            elif "DELETE FROM TERAPIE" in q:
+                t_id = params[0]
+                try: supabase.table("terapie").delete().eq("id", t_id).execute()
+                except: supabase.table("terapie").delete().eq("id_t", t_id).execute()
+
+        return []
     except Exception as e:
-        st.error(f"Errore DB: {e}")
+        st.error(f"Errore critico DB: {e}")
         return []
 # --- FUNZIONI ORARIO ---
 def get_now_it():
