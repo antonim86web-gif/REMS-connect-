@@ -465,7 +465,7 @@ elif nav == "📊 Monitoraggio":
                     
                     if termine.upper() in filtri_terapia:
                         # Teniamo tutte le righe che hanno UN QUALSIASI esito (A oppure R)
-                        diario = [r for r in diario if r[4] and str(r[4]).strip() != ""
+                        diario = [r for r in diario if r[4] and str(r[4]).strip() != ""]
                     
                     # Filtro date (se impostate)
                     if d_inizio or d_fine:
