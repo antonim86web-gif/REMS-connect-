@@ -48,32 +48,33 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def db_run(query, params=None, commit=False):
     try:
-        query_up = query.upper()
-        if "SELECT" in query_up:
-            # --- SEZIONE UTENTI ---
-            if "FROM UTENTI" in query_up:
-                res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
-                if res.data:
-                    return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
-                return []
+        q = query.upper()
+        # --- GESTIONE UTENTI ---
+        if "FROM UTENTI" in q:
+            res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
+            if res.data:
+                return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
+            return []
 
-            # --- SEZIONE PAZIENTI ---
-            if "FROM PAZIENTI" in query_up:
-                res = supabase.table("pazienti").select("*").execute()
-                return res.data if res.data else []
+        # --- GESTIONE PAZIENTI ---
+        if "FROM PAZIENTI" in q:
+            res = supabase.table("pazienti").select("*").execute()
+            return res.data if res.data else []
 
-            # --- SEZIONE DIARIO / CONSEGNE (Tutte le figure) ---
-            if "FROM DIARIO" in query_up or "FROM CONSEGNE" in query_up:
-                # Usiamo ascending=False per evitare l'errore 'descending'
-                res = supabase.table("diario").select("*").order("data_ora", ascending=False).execute()
-                return res.data if res.data else []
-
+        # --- GESTIONE DIARIO / CONSEGNE ---
+        if "FROM DIARIO" in q or "FROM CONSEGNE" in q:
+            # Ordine forzato per evitare il crash 'descending'
+            res = supabase.table("diario").select("*").order("data_ora", ascending=False).execute()
+            return res.data if res.data else []
+            
         return []
     except Exception as e:
-        # Mostra l'errore nella barra laterale solo se serve debug
+        # Se c'è un errore lo scriviamo silenziosamente
+        st.error(f"Errore DB: {str(e)}")
         return []
 
 def get_italy_time():
+    from datetime import datetime, timezone, timedelta
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
 # --- FUNZIONE ORARIO ITALIA ---
