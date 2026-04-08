@@ -69,10 +69,9 @@ def genera_pdf_clinico(p_nome, dati_clinici):
 # --- AGGIORNAMENTO MOTORE DATABASE (Sostituisci questa parte nel Blocco 1) ---
 def db_run(query, params=None, commit=False):
     try:
+        # Prevenzione errore se params è None
+        if params is None: params = []
         q = query.upper()
-        
-        try:
-            q = query.upper()
 
         # 1. GESTIONE UTENTI
         if "FROM UTENTI" in q:
@@ -85,23 +84,23 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("pazienti").select("*").eq("stato", stato).order("nome").execute()
             return [[r["id"], r["nome"]] for r in res.data] if res.data else []
 
-        # 3. GESTIONE EVENTI / DIARIO / MONITORAGGIO (IL PEZZO CRITICO)
+        # 3. GESTIONE EVENTI / MONITORAGGIO (IL PEZZO CRITICO)
         elif "FROM EVENTI" in q:
             p_id = params[0]
             query_base = supabase.table("eventi").select("*").eq("paziente_id", p_id)
             
-            # Controllo filtri (Terapia o Ricerca)
+            # Gestione Filtri (Terapia o Ricerca)
             if len(params) > 1 and params[1]:
                 term = params[1]
                 if term == "SOLO_TERAPIA":
-                    # Filtro per simboli e esiti
+                    # Filtro per simboli e esiti compilati
                     query_base = query_base.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                 else:
                     # Ricerca testuale libera
                     query_base = query_base.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
             
             res = query_base.order("id_u", desc=True).limit(100).execute()
-            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')] for r in res.data] if res.data else []
+            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
         # 4. GESTIONE TERAPIE (LISTA FARMACI)
         elif "FROM TERAPIE" in q:
