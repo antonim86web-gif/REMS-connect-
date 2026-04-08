@@ -95,11 +95,7 @@ def db_run(query, params=None, commit=False):
                 res = qb.order("id", desc=True).execute()
                 return [[r.get('data','-'), r.get('nota','-')] for r in res.data] if res.data else []
             
-            # DEFAULT (5 colonne) - L'else deve essere allineato agli IF/ELIF sopra
-            else:
-                res = qb.order("id", desc=True).limit(100).execute()
-                return [[r.get('data','-'), r.get('ruolo','-'), r.get('op','-'), r.get('nota','-'), r.get('esito','-')] for r in res.data] if res.data else []
-
+            
             # 3. Caso Default (Tutto il resto - 5 colonne) - L'ELSE VA SEMPRE PER ULTIMO
             else:
                 res = qb.order("id", desc=True).limit(100).execute()
