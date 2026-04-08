@@ -50,18 +50,29 @@ def db_run(query, params=None, commit=False):
 def db_run(query, params=None, commit=False):
     try:
         q = query.upper()
-        # UTENTI
+        # --- GESTIONE UTENTI ---
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
-            return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data] if res.data else []
-        # PAZIENTI
+            if res.data:
+                return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
+            return []
+
+        # --- GESTIONE PAZIENTI ---
         if "FROM PAZIENTI" in q:
             res = supabase.table("pazienti").select("*").execute()
             return res.data if res.data else []
-        # DIARIO / EVENTI / CONSEGNE (Per tutte le figure)
+
+        # --- GESTIONE DIARIO / EVENTI / CONSEGNE (Tutte le figure) ---
         if "FROM EVENTI" in q or "FROM DIARIO" in q or "FROM CONSEGNE" in q:
+            # Protezione 'descending' e limite per velocità
             res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(40).execute()
             return res.data if res.data else []
+
+        # --- GESTIONE TERAPIE / SOMMINISTRAZIONI ---
+        if "FROM TERAPIE" in q or "FROM SOMMINISTRAZIONI" in q:
+            res = supabase.table("terapie").select("*").execute()
+            return res.data if res.data else []
+
         return []
     except Exception:
         return []
