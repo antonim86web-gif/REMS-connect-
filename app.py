@@ -447,9 +447,9 @@ elif nav == "👥 Modulo Equipe":
                         dati_corretti.append(row[:3])
                 
                 df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
-                st.table(df_smarc)
-            except Exception as e:
-                st.error(f"Errore visualizzazione: {e}")
+            st.table(df_smarc) # <--- Se vuoi mostrare la tabella
+        except Exception as e: # <--- AGGIUNGI QUESTA RIGA (allineata al try)
+            st.error(f"Errore tabella: {e}")
         else:
             st.info("Nessuna somministrazione trovata.")
 
