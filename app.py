@@ -215,11 +215,13 @@ def render_postits(p_id, limit=50):
         params.extend(scelta_ruolo)
     res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
     for d, r, o, nt in res:
-        role_map = {"Psichiatra":"psichiatra", # --- SESSIONE E LOGIN ---
-            if 'user_session' not in st.session_state: st.session_state.user_session = None
-            if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
-            if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
-                        if not st.session_state.user_session:
+
+        # --- SESSIONE E LOGIN ---
+if 'user_session' not in st.session_state: st.session_state.user_session = None
+if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
+if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
+
+if not st.session_state.user_session:
     st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
     c_l, c_r = st.columns(2)
     with c_l:
@@ -241,22 +243,22 @@ def render_postits(p_id, limit=50):
             rp = st.text_input("Scegli Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
-            # Lista qualifiche aggiornata
             rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
             if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
-                                    try:
-                    supabase.table("utenti").insert(nuovo).execute()
-                    st.success(f"Profilo {rq} creato! Accedi a sinistra.")
-                except:
-                    st.error("Errore: Username già in uso.")
-
+                    try:
+                        supabase.table("utenti").insert(nuovo).execute()
+                        st.success(f"Profilo {rq} creato! Accedi a sinistra.")
                     except:
-                        st.error("Errore: Username già esistente o problema DB.")
+                        st.error("Errore: Username già in uso.")
                 else:
                     st.warning("Compila tutti i campi.")
     st.stop()
+
+u = st.session_state.user_session
+
+        
 
 # --- DATI UTENTE LOGGATO ---
 u = st.session_state.user_session
