@@ -83,17 +83,18 @@ def db_run(query, params=None, commit=False):
             return [(r['id'], r['nome']) for r in res.data]
 
         # 3. GESTIONE EVENTI / DIARIO / LOGS
-        if "FROM EVENTI" in q or "FROM DIARIO" in q:
+        if "FROM EVENTI" in q:
             p_id = params[0]
-            # Partiamo con la query base per il paziente
-            res = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("data", desc=True)
+            query_base = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("data", desc=True)
             
-            # Se è presente il termine di ricerca (params[1])
             if len(params) > 1 and params[1] is not None:
-                res = res.ilike("nota", params[1])
-            
-            data = res.execute()
-            return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in data.data]
+                # CERCA SIA IN NOTA CHE IN ESITO (OR logico)
+                term = params[1]
+                res = query_base.or_(f"nota.ilike.{term},esito.ilike.{term}").execute()
+            else:
+                res = query_base.execute()
+                
+            return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in res.data]
             
             p_id = params[0]
             # Usiamo paziente_id per filtrare
@@ -431,12 +432,18 @@ elif nav == "📊 Monitoraggio":
         with st.expander(f"📁 CARTELLA: {p_nome}"):
             c1, c2 = st.columns([2, 1])
             with c1:
-                st.write("**🔍 Filtra Storico Clinico:**")
-                # Selettori di data e testo
-                cd1, cd2 = st.columns(2)
-                d_inizio = cd1.date_input("Dal:", value=None, key=f"start_{p_id}")
-                d_fine = cd2.date_input("Al:", value=None, key=f"end_{p_id}")
-                termine = st.text_input("Cerca farmaco o parola chiave:", key=f"txt_{p_id}")
+                st.write("**🔍 Filtra Storico:**")
+                # Tasti rapidi
+                c_btn1, c_btn2 = st.columns(2)
+                filtro_rapido = ""
+                if c_btn1.button("💊 Solo Terapie", key=f"t_{p_id}"):
+                    termine = "A" # Questo cercherà tutti gli 'Assunti' e 'Rifiutati' se usiamo la logica OR
+                
+                termine = st.text_input("Cerca farmaco o esito (A/R):", value=termine if 'termine' in locals() else "", key=f"txt_{p_id}")
+
+                # Chiamata al DB
+                t_search = f"%{termine}%" if termine else None
+                diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, t_search))
 
                 # Chiamata al DB con il filtro opzionale del termine
                 diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, f"%{termine}%" if termine else None))
@@ -454,11 +461,11 @@ elif nav == "📊 Monitoraggio":
                     diario = filtered
 
                 if diario:
-                    for d, ruolo, o, n, esito in diario[:20]: # Mostra i primi 20 risultati
-                        esito_str = f" - **ESITO: {esito}**" if esito else ""
-                        st.write(f"**{d}** ({o}): {n}{esito_str}")
-                else:
-                    st.warning("Nessun dato trovato per questi filtri.")
+                    for d, ruolo, o, n, esito in diario:
+                        if esito:
+                            st.success(f"💊 **{d}** - {n} | Esito: **{esito}** ({o})")
+                        else:
+                            st.write(f"📝 {d} ({o}): {n}")
 
             with c2:
                 st.write("**📄 Esportazione:**")
