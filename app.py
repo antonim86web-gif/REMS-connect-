@@ -438,20 +438,20 @@ elif nav == "👥 Modulo Equipe":
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
                 res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_sel])
-                if 'res_smarc' in locals() and res_smarc:
-                    try:
-                        dati_corretti = []
-                        for r in res_smarc:
-                            row = list(r)
-                            while len(row) < 3: row.append("-")
-                        dati_corretti.append(row[:3])
+
+        if res_smarc:
+            try:
+                dati_corretti = []
+                for row in res_smarc:
+                    dati_corretti.append(row[:3])
                 
                 df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
-            st.table(df_smarc) # <--- Se vuoi mostrare la tabella
-        except Exception as e: # <--- AGGIUNGI QUESTA RIGA (allineata al try)
-            st.error(f"Errore tabella: {e}")
+                st.write("### 📋 Diario Somministrazioni")
+                st.table(df_smarc)
+            except Exception as e:
+                st.error(f"Errore nella visualizzazione tabella: {e}")
         else:
-            st.info("Nessuna somministrazione trovata.")
+            st.warning("Nessuna somministrazione registrata per questo paziente.")
 
                 # --- FORM NUOVA PRESCRIZIONE ---
         with st.expander("➕ Prescrivi Nuovo Farmaco"):
