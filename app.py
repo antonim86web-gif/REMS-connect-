@@ -2,7 +2,11 @@ import streamlit as st
 import pandas as pd
 import hashlib
 import calendar
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+import pytz
+
+def get_now_it():
+    return datetime.now(pytz.timezone('Europe/Rome'))
 from groq import Groq
 from supabase import create_client # <--- NUOVO
 # Inizializzazione variabili di sessione mancanti
