@@ -439,7 +439,7 @@ elif nav == "👥 Modulo Equipe":
                 """, (p_id,))
                 res_smarc = db_run("FROM EVENTI SOMM", [p_id])
                 
-                if res_smarc:
+        if res_smarc:
             try:
                 dati_corretti = []
                 for r in res_smarc:
