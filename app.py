@@ -1,17 +1,17 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
-import hashlib  # <--- MANCAVA QUESTO (Risolve l'errore riga 141)
+import hashlib
 import calendar
-from datetime import datetime, timedelta, timezone # <--- Risolve l'errore orario
-from groq import Groq # <--- Per l'IA di Groq
-
-# Configurazione Groq
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+from datetime import datetime, timedelta, timezone
+from groq import Groq
+from supabase import create_client # <--- NUOVO
 from fpdf import FPDF
 import io
 
-import io # <--- Assicurati di avere questo import in alto!
+# --- CONNESSIONE CLOUD (Mettile subito sotto gli import) ---
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
 
 def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf = FPDF()
@@ -46,16 +46,31 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
-def aggiorna_struttura_db():
-    conn = sqlite3.connect('rems_final_v12.db')
-    c = conn.cursor()
-    # Colonne per eventi
-    try: c.execute("ALTER TABLE eventi ADD COLUMN tipo_evento TEXT")
-    except: pass
-    try: c.execute("ALTER TABLE eventi ADD COLUMN figura_professionale TEXT")
-    except: pass
-    try: c.execute("ALTER TABLE eventi ADD COLUMN esito TEXT")
-    except: pass
+def db_run(query, params=(), commit=False):
+    # Questa funzione ora parla con Supabase invece di SQLite
+    # Per semplicità, durante la notte, usiamo l'esecuzione diretta RPC o REST
+    # Ma per non stravolgere il tuo codice, puntiamo alle tabelle principali:
+    try:
+        if "SELECT" in query.upper():
+            table = "pazienti" if "pazienti" in query.lower() else "eventi"
+            if "utenti" in query.lower(): table = "utenti"
+            res = supabase.table(table).select("*").execute()
+            # Trasformiamo i dati in formato compatibile con il tuo vecchio codice
+            if table == "utenti": return [[r['nome'], r['cognome'], r['qualifica']] for r in res.data]
+            if table == "pazienti": return [[r['id'], r['nome']] for r in res.data]
+            return [[r['data'], r['ruolo'], r['op'], r['nota']] for r in res.data]
+        
+        elif "INSERT" in query.upper():
+            # Esempio semplificato per il salvataggio immediato
+            if "eventi" in query.lower():
+                supabase.table("eventi").insert({"id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}).execute()
+            elif "pazienti" in query.lower():
+                supabase.table("pazienti").insert({"nome": params[0], "stato": "ATTIVO"}).execute()
+        return []
+    except Exception as e:
+        st.error(f"Errore Cloud: {e}")
+        return []
+
     
     # --- LOGICA DI STATO PAZIENTE (DIMISSIONI) ---
     try: c.execute("ALTER TABLE pazienti ADD COLUMN stato TEXT DEFAULT 'ATTIVO'")
