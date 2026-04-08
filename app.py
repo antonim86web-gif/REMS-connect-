@@ -30,10 +30,15 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf.ln(10)
 
     for riga in dati_clinici:
-        # Estraiamo i dati per posizione per evitare errori se cambia il numero di colonne
-        data = riga[0]
-        op = riga[2]
-        nota = riga[3]
+        # Usiamo riga[n] perché db_run restituisce (data, ruolo, op, nota, esito)
+        data = str(riga[0]) if len(riga) > 0 else ""
+        op = str(riga[2]) if len(riga) > 2 else ""
+        nota = str(riga[3]) if len(riga) > 3 else ""
+        
+        # Se c'è anche un esito (per le terapie), lo aggiungiamo alla nota
+        esito = str(riga[4]) if len(riga) > 4 and riga[4] else ""
+        if esito:
+            nota = f"{nota} [ESITO: {esito}]"
         
         pdf.set_font("Arial", 'B', 10)
         pdf.set_fill_color(240, 240, 240)
