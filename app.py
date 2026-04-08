@@ -252,7 +252,7 @@ if nav == "👥 Modulo Equipe":
                             if f_nome:
                                 db_run("INSERT INTO terapie", (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0), True)
                                 st.rerun()
-          with t3:
+           with t3:
                 st.subheader("🩺 Esame Obiettivo e Parametri")
                 ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id_u DESC", (p_id,))
                 if ultimi_p:
