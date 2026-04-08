@@ -77,28 +77,27 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 2. GESTIONE PAZIENTI (Semplificata per evitare il "Nessun paziente trovato")
+        # 2. GESTIONE PAZIENTI
         elif "FROM PAZIENTI" in q:
-            # Cerchiamo tutti i pazienti, poi filtriamo per stato
-            res = supabase.table("pazienti").select("id, nome, stato").order("nome").execute()
-            if res.data:
-                # Se nella query c'è "ATTIVO", filtriamo solo quelli attivi
-                if "ATTIVO" in q:
-                    return [[r["id"], r["nome"]] for r in res.data if r.get("stato") == "ATTIVO"]
-                # Altrimenti tutti (o dimessi)
-                return [[r["id"], r["nome"]] for r in res.data]
-            return []
+            st_p = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
+            res = supabase.table("pazienti").select("*").eq("stato", st_p).order("nome").execute()
+            return [[r["id"], r["nome"]] for r in res.data] if res.data else []
 
-        # 3. GESTIONE EVENTI / MONITORAGGIO
+        # 3. GESTIONE EVENTI (MONITORAGGIO E DIARIO)
         elif "FROM EVENTI" in q:
             p_id = params[0]
+            # Usiamo paziente_id (se dà errore qui, cambieremo in "id")
             qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
+            
             if len(params) > 1 and params[1]:
-                if params[1] == "SOLO_TERAPIA":
+                term = params[1]
+                if term == "SOLO_TERAPIA":
                     qb = qb.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                 else:
-                    qb = qb.or_(f"nota.ilike.%{params[1]}%,esito.ilike.%{params[1]}%")
-            res = qb.order("id_u", desc=True).limit(100).execute()
+                    qb = qb.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
+            
+            # CORREZIONE: Usiamo "id" invece di "id_u" come suggerito dal database
+            res = qb.order("id", desc=True).limit(100).execute()
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
         # 4. GESTIONE TERAPIE
@@ -106,7 +105,7 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
             return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
-        # 5. COMMIT (INSERIMENTI / CANCELLAZIONI)
+        # 5. AZIONI DI SCRITTURA (COMMIT)
         if commit:
             if "INSERT INTO EVENTI" in q:
                 pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
@@ -121,7 +120,7 @@ def db_run(query, params=None, commit=False):
         return []
 
     except Exception as e:
-        st.error(f"Errore critico DB: {e}")
+        st.error(f"Errore DB: {e}")
         return []
 
 # --- FUNZIONI ORARIO ---
