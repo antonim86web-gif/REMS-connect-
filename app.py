@@ -431,98 +431,72 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>📊 MONITORAGGIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    # 1. Recupero lista pazienti (con protezione anti-None)
+    # 1. Recupero pazienti
     raw_pazienti = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
     p_lista = raw_pazienti if raw_pazienti is not None else []
     
-    # 2. Interfaccia Filtri
+    # 2. Filtri
     c1, c2 = st.columns([1, 2])
     with c1:
-        # Toggle per attivare il filtro Terapie (Simboli + Esiti)
-        filtro_terapia = st.toggle("💊 Solo Terapie/Esiti", key="togg_ter")
+        filtro_terapia = st.toggle("💊 Solo Terapie / Obiettivo", key="togg_ter")
     with c2:
-        # Ricerca testuale libera
-        cerca_t = st.text_input("Cerca parola chiave o farmaco:", placeholder="Es: Clozapina, Rifiuto...", key="search_mon")
+        cerca_t = st.text_input("Cerca parola chiave:", placeholder="Es: Clozapina, Parametri...", key="search_mon")
 
     st.divider()
 
-    # 3. Ciclo unico pazienti (Blindato contro AttributeError e NoneType)
     if p_lista:
         for p in p_lista:
             try:
-                # Estrazione sicura dei dati del paziente
-                if isinstance(p, (list, tuple)) and len(p) >= 2:
-                    pid, nome = str(p[0]), str(p[1])
-                elif isinstance(p, dict):
-                    pid, nome = str(p.get('id')), str(p.get('nome', 'Paziente'))
-                else:
-                    continue
+                pid, nome = (str(p[0]), str(p[1])) if isinstance(p, (list, tuple)) else (str(p.get('id')), str(p.get('nome')))
                 
                 with st.expander(f"📁 SCHEDA: {nome}"):
-                    # Costruiamo la query SQL in base ai filtri
+                    # --- QUERY POTENZIATA: PESCA DA EVENTI + ESAME OBIETTIVO ---
                     if filtro_terapia:
-                        sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' AND (nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' OR esito IS NOT NULL) ORDER BY id_u DESC"
-                        tipo_rep = "SOLO_TERAPIE"
-                    elif cerca_t:
-                        sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' AND nota LIKE '%{cerca_t}%' ORDER BY id_u DESC"
-                        tipo_rep = f"RICERCA_{cerca_t.upper()}"
+                        # Qui cerchiamo: Simboli pillola, Esiti A/R E anche le note che contengono "Obiettivo" o "Parametri"
+                        sql = f"""
+                        SELECT data, ruolo, op, nota, esito 
+                        FROM eventi 
+                        WHERE id='{pid}' 
+                        AND (
+                            nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' 
+                            OR esito IS NOT NULL 
+                            OR nota LIKE '%Obiettivo%' OR nota LIKE '%Esame%'
+                        ) 
+                        ORDER BY id_u DESC
+                        """
+                        tipo_rep = "TERAPIE_E_OBIETTIVO"
                     else:
                         sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' ORDER BY id_u DESC"
                         tipo_rep = "DIARIO_COMPLETO"
                     
-                    # Esecuzione query con protezione anti-None
-                    raw_eventi = db_run(sql)
-                    eventi = raw_eventi if raw_eventi is not None else []
+                    eventi = db_run(sql)
+                    eventi = eventi if eventi is not None else []
                     
                     if eventi:
                         st.caption(f"🔍 Record trovati: {len(eventi)}")
-                        
-                        # --- PREPARAZIONE TESTO PER STAMPA ---
-                        testo_stampa = f"REMS-CONNECT - REPORT: {tipo_rep}\nPAZIENTE: {nome}\n"
-                        testo_stampa += "="*50 + "\n\n"
+                        testo_stampa = f"REPORT: {tipo_rep} - PAZIENTE: {nome}\n" + "="*40 + "\n\n"
                         
                         for e in eventi:
-                            # Mapping sicuro (0=Data, 1=Ruolo, 2=Op, 3=Nota, 4=Esito)
-                            d_e = e[0] if len(e) > 0 else "-"
-                            r_e = e[1] if len(e) > 1 else "-"
-                            o_e = e[2] if len(e) > 2 else "-"
-                            n_e = e[3] if len(e) > 3 else ""
-                            s_e = e[4] if len(e) > 4 else None
+                            d_e, r_e, o_e, n_e, s_e = e[0], e[1], e[2], e[3], e[4]
                             
-                            # Aggiunta al report di stampa
-                            testo_stampa += f"[{d_e}] {o_e} ({r_e})\nESITO: {s_e if s_e else '-'} | NOTA: {n_e}\n"
-                            testo_stampa += "-"*30 + "\n"
+                            # Logica per il BOX COLORATO
+                            # Se è un esame obiettivo (parola chiave nella nota), usiamo un colore Blu/Azzurro
+                            is_obiettivo = any(x in str(n_e).lower() for x in ['obiettivo', 'esame', 'parametri'])
                             
-                            # --- VISUALIZZAZIONE A SCHERMO ---
-                            if s_e in ['A', 'R'] or any(sym in str(n_e) for sym in ['💊', '✔️', '❌']):
-                                bg_color = "#dcfce7" if s_e == 'A' else "#fee2e2"
-                                icona_status = "✔️" if s_e == 'A' else "❌"
-                                st.markdown(f"""
-                                <div style='background-color: {bg_color}; padding: 10px; border-radius: 8px; border-left: 6px solid #1e3a8a; color: black; margin-bottom: 8px;'>
-                                    <b>{d_e}</b> | {icona_status} Esito: <b>{s_e if s_e else '-'}</b><br>
-                                    <small>{r_e} - {o_e}</small><br>
-                                    {n_e}
-                                </div>
-                                """, unsafe_allow_html=True)
+                            if s_e in ['A', 'R'] or '💊' in str(n_e):
+                                bg = "#dcfce7" if s_e == 'A' else "#fee2e2"
+                                st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'><b>{d_e}</b> | Esito: {s_e}<br>{n_e}</div>", unsafe_allow_html=True)
+                            elif is_obiettivo:
+                                # Box Azzurro per l'Esame Obiettivo
+                                st.markdown(f"<div style='background-color:#e0f2fe; padding:10px; border-radius:8px; border-left:6px solid #0369a1; color:black; margin-bottom:8px;'><b>{d_e} (OBIETTIVO)</b><br>{n_e}</div>", unsafe_allow_html=True)
                             else:
-                                st.write(f"📝 **{d_e}** ({o_e}): {n_e}")
+                                st.write(f"📝 **{d_e}**: {n_e}")
+                            
+                            testo_stampa += f"[{d_e}] {o_e}: {n_e}\n"
                         
-                        # --- TASTO DOWNLOAD PDF (VERSIONE FILTRATA) ---
-                        st.divider()
-                        st.download_button(
-                            label=f"📥 SCARICA REPORT {tipo_rep}",
-                            data=testo_stampa,
-                            file_name=f"Report_{nome}_{tipo_rep}.txt",
-                            mime="text/plain",
-                            key=f"btn_stampa_{pid}"
-                        )
-                    else:
-                        st.info("Nessun dato corrispondente ai filtri impostati.")
-                        
-            except Exception as e_paz:
-                st.error(f"⚠️ Errore tecnico nel caricamento di un paziente.")
-    else:
-        st.warning("⚠️ Database non raggiungibile o nessun paziente attivo.")
+                        st.download_button(label=f"📥 SCARICA {tipo_rep}", data=testo_stampa, file_name=f"Report_{nome}.txt", key=f"btn_{pid}")
+            except Exception:
+                continue
                 
 
 elif nav == "📅 Agenda Dinamica":
