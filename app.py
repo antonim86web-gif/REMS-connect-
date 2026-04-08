@@ -676,8 +676,7 @@ elif ruolo_corr == "Infermiere":
                                     if st.form_submit_button("REGISTRA"): 
                                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
                                         st.rerun()
-                                    
-                                    elif ruolo_corr == "Assistente Sociale":
+                                        elif ruolo_corr == "Assistente Sociale":
             t1, t2 = st.tabs(["🤝 RETE", "🏠 PROGETTO"])
             with t1:
                 with st.form("f_soc"):
@@ -888,3 +887,5 @@ elif nav == "⚙️ Admin":
         logs_audit = db_run("SELECT data_ora, utente, azione, dettaglio FROM logs_sistema ORDER BY id_log DESC LIMIT 200")
         if logs_audit:
             st.dataframe(pd.DataFrame(logs_audit, columns=["Data/Ora", "Operatore", "Azione", "Descrizione"]), use_container_width=True)
+                                    
+        
