@@ -543,15 +543,12 @@ elif ruolo_corr == "Infermiere":
     u = st.session_state.user_session
     nome_reale = f"{u['nome']} {u['cognome']}"
     ruolo_reale = u.get('qualifica', 'Operatore')
-
-            with t1:
-                st.subheader("Registrazione Somministrazione Farmaci")
-                st.info(f"👤 Operatore: **{nome_reale}** | Turno attivo")
-                
-                turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
-                terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
-                
-                for f in terapie_keep:
+    with t1:
+        st.subheader("Registrazione Somministrazione Farmaci")
+        st.info(f"👤 Operatore: **{nome_reale}** | Turno attivo")
+        turno_attivo = st.selectbox("Seleziona Turno Operativo", ["8:13 (Mattina)", "16:20 (Pomeriggio)", "Al bisogno"])
+        terapie_keep = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
+        for f in terapie_keep:
                     t_id_univoco, nome_f, dose_f = f[0], f[1], f[2]
                     mostra = (turno_attivo == "8:13 (Mattina)" and f[3] == 1) or \
                              (turno_attivo == "16:20 (Pomeriggio)" and f[4] == 1) or \
