@@ -104,7 +104,7 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
             return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
-        # 5. AZIONI DI SCRITTURA
+        # 5. AZIONI DI SCRITTURA (COMMIT)
         if commit:
             if "INSERT INTO EVENTI" in q:
                 payload = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
@@ -118,10 +118,6 @@ def db_run(query, params=None, commit=False):
             elif "DELETE FROM TERAPIE" in q:
                 supabase.table("terapie").delete().eq("id_t", params[0]).execute()
 
-        return []
-
-    except Exception as e:
-        st.error(f"Errore DB: {e}")
         return []
             # Esegue una ricerca filtrata sulla tabella eventi
     query = supabase.table("eventi").select("*").eq("id", p_id)
