@@ -72,67 +72,62 @@ def db_run(query, params=None, commit=False):
         if params is None: params = []
         q = query.upper()
 
-        # 1. GESTIONE UTENTI
+        # 1. UTENTI
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 2. GESTIONE PAZIENTI (Sbloccata: prende tutti per capire dove è l'errore)
+        # 2. PAZIENTI
         elif "FROM PAZIENTI" in q:
-            # Prendiamo TUTTI i pazienti senza filtri per testare
             res = supabase.table("pazienti").select("*").order("nome").execute()
             if res.data:
-                # Proviamo a filtrare in modo morbido (non case-sensitive)
                 if "ATTIVO" in q:
                     return [[r["id"], r["nome"]] for r in res.data if str(r.get("stato", "")).upper() == "ATTIVO"]
                 return [[r["id"], r["nome"]] for r in res.data]
             return []
 
-        # 3. GESTIONE EVENTI (MONITORAGGIO E DIARIO)
+        # 3. EVENTI
         elif "FROM EVENTI" in q:
             p_id = params[0]
-            # Usiamo paziente_id (se dà errore qui, prova a cambiarlo in "id")
             qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
-            
             if len(params) > 1 and params[1]:
-                term = params[1]
-                if term == "SOLO_TERAPIA":
+                if params[1] == "SOLO_TERAPIA":
                     qb = qb.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                 else:
-                    qb = qb.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
-            
-            # Ordinamento corretto suggerito dal DB (id)
+                    qb = qb.or_(f"nota.ilike.%{params[1]}%,esito.ilike.%{params[1]}%")
             res = qb.order("id", desc=True).limit(100).execute()
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
-        # 4. GESTIONE TERAPIE
-        # 4. GESTIONE TERAPIE
+        # 4. TERAPIE
         elif "FROM TERAPIE" in q:
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
-            # Usiamo r.get('id') o r.get('id_t') per essere sicuri
-            return [[(r.get('id') or r.get('id_t')), r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
+            # Se id_t non esiste, usa id. Questo evita l'errore che hai visto.
+            return [[(r.get('id_t') if r.get('id_t') is not None else r.get('id')), r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
-        # 5. AZIONI DI SCRITTURA
+        # 5. SCRITTURA (COMMIT)
         if commit:
-            # ... (insert eventi resta uguale)
+            if "INSERT INTO EVENTI" in q:
+                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                if len(params) > 5: pay["esito"] = params[5]
+                supabase.table("eventi").insert(pay).execute()
             
             elif "INSERT INTO TERAPIE" in q:
                 pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
                 supabase.table("terapie").insert(pay).execute()
             
             elif "DELETE FROM TERAPIE" in q:
-                # Proviamo a cancellare usando 'id' (che è lo standard di Supabase)
+                # Prova a eliminare usando id_t, se fallisce prova id
                 t_id = params[0]
                 try:
-                    supabase.table("terapie").delete().eq("id", t_id).execute()
-                except:
                     supabase.table("terapie").delete().eq("id_t", t_id).execute()
+                except:
+                    supabase.table("terapie").delete().eq("id", t_id).execute()
+
         return []
 
     except Exception as e:
-        st.error(f"Errore critico DB: {e}")
+        st.error(f"Errore DB: {e}")
         return []
-
 # --- FUNZIONI ORARIO ---
 def get_now_it():
     return datetime.now(timezone.utc) + timedelta(hours=1)
