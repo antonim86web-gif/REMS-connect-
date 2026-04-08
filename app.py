@@ -403,7 +403,7 @@ elif nav == "👥 Modulo Equipe":
         
         if ruolo_corr == "Psichiatra":
             # 1. DEFINIZIONE TAB MEDICO
-            t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
+            t1, t2, t3, t4, t5 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "💉 SOMMINISTRAZIONI", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
             with t1:
                 st.subheader("Inserimento Nota in Diario Clinico")
                 with st.form("form_diario_med"):
