@@ -137,6 +137,25 @@ def db_run(query, params=None, commit=False):
             # AGGIUNTA PER RICERCA LIBERA (MONITORAGGIO)
         if "FROM EVENTI_LIBERO" in q:
             p_id = params[0]
+            # 1. Puntiamo alla tabella eventi
+            query = supabase.table("eventi").select("*").eq("paziente_id", p_id)
+            
+            if len(params) > 1:
+                filtro = params[1]
+                if filtro == "SOLO_TERAPIA":
+                    # Usiamo simboli generici e controlliamo la colonna esito
+                    # IMPORTANTE: Usiamo ILIKE con i simboli e controlliamo se esito ha dati
+                    query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.eq.A,esito.eq.R")
+                else:
+                    # Ricerca testuale libera
+                    query = query.ilike("nota", f"%{filtro}%")
+            
+            res = query.order("id_u", ascending=False).execute()
+            
+            # Restituiamo i dati mappati correttamente per il ciclo for
+            if res.data:
+                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', ''), r.get('esito')] for r in res.data]
+            return []
             # Esegue una ricerca filtrata sulla tabella eventi
             query = supabase.table("eventi").select("*").eq("id", p_id)
             
