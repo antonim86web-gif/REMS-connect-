@@ -464,6 +464,9 @@ elif nav == "📊 Monitoraggio":
                         except: 
                             filtered.append(r)
                     diario = filtered
+                    if termine in ["A", "R"]:
+            # Filtriamo la lista: teniamo solo le righe che hanno un valore nella colonna esito (r[4])
+            diario = [r for r in diario if r[4]]
 
                 # 5. Visualizzazione Risultati
                 
