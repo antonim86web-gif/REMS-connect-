@@ -59,7 +59,7 @@ def db_run(query, params=(), commit=False):
             # Creiamo una lista di tuple sicure. Se un dato manca, mettiamo "N/D"
                     return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
                 
-return []
+    return []
 
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
