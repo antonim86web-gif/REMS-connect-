@@ -378,16 +378,14 @@ elif nav == "👥 Modulo Equipe":
         ruolo_corr = st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
  
     p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
-    
     if p_lista:
         p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
-            now = get_italy_time(); oggi = now.strftime("%d/%m/%Y")
-
+        now = get_italy_time(); oggi = now.strftime("%d/%m/%Y")
+        
         if ruolo_corr == "Psichiatra":
             # 1. DEFINIZIONE TAB MEDICO
             t1, t2, t3, t4 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
-
             with t1:
                 st.subheader("Inserimento Nota in Diario Clinico")
                 with st.form("form_diario_med"):
