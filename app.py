@@ -85,24 +85,25 @@ def db_run(query, params=None, commit=False):
         # 3. GESTIONE EVENTI / DIARIO / LOGS
         if "FROM EVENTI" in q:
             p_id = params[0]
-            query_base = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("data", desc=True)
+            # 1. Base della query: filtra per il paziente corretto
+            query = supabase.table("eventi").select("*").eq("paziente_id", p_id)
             
+            # 2. Gestione Filtro Terapie o Ricerca Testuale
             if len(params) > 1 and params[1] is not None:
-                # CERCA SIA IN NOTA CHE IN ESITO (OR logico)
                 term = params[1]
-                res = query_base.or_(f"nota.ilike.{term},esito.ilike.{term}").execute()
-            else:
-                res = query_base.execute()
-                
-            return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in res.data]
+                if term == "SOLO_TERAPIA":
+                    # Filtro speciale per pillole, spunte ed esiti compilati
+                    query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
+                else:
+                    # Ricerca libera per parola chiave (sia in nota che in esito)
+                    query = query.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
             
-            p_id = params[0]
-            # Usiamo paziente_id per filtrare
-            res = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("id", desc=True)
-            if params and len(params) > 1 and isinstance(params[1], str) and "%" in params[1]:
-                res = res.ilike("nota", f"%{params[1].replace('%', '')}%")
-            data = res.limit(50).execute()
-            return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in data.data]
+            # 3. Esecuzione (ordine per ID decrescente per vedere i più recenti sopra)
+            res = query.order("id_u", desc=True).limit(100).execute()
+            
+            if res.data:
+                return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in res.data]
+            return []
 
         # 4. GESTIONE TERAPIE
         if "FROM TERAPIE" in q:
