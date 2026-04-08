@@ -48,23 +48,33 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def db_run(query, params=None, commit=False):
     try:
-        if "SELECT" in query.upper():
-            # Gestione Tabella Utenti
-            if "FROM utenti" in query:
+        query_up = query.upper()
+        if "SELECT" in query_up:
+            # --- SEZIONE UTENTI ---
+            if "FROM UTENTI" in query_up:
                 res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
                 if res.data:
                     return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
                 return []
-            
-            # Gestione Tabella Pazienti (esempio)
-            if "FROM pazienti" in query:
+
+            # --- SEZIONE PAZIENTI ---
+            if "FROM PAZIENTI" in query_up:
                 res = supabase.table("pazienti").select("*").execute()
+                return res.data if res.data else []
+
+            # --- SEZIONE DIARIO / CONSEGNE (Tutte le figure) ---
+            if "FROM DIARIO" in query_up or "FROM CONSEGNE" in query_up:
+                # Usiamo ascending=False per evitare l'errore 'descending'
+                res = supabase.table("diario").select("*").order("data_ora", ascending=False).execute()
                 return res.data if res.data else []
 
         return []
     except Exception as e:
-        # Questo chiude il try e impedisce il crash alla riga 66
+        # Mostra l'errore nella barra laterale solo se serve debug
         return []
+
+def get_italy_time():
+    return datetime.now(timezone.utc) + timedelta(hours=2)
 
 # --- FUNZIONE ORARIO ITALIA ---
 def get_italy_time():
