@@ -255,29 +255,39 @@ if not st.session_state.user_session:
 # --- SE SIAMO QUI, L'UTENTE È LOGGATO ---
 u = st.session_state.user_session
 
-
-
-        
-
-# --- DATI UTENTE LOGGATO ---
-u = st.session_state.user_session
     
 # --- SIDEBAR ---
-st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
-st.sidebar.markdown(f"<div class='user-logged'>● {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
-conta_oggi = db_run("SELECT COUNT(*) FROM appuntamenti WHERE data=? AND stato='PROGRAMMATO'", (oggi_iso,))[0][0]
-if conta_oggi > 0:
-    st.sidebar.markdown(f"<div class='alert-sidebar'>⚠️ {conta_oggi} SCADENZE OGGI</div>", unsafe_allow_html=True)
-opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"]
-if u['ruolo'] == "Admin": opts.append("⚙️ Admin")
-nav = st.sidebar.radio("NAVIGAZIONE", opts)
-if st.sidebar.button("LOGOUT"): 
-    scrivi_log("LOGOUT", "Uscita dal sistema")
-    st.session_state.user_session = None; 
-    st.rerun()
-st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
+with st.sidebar:
+    # Calcoliamo prima le scadenze (se hai la funzione db_run pronta)
+    try:
+        scadenze_query = db_run("SELECT COUNT(*) FROM scadenze WHERE data = CURRENT_DATE")
+        conta_oggi = scadenze_query[0][0] if scadenze_query else 0
+    except:
+        conta_oggi = 0
 
-# --- LOGICA NAVIGAZIONE ---
+    st.markdown(f"<div class='sidebar-title'>REMS Connect</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='user-logged'>👤 {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
+    
+    # Il tuo avviso scadenze
+    st.sidebar.markdown(f"<div class='alert-sidebar'>⚠️ {conta_oggi} SCADENZE OGGI</div>", unsafe_allow_html=True)
+    
+    # Il tuo menu completo
+    opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"]
+    
+    # ATTENZIONE: Qui usiamo 'qualifica' perché è quello che salviamo nel database
+    if u.get('qualifica') == "Coordinatore" or u.get('user') == "admin":
+        opts.append("⚙️ Admin")
+        
+    nav = st.sidebar.radio("NAVIGAZIONE", opts)
+    
+    if st.sidebar.button("LOGOUT"):
+        try: scrivi_log("LOGOUT", "Uscita dal sistema")
+        except: pass
+        st.session_state.user_session = None
+        st.rerun()
+    
+    # Il tuo Footer Elite
+    st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 # --- LOGICA NAVIGAZIONE ---
 if nav == "📍 Mappa Posti":
     st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
