@@ -232,13 +232,15 @@ if not st.session_state.user_session:
         with st.form("login_main"):
             u_i = st.text_input("Username").lower().strip()
             p_i = st.text_input("Password", type="password")
-            if st.form_submit_button("ACCEDI"):
-                res = db_run("SELECT nome, cognome, qualifica FROM utenti WHERE user=? AND pwd=?", (u_i, hash_pw(p_i)))
-                if res: 
-                    st.session_state.user_session = {"nome": res[0][0], "cognome": res[0][1], "ruolo": res[0][2], "uid": u_i}
-                    scrivi_log("LOGIN", "Accesso eseguito correttamente")
-                    st.rerun()
-                else: st.error("Errore login: Credenziali errate.")
+                    if st.form_submit_button("ACCEDI"):
+            res = supabase.table("utenti").select("*").eq("user", u_i).execute()
+            if res.data and res.data[0]['pwd'] == p_i:
+                st.session_state.user_session = res.data[0]
+                scrivi_log("LOGIN", "Accesso eseguito")
+                st.rerun()
+            else:
+                st.error("Errore login: Credenziali errate.")
+
     with c_r:
         st.subheader("Registrazione")
         with st.form("reg_main"):
@@ -247,11 +249,7 @@ if not st.session_state.user_session:
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
             rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
-            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
-                if ru and rp and rn and rc:
-                    if not db_run("SELECT user FROM utenti WHERE user=?", (ru,)):
-                        db_run("INSERT INTO utenti (user, pwd, nome, cognome, qualifica) VALUES (?,?,?,?,?)", (ru, hash_pw(rp), rn.capitalize(), rc.capitalize(), rq), True)
-                        scrivi_log("REGISTRAZIONE", f"Creato nuovo utente {ru} con qualifica {rq}")
+            
                         st.success(f"Profilo {rq} creato! Accedi a sinistra.")
                     else: st.error("Username già in uso.")
                 else: st.warning("Compila tutti i campi.")
@@ -277,7 +275,17 @@ if st.sidebar.button("LOGOUT"):
 st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
 # --- LOGICA NAVIGAZIONE ---
-if nav == "🗺️ Mappa Posti Letto":
+if nav == "🗺️ Mappa Pos        if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+            if ru and rp and rn and rc:
+                nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
+                try:
+                    supabase.table("utenti").insert(nuovo).execute()
+                    st.success(f"Profilo {rq} creato! Accedi sopra.")
+                except:
+                    st.error("Errore nel salvataggio o username esistente.")
+            else:
+                st.warning("Compila tutti i campi.")
+ti Letto":
     st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
     stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
     paz_db = db_run("SELECT p.id, p.nome, a.stanza_id, a.letto FROM pazienti p LEFT JOIN assegnazioni a ON p.id = a.p_id WHERE p.stato='ATTIVO'")
