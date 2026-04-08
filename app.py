@@ -495,11 +495,11 @@ elif nav == "👥 Modulo Equipe":
             with st.expander("📄 ESPORTAZIONE PDF"):
                 # ... (il tuo codice PDF rimane qui, ben allineato sotto il blocco Psichiatra)
 
-# Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso bene
-elif ruolo_corr == "Infermiere":
-    import calendar
-    from datetime import timedelta
-    t1, t2, t3, t4 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA"])
+# Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso ben
+                elif ruolo_corr == "Infermiere":
+                import calendar
+                from datetime import timedelta
+                t1, t2, t3, t4 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA"])
             
             # --- IDENTIFICAZIONE DINAMICA DAL TUO LOGIN ---
     u = st.session_state.user_session
