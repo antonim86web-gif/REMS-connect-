@@ -53,23 +53,13 @@ def db_run(query, params=(), commit=False):
     try:
         if "SELECT" in query.upper():
             table = "pazienti" if "pazienti" in query.lower() else "eventi"
-            if "utenti" in query.lower(): table = "utenti"
-            res = supabase.table(table).select("*").execute()
-            # Trasformiamo i dati in formato compatibile con il tuo vecchio codice
-            if table == "utenti": return [[r['nome'], r['cognome'], r['qualifica']] for r in res.data]
-            if table == "pazienti": return [[r['id'], r['nome']] for r in res.data]
-            return [[r['data'], r['ruolo'], r['op'], r['nota']] for r in res.data]
-        
-        elif "INSERT" in query.upper():
-            # Esempio semplificato per il salvataggio immediato
-            if "eventi" in query.lower():
-                supabase.table("eventi").insert({"id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}).execute()
-            elif "pazienti" in query.lower():
-                supabase.table("pazienti").insert({"nome": params[0], "stato": "ATTIVO"}).execute()
+                if "FROM utenti" in query:
+        res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
+        if res.data:
+            # Creiamo una lista di tuple sicure. Se un dato manca, mettiamo "N/D"
+            return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
         return []
-    except Exception as e:
-        st.error(f"Errore Cloud: {e}")
-        return []
+
 
 #aggiorna_struttura_db()
 
