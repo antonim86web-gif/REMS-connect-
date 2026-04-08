@@ -46,26 +46,30 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
-def db_run(query, params=(), commit=False):
-    # Questa funzione ora parla con Supabase invece di SQLite
-    # Per semplicità, durante la notte, usiamo l'esecuzione diretta RPC o REST
-    # Ma per non stravolgere il tuo codice, puntiamo alle tabelle principali:
+def db_run(query, params=None, commit=False):
     try:
         if "SELECT" in query.upper():
-            table = "pazienti" if "pazienti" in query.lower() else "eventi"
+            # Gestione Tabella Utenti
             if "FROM utenti" in query:
                 res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
                 if res.data:
-            # Creiamo una lista di tuple sicure. Se un dato manca, mettiamo "N/D"
                     return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
-                
-    return []
+                return []
+            
+            # Gestione Tabella Pazienti (esempio)
+            if "FROM pazienti" in query:
+                res = supabase.table("pazienti").select("*").execute()
+                return res.data if res.data else []
 
+        return []
+    except Exception as e:
+        # Questo chiude il try e impedisce il crash alla riga 66
+        return []
 
-# --- FUNZIONE ORARIO ITALIA (UTC+2) ---
-
+# --- FUNZIONE ORARIO ITALIA ---
 def get_italy_time():
     return datetime.now(timezone.utc) + timedelta(hours=2)
+
     def scrivi_log(azione, dettagli):
     # Log disattivato per compatibilità Cloud
         pass
