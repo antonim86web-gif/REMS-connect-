@@ -424,8 +424,8 @@ elif nav == "👥 Modulo Equipe":
                     for t in terapie_attuali:
                         c1, c2 = st.columns([4, 1])
                         c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
-                        if c2.button("🗑️", key=f"del_med_{t[0]}"):
-                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                        chiave_unica = f"del_med_{t[0]}_{t[1]}"
+        if c2.button("🗑️", key=chiave_unica):
                             st.rerun()
                 
                 st.divider()
