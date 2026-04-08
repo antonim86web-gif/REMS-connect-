@@ -29,10 +29,11 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf.cell(0, 8, f"Paziente: {p_nome}", ln=True)
     pdf.ln(10)
 
-    for data, op, nota in dati_clinici:
-        # Pulizia totale caratteri per evitare crash latin-1
-        nota_p = str(nota).encode('latin-1', 'replace').decode('latin-1')
-        op_p = str(op).encode('latin-1', 'replace').decode('latin-1')
+    for riga in dati_clinici:
+        # Estraiamo i dati per posizione per evitare errori se cambia il numero di colonne
+        data = riga[0]
+        op = riga[2]
+        nota = riga[3]
         
         pdf.set_font("Arial", 'B', 10)
         pdf.set_fill_color(240, 240, 240)
