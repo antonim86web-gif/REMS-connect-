@@ -309,7 +309,7 @@ if nav == "👥 Modulo Equipe":
                             st.markdown(f"<div class='ai-box'>{relazione}</div>", unsafe_allow_html=True)
                 else:
                     st.warning("Dati insufficienti per l'analisi.")
-
+#--------------infermiere--------------
         elif ruolo_corr == "Infermiere":
             t_inf1, t_inf2, t_inf3, t_inf4 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA"])
             
