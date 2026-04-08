@@ -41,36 +41,72 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 # --- MOTORE DATABASE UNIFICATO ---
 def db_run(query, params=None, commit=False):
- try:
- q = query.upper()
- # 1. GESTIONE UTENTI
- if "FROM UTENTI" in q:
- res = supabase.table("utenti").select("user, nome, cognome,
-qualifica").execute()
- return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'),
-r.get('qualifica','?')) for r in res.data] if res.data else []
+    try:
+        if params is None: params = []
+        q = query.upper()
 
- # 2. GESTIONE PAZIENTI
- if "FROM PAZIENTI" in q:
- res = supabase.table("pazienti").select("*").execute()
- return res.data if res.data else []
- # 3. GESTIONE DIARIO / EVENTI (Correzione Errore Red)
- if "FROM EVENTI" in q or "FROM DIARIO" in q:
- # Qui usiamo ascending=False per risolvere l'errore dello screenshot
- res = supabase.table("eventi").select("*").order("id_u",
-ascending=False).limit(40).execute()
- return res.data if res.data else []
- # 4. GESTIONE TERAPIE
- if "FROM TERAPIE" in q:
- res = supabase.table("terapie").select("*").execute()
- return res.data if res.data else []
+        # --- LETTURA ---
+        if "FROM UTENTI" in q:
+            res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
+            return res.data if res.data else []
 
- return []
- except Exception:
- return []
-def get_italy_time():
- from datetime import datetime, timezone, timedelta
- return datetime.now(timezone.utc) + timedelta(hours=2)
+        elif "FROM PAZIENTI" in q:
+            res = supabase.table("pazienti").select("*").order("nome").execute()
+            if res.data:
+                if "ATTIVO" in q:
+                    return [[r["id"], r["nome"]] for r in res.data if str(r.get("stato", "")).upper() == "ATTIVO"]
+                return [[r["id"], r["nome"]] for r in res.data]
+            return []
+
+        elif "FROM EVENTI" in q:
+            p_id = params[0]
+            qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
+            if len(params) > 1 and params[1]:
+                term = params[1]
+                if term == "SOLO_TERAPIA":
+                    qb = qb.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
+                else:
+                    qb = qb.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
+            res = qb.order("id", desc=True).limit(100).execute()
+            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
+
+        elif "FROM TERAPIE" in q:
+            res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
+            if res.data:
+                final_t = []
+                for r in res.data:
+                    t_id = r.get('id') or r.get('id_t') or 0
+                    farm = r.get('farmaco', 'Sconosciuto')
+                    dose = r.get('dose', '-')
+                    # Gestione errore not_somm
+                    n_som = r.get('not_somm') if r.get('not_somm') is not None else r.get('not_som', 0)
+                    p_nuo = r.get('pax_nuovo') or 0
+                    al_bi = r.get('al_bisogno') or 0
+                    final_t.append([t_id, farm, dose, n_som, p_nuo, al_bi])
+                return final_t
+            return []
+
+        # --- SCRITTURA ---
+        if commit:
+            if "INSERT INTO EVENTI" in q:
+                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                if len(params) > 5: pay["esito"] = params[5]
+                supabase.table("eventi").insert(pay).execute()
+            
+            elif "INSERT INTO TERAPIE" in q:
+                pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], 
+                       "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
+                supabase.table("terapie").insert(pay).execute()
+            
+            elif "DELETE FROM TERAPIE" in q:
+                t_id = params[0]
+                try: supabase.table("terapie").delete().eq("id", t_id).execute()
+                except: supabase.table("terapie").delete().eq("id_t", t_id).execute()
+
+        return []
+    except Exception as e:
+        st.error(f"Errore critico DB: {e}")
+        return []
 # --- FUNZIONE ORARIO ITALIA ---
 def get_italy_time():
  return datetime.now(timezone.utc) + timedelta(hours=2)
