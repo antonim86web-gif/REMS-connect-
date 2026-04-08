@@ -74,11 +74,13 @@ def db_run(query, params=(), commit=False):
 #aggiorna_struttura_db()
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
-pass
+
+    def get_italy_time():
     return datetime.now(timezone.utc) + timedelta(hours=2)
+        
 
 # --- FUNZIONE SCRITTURA LOG ---
-def scrivi_log(azione, dettaglio):
+pass
     user_log = st.session_state.user_session['uid'] if st.session_state.user_session else "SISTEMA"
     with sqlite3.connect('rems_final_v12.db') as conn:
         conn.execute("INSERT INTO logs_sistema (data_ora, utente, azione, dettaglio) VALUES (?,?,?,?)", 
