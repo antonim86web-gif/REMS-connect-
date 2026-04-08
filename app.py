@@ -65,16 +65,13 @@ def db_run(query, params=(), commit=False):
 
 def get_italy_time():
     return datetime.now(timezone.utc) + timedelta(hours=2)
-
-def scrivi_log(azione, dettagli):
+    def scrivi_log(azione, dettagli):
     # Log disattivato per compatibilità Cloud
-    pass
-
-
-    user_log = st.session_state.user_session['uid'] if st.session_state.user_session else "SISTEMA"
-    data_log = get_italy_time().strftime("%Y-%m-%d %H:%M:%S")
+        pass
+        user_log = st.session_state.user_session['uid'] if st.session_state.user_session else "SISTEMA"
+        data_log = get_italy_time().strftime("%Y-%m-%d %H:%M:%S")
     # Log disattivato per compatibilità Cloud
-    pass
+pass
 
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
