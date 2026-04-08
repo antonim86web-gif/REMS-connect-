@@ -62,24 +62,26 @@ def db_run(query, params=None, commit=False):
 
         # 3. GESTIONE EVENTI / DIARIO / LOGS
         if "FROM EVENTI" in q or "FROM DIARIO" in q:
-            # Se la query contiene una JOIN (per l'Admin)
             if "JOIN PAZIENTI" in q:
-                res = supabase.table("eventi").select("*, pazienti(nome)").order("id_u", ascending=False).limit(100).execute()
+                # Per l'Admin: visualizza log con nomi pazienti
+                res = supabase.table("eventi").select("*, pazienti(nome)").order("id_u", desc=True).limit(100).execute()
                 return [(r['data'], r['ruolo'], r['op'], r['nota'], r['pazienti']['nome'], r['id_u']) for r in res.data]
             
             # Query standard per paziente singolo
             p_id = params[0]
-            res = supabase.table("eventi").select("*").eq("id", p_id).order("id_u", ascending=False)
+            res = supabase.table("eventi").select("*").eq("id", p_id).order("id_u", desc=True)
+            
+            # Gestione ricerca (LIKE)
             if params and len(params) > 1 and isinstance(params[1], str) and "%" in params[1]:
                 res = res.ilike("nota", f"%{params[1].replace('%', '')}%")
+                
             data = res.limit(50).execute()
             return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in data.data]
 
-        # 4. GESTIONE TERAPIE (Questa è la parte che mancava!)
+        # 4. GESTIONE TERAPIE
         if "FROM TERAPIE" in q:
             p_id = params[0]
             res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
-            # Restituisce: (id_univoco, farmaco, dose, mattina, pomeriggio, al_bisogno)
             return [(r['id_u'], r['farmaco'], r['dose'], r['mat_nuovo'], r['pom_nuovo'], r['al_bisogno']) for r in res.data]
 
         # 5. AZIONI DI SCRITTURA (COMMIT)
