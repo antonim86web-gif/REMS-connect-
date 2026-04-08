@@ -48,35 +48,47 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 # --- MOTORE DATABASE UNIFICATO ---
 def db_run(query, params=None, commit=False):
     try:
+        if params is None: params = []
         q = query.upper()
-        # 1. GESTIONE UTENTI
-        if "FROM UTENTI" in q:
-            res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
-            return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data] if res.data else []
-        
-        # 2. GESTIONE PAZIENTI
+
+        # TRADUTTORE AUTOMATICO PER VECCHIE QUERY
         if "FROM PAZIENTI" in q:
-            res = supabase.table("pazienti").select("*").execute()
+            res = supabase.table("pazienti").select("*").order("nome").execute()
+            if "WHERE STATO='ATTIVO'" in q or "ATTIVO" in q:
+                return [[r["id"], r["nome"]] for r in res.data if str(r.get("stato", "")).upper() == "ATTIVO"]
+            return [[r["id"], r["nome"]] for r in res.data]
+
+        elif "FROM UTENTI" in q:
+            # params[0] di solito è lo username
+            res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 3. GESTIONE DIARIO / EVENTI (Correzione Errore Red)
-        if "FROM EVENTI" in q or "FROM DIARIO" in q:
-            # Qui usiamo ascending=False per risolvere l'errore dello screenshot
-            res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(40).execute()
-            return res.data if res.data else []
+        elif "FROM TERAPIE" in q:
+            res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
+            # Mappatura per non rompere il ciclo for delle terapie
+            return [[(r.get('id') or r.get('id_t')), r.get('farmaco'), r.get('dose'), 
+                     r.get('mat_nuovo',0), r.get('pom_nuovo',0), r.get('al_bisogno',0)] for r in res.data]
 
-        # 4. GESTIONE TERAPIE
-        if "FROM TERAPIE" in q:
-            res = supabase.table("terapie").select("*").execute()
-            return res.data if res.data else []
-            
+        elif "FROM EVENTI" in q:
+            # Gestione semplificata per il diario
+            res = supabase.table("eventi").select("*").order("id", desc=True).limit(100).execute()
+            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data]
+
+        # SEZIONE SCRITTURA (COMMIT)
+        if commit:
+            if "INSERT INTO TERAPIE" in q:
+                pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], 
+                       "mat_nuovo": int(params[3]), "pom_nuovo": int(params[4]), "al_bisogno": int(params[5])}
+                supabase.table("terapie").insert(pay).execute()
+            elif "INSERT INTO EVENTI" in q:
+                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                supabase.table("eventi").insert(pay).execute()
+        
         return []
-    except Exception:
+    except Exception as e:
+        # Questo serve per il debug: se crasha ancora, vedrai l'errore esatto
+        st.error(f"Errore Traduzione DB: {e}")
         return []
-
-def get_italy_time():
-    from datetime import datetime, timezone, timedelta
-    return datetime.now(timezone.utc) + timedelta(hours=2)
 
 # --- FUNZIONE ORARIO ITALIA ---
 def get_italy_time():
@@ -172,6 +184,10 @@ st.markdown("""
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 if 'user_session' not in st.session_state:
     st.session_state.user_session = None
+if 'cal_month' not in st.session_state:
+    st.session_state.cal_month = datetime.now().month
+if 'cal_year' not in st.session_state:
+    st.session_state.cal_year = datetime.now().year
 
 if not st.session_state.user_session:
     st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
@@ -785,7 +801,7 @@ elif nav == "⚙️ Admin":
             if st.form_submit_button("AGGIUNGI"): 
                 db_run("INSERT INTO pazienti (nome, stato) VALUES (?, 'ATTIVO')", (np_val.upper(),), True)
                 st.rerun()
-        for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
+        for pid, pn in db_run("FROM PAZIENTI ATTIVO"):
             c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
             c1.write(f"**{pn}**")
             if c2.button("DIMETTI", key=f"dim_{pid}"):
