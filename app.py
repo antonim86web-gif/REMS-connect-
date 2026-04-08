@@ -438,8 +438,7 @@ elif nav == "👥 Modulo Equipe":
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
                 res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_sel])
-
-if 'res_smarc' in locals() and res_smarc:
+                if 'res_smarc' in locals() and res_smarc:
             try:
                 dati_corretti = []
                 for r in res_smarc:
