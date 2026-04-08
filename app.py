@@ -455,8 +455,8 @@ elif nav == "👥 Modulo Equipe":
             st.info("Nessuna somministrazione trovata.")
 
                 # --- FORM NUOVA PRESCRIZIONE ---
-                with st.expander("➕ Prescrivi Nuovo Farmaco"):
-                    with st.form("nuova_terapia_med"):
+        with st.expander("➕ Prescrivi Nuovo Farmaco"):
+            with st.form("nuova_terapia_med"):
                         f_nome = st.text_input("Nome Farmaco")
                         f_dose = st.text_input("Dosaggio")
                         col1, col2, col3 = st.columns(3)
