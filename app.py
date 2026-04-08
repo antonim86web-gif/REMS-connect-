@@ -613,31 +613,29 @@ elif ruolo_corr == "Infermiere":
                                     (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_p, ruolo_reale, nome_reale), True)
                                     st.success("Parametri salvati!")
                                     st.rerun()
-                                    
-                        with t3:
-                st.subheader("📝 Consegne Cliniche")
-                with st.form("form_c_inf"):
-                    txt_c = st.text_area("Inserisci diario clinico...")
-                    if st.form_submit_button("SALVA NOTA"):
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 {txt_c}", ruolo_reale, nome_reale), True)
-                        st.success("Nota registrata!")
-                        st.rerun()
 
-            with t4:
-                st.subheader("📋 Briefing Intelligente (IA)")
-                
-                # 1. Recupero delle ultime 20 attività
-                b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
-                
-                if b_logs:
-                    st.success(f"✅ Recuperate le ultime {len(b_logs)} attività dal diario clinico.")
-                    
-                    if st.button("🤖 GENERA RIASSUNTO TURNO (IA)", type="primary", use_container_width=True):
+                                    
+                                    with t3:
+                                        st.subheader("📝 Consegne Cliniche")
+                                        with st.form("form_c_inf"):
+                                            txt_c = st.text_area("Inserisci diario clinico...")
+                                            if st.form_submit_button("SALVA NOTA"):
+                                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                                                (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 {txt_c}", ruolo_reale, nome_reale), True)
+                                                st.success("Nota registrata!")
+                                                st.rerun()
+                                                
+                                                
+                                                with t4:
+                                                    st.subheader("📋 Briefing Intelligente (IA)")
+                                                    # 1. Recupero delle ultime 20 attività
+        b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC LIMIT 20", (p_id,))
+        if b_logs:
+            st.success(f"✅ Recuperate le ultime {len(b_logs)} attività dal diario clinico.")
+            if st.button("🤖 GENERA RIASSUNTO TURNO (IA)", type="primary", use_container_width=True):
                         # Prepariamo le note in ordine cronologico
-                        testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
-                        
-                        with st.spinner("L'IA sta analizzando i dati..."):
+                testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
+                with st.spinner("L'IA sta analizzando i dati..."):
                             # COSTRUIAMO IL MESSAGGIO UNIFICATO (Evita il TypeError)
                             istruzioni_ia = (
                                 "RIASSUNTO BRIEFING TURNO: "
