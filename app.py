@@ -438,7 +438,7 @@ elif nav == "👥 Modulo Equipe":
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
                 res_smarc = db_run("FROM EVENTI SOMM", [p_id])
-                res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [sel_paz])
+                res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [id_paz])
                 
         if res_smarc:
             try:
