@@ -86,11 +86,19 @@ def db_run(query, params=None, commit=False):
             
             # Se la query serve per lo smarcamento (tabella a 3 colonne)
             if "SOMM" in q:
+                # Filtriamo solo le note che contengono la somministrazione
                 qb = qb.ilike("nota", "%Somm:%")
                 res = qb.order("id", desc=True).execute()
                 if res.data:
                     # Ritorna ESATTAMENTE 3 colonne: data, nota, operatore
                     return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data]
+                return []
+
+            # Default per il diario clinico o altro (restituisce tutto)
+            else:
+                res = qb.order("id", desc=True).limit(100).execute()
+                if res.data:
+                    return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data]
                 return []
 
             # Se serve per il diario clinico (riga 450 - 2 colonne)
