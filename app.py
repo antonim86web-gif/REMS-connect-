@@ -540,9 +540,9 @@ elif ruolo_corr == "Infermiere":
     t1, t2, t3, t4 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA"])
             
             # --- IDENTIFICAZIONE DINAMICA DAL TUO LOGIN ---
-            u = st.session_state.user_session
-            nome_reale = f"{u['nome']} {u['cognome']}"
-            ruolo_reale = u.get('qualifica', 'Operatore')
+    u = st.session_state.user_session
+    nome_reale = f"{u['nome']} {u['cognome']}"
+    ruolo_reale = u.get('qualifica', 'Operatore')
 
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
