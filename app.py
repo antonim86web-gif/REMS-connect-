@@ -441,20 +441,16 @@ elif nav == "👥 Modulo Equipe":
         res_smarc = []
         
         # 2. Proviamo a riempirla con i dati (usando p_id che è quella giusta)
-        res_smarc = query_db("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_id])
+        res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_id])
 
-        # 3. Ora controlliamo se contiene qualcosa
         if res_smarc:
             try:
-                dati_corretti = []
-                for row in res_smarc:
-                    dati_corretti.append(row[:3])
-                
+                dati_corretti = [row[:3] for row in res_smarc]
                 df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
                 st.write("### 📋 Diario Somministrazioni")
                 st.table(df_smarc)
             except Exception as e:
-                st.error(f"Errore tecnico tabella: {e}")
+                st.error(f"Errore: {e}")
         else:
             st.info("Nessun dato di somministrazione trovato.")
 
