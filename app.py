@@ -425,10 +425,9 @@ if nav == "👥 Modulo Equipe":
                         st.success("Nota registrata!")
                         st.rerun()
 
-Ecco il blocco completo e millimetrico per la sezione Monitoraggio. Ho corretto la gestione dei dati per evitare quell'errore NoneType e ho aggiunto la funzione di stampa che scarica solo i dati filtrati.
+#Ecco il blocco completo e millimetrico per la sezione Monitoraggio. Ho corretto la gestione dei dati per evitare quell'errore NoneType e ho aggiunto la funzione di stampa che scarica solo i dati filtrati.
 
-🛠️ Sostituisci tutto il blocco elif nav == "📊 Monitoraggio": con questo:
-Python
+
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>📊 MONITORAGGIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
