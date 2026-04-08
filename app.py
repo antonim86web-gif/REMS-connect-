@@ -435,34 +435,57 @@ elif nav == "📊 Monitoraggio":
             with c1:
                 st.write("**🔍 Filtri di Ricerca:**")
                 
-                # 1. Selettori di data
-                cd1, cd2 = st.columns(2)
-                d_inizio = cd1.date_input("Dal:", value=None, key=f"start_{p_id}")
-                d_fine = cd2.date_input("Al:", value=None, key=f"end_{p_id}")
-                
-                # 2. Input testo e tasto rapido
-                if st.button("💊 Mostra Solo Terapie", key=f"btn_t_{p_id}"):
-                    st.session_state[f"search_{p_id}"] = "A"
-                
-                valore_ricerca = st.session_state.get(f"search_{p_id}", "")
-                termine = st.text_input("Cerca farmaco o nota:", value=valore_ricerca, key=f"txt_{p_id}")
-                st.session_state[f"search_{p_id}"] = termine
+                # 1. Inizializziamo lo stato se non esiste
+                if f"filter_{p_id}" not in st.session_state:
+                    st.session_state[f"filter_{p_id}"] = ""
 
-                # 3. Chiamata al DB
+                # 2. Selettori di data
+                cd1, cd2 = st.columns(2)
+                d_inizio = cd1.date_input("Dal:", value=None, key=f"s_{p_id}")
+                d_fine = cd2.date_input("Al:", value=None, key=f"e_{p_id}")
+                
+                # 3. I Tasti e l'Input
+                col_btn, col_txt = st.columns([1, 2])
+                if col_btn.button("💊 Solo Terapie", key=f"btn_t_{p_id}"):
+                    st.session_state[f"filter_{p_id}"] = "A"
+                
+                termine = col_txt.text_input("Cerca farmaco o nota:", 
+                                            value=st.session_state[f"filter_{p_id}"], 
+                                            key=f"input_{p_id}")
+                st.session_state[f"filter_{p_id}"] = termine
+
+                # 4. Recupero dati
                 t_search = f"%{termine}%" if termine else None
                 diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, t_search))
                 
-                # 4. Filtro temporale
-                if diario and (d_inizio or d_fine):
-                    from datetime import datetime
-                    filtered = []
-                    for r in diario:
-                        try:
-                            dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
-                            if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
-                                filtered.append(r)
-                        except: filtered.append(r)
-                    diario = filtered
+                # 5. FILTRO AGGRESSIVO (Questo è quello che pulisce le note 'prova')
+                if diario:
+                    # Se il termine è "A" o "R", eliminiamo fisicamente le righe senza esito
+                    if termine.upper() in ["A", "R", "ASSUNTO", "RIFIUTATO"]:
+                        diario = [r for r in diario if r[4] and str(r[4]).strip() != ""]
+                    
+                    # Filtro date (se impostate)
+                    if d_inizio or d_fine:
+                        from datetime import datetime
+                        temp_list = []
+                        for r in diario:
+                            try:
+                                dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
+                                if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
+                                    temp_list.append(r)
+                            except: temp_list.append(r)
+                        diario = temp_list
+
+                # 6. Visualizzazione
+                if diario:
+                    st.info(f"Record visualizzati: {len(diario)}")
+                    for d, ruolo, o, n, esito in diario:
+                        if esito and str(esito).strip() != "":
+                            st.success(f"💊 **{d}** - {n} (Esito: {esito})")
+                        else:
+                            st.write(f"📝 {d}: {n}")
+                else:
+                    st.warning("Nessun dato trovato.")
 
                 # 5. Filtro per STAMPA SOLO TERAPIA
                 if termine in ["A", "R"]:
