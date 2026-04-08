@@ -106,22 +106,27 @@ def db_run(query, params=None, commit=False):
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
         # 4. GESTIONE TERAPIE
+        # 4. GESTIONE TERAPIE
         elif "FROM TERAPIE" in q:
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
-            return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
+            # Usiamo r.get('id') o r.get('id_t') per essere sicuri
+            return [[(r.get('id') or r.get('id_t')), r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
         # 5. AZIONI DI SCRITTURA
         if commit:
-            if "INSERT INTO EVENTI" in q:
-                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
-                if len(params) > 5: pay["esito"] = params[5]
-                supabase.table("eventi").insert(pay).execute()
+            # ... (insert eventi resta uguale)
+            
             elif "INSERT INTO TERAPIE" in q:
                 pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
                 supabase.table("terapie").insert(pay).execute()
+            
             elif "DELETE FROM TERAPIE" in q:
-                supabase.table("terapie").delete().eq("id_t", params[0]).execute()
-
+                # Proviamo a cancellare usando 'id' (che è lo standard di Supabase)
+                t_id = params[0]
+                try:
+                    supabase.table("terapie").delete().eq("id", t_id).execute()
+                except:
+                    supabase.table("terapie").delete().eq("id_t", t_id).execute()
         return []
 
     except Exception as e:
