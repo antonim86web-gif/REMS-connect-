@@ -129,7 +129,7 @@ def db_run(query, params=None, commit=False):
     
     return []
             # Esegue una ricerca filtrata sulla tabella eventi
-            query = supabase.table("eventi").select("*").eq("id", p_id)
+    query = supabase.table("eventi").select("*").eq("id", p_id)
             
             # Se ci sono altri parametri (filtro terapia o testo)
             if len(params) > 1:
