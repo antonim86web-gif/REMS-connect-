@@ -252,8 +252,10 @@ if nav == "👥 Modulo Equipe":
                             if f_nome:
                                 db_run("INSERT INTO terapie", (p_id, f_nome, f_dose, 1 if m_n else 0, 1 if p_n else 0, 1 if a_b else 0), True)
                                 st.rerun()
-           with t3:
+
+            with t3:
                 st.subheader("🩺 Esame Obiettivo e Parametri")
+                # Cerchiamo i parametri registrati in precedenza
                 ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id_u DESC", (p_id,))
                 if ultimi_p:
                     for d, n in ultimi_p[:5]:
@@ -263,6 +265,7 @@ if nav == "👥 Modulo Equipe":
                     e_o = st.text_area("Descrizione esame obiettivo e stato mentale...")
                     if st.form_submit_button("SALVA ESAME OBIETTIVO"):
                         db_run("INSERT INTO eventi", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
+                        st.success("Esame salvato!")
                         st.rerun()
 
             with t4:
@@ -272,7 +275,7 @@ if nav == "👥 Modulo Equipe":
                     if st.button("🤖 GENERA RELAZIONE CLINICA AGGIORNATA", type="primary"):
                         testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs[:20])])
                         with st.spinner("L'IA sta analizzando il caso..."):
-                            prompt = f"Agisci come Psichiatra. Analizza queste note e genera una sintesi clinica: {testo_note}"
+                            prompt = f"Agisci come Psichiatra. Analizza queste note e genera una sintesi clinica professionale: {testo_note}"
                             relazione = genera_relazione_ia(p_id, prompt) 
                             st.markdown(f"<div class='ai-box'>{relazione}</div>", unsafe_allow_html=True)
                 else:
