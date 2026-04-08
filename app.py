@@ -419,23 +419,26 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>📊 MONITORAGGIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    # 1. Recupero pazienti
+    # 1. Recupero lista pazienti (usando la versione 'morbida' che abbiamo creato)
     p_lista = db_run("FROM PAZIENTI ATTIVO")
     
+    # Header con Filtri
     c1, c2 = st.columns([1, 2])
     with c1:
         solo_t = st.toggle("💊 Solo Terapie / Obiettivo", key="togg_mon")
     with c2:
-        cerca_p = st.text_input("Cerca nel diario:", placeholder="Es: Clozapina...", key="inp_mon")
+        cerca_p = st.text_input("🔍 Cerca nel diario:", placeholder="Es: Clozapina, TP, Esame...", key="inp_mon")
 
     st.divider()
 
     if p_lista:
+        from fpdf import FPDF
+
         for p in p_lista:
             pid, nome = p[0], p[1]
             
             with st.expander(f"📁 SCHEDA: {nome}"):
-                # Chiamata al database aggiornata
+                # 2. Chiamata DB con i filtri selezionati
                 if solo_t:
                     eventi = db_run("FROM EVENTI", [pid, "SOLO_TERAPIA"])
                 elif cerca_p:
@@ -444,35 +447,53 @@ elif nav == "📊 Monitoraggio":
                     eventi = db_run("FROM EVENTI", [pid])
 
                 if eventi:
-                    # --- QUI RIGENERIAMO IL REPORT PER IL DOWNLOAD ---
-                    testo_report = f"REPORT CLINICO: {nome}\n" + "="*30 + "\n"
-                    
+                    # Preparazione PDF
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, f"REPORT CLINICO: {nome.upper()}", 0, 1, 'C')
+                    pdf.ln(10)
+
                     for e in eventi:
                         d_e, r_e, o_e, n_e, s_e = e[0], e[1], e[2], e[3], e[4]
-                        testo_report += f"[{d_e}] {o_e} ({r_e})\nNOTA: {n_e} | ESITO: {s_e}\n" + "-"*20 + "\n"
                         
-                        # Visualizzazione Box (Verde/Rosso/Azzurro)
+                        # --- VISUALIZZAZIONE A SCHERMO ---
                         nota_l = str(n_e).lower()
+                        # Box colorati in base al contenuto
                         if s_e in ['A', 'R'] or any(sym in str(n_e) for sym in ['💊', '✔️', '❌']):
                             bg = "#dcfce7" if s_e == 'A' else "#fee2e2"
                             st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'><b>{d_e}</b> | Esito: <b>{s_e}</b><br><small>{r_e} - {o_e}</small><br>{n_e}</div>", unsafe_allow_html=True)
                         elif any(x in nota_l for x in ['obiettivo', 'esame', 'parametri']):
                             st.markdown(f"<div style='background-color:#e0f2fe; padding:10px; border-radius:8px; border-left:6px solid #0369a1; color:black; margin-bottom:8px;'><b>{d_e} (ESAME OBIETTIVO)</b><br>{n_e}</div>", unsafe_allow_html=True)
                         else:
-                            st.write(f"📝 **{d_e}**: {n_e}")
+                            st.markdown(f"📝 **{d_e}** ({o_e}): {n_e}")
 
-                    # --- ECCO IL TASTO DOWNLOAD ---
+                        # --- AGGIUNTA AL PDF ---
+                        pdf.set_font("Arial", 'B', 10)
+                        pdf.cell(0, 8, f"Data: {d_e} | Op: {o_e} ({r_e})", 0, 1)
+                        pdf.set_font("Arial", size=10)
+                        # Pulizia testo per evitare errori di codifica nel PDF
+                        clean_n = str(n_e).encode('latin-1', 'replace').decode('latin-1')
+                        clean_s = str(s_e).encode('latin-1', 'replace').decode('latin-1')
+                        pdf.multi_cell(0, 6, f"NOTA: {clean_n}\nESITO: {clean_s}")
+                        pdf.ln(2)
+                        pdf.cell(0, 0, '', 'T')
+                        pdf.ln(2)
+
+                    # 3. Tasto per scaricare il PDF
+                    pdf_bytes = pdf.output(dest='S').encode('latin-1')
                     st.divider()
                     st.download_button(
-                        label=f"📥 Scarica Report {nome}",
-                        data=testo_report,
-                        file_name=f"Report_{nome.replace(' ', '_')}.txt",
-                        key=f"dl_{pid}"
+                        label=f"📄 Scarica PDF {nome}",
+                        data=pdf_bytes,
+                        file_name=f"Report_{nome.replace(' ', '_')}.pdf",
+                        mime="application/pdf",
+                        key=f"pdf_btn_{pid}"
                     )
                 else:
-                    st.info("Nessun dato per questo paziente.")
+                    st.info(f"Nessun dato trovato per {nome} con i filtri attuali.")
     else:
-        st.warning("Nessun paziente trovato.")
+        st.warning("Nessun paziente attivo trovato nel database.")
                 
 
 elif nav == "📅 Agenda Dinamica":
