@@ -279,7 +279,7 @@ if nav == "👥 Modulo Equipe":
                 b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (p_id,))
                 if b_logs:
                     if st.button("🤖 GENERA RELAZIONE CLINICA AGGIORNATA", type="primary"):
-                        testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs[:20])])
+                        testo_note = "\n".join([f"[{d}] {o}: {n}" for d, _, o, n, _ in reversed(b_logs[:20])])
                         with st.spinner("L'IA sta analizzando il caso..."):
                             prompt = f"Agisci come Psichiatra. Analizza queste note e genera una sintesi clinica professionale: {testo_note}"
                             relazione = genera_relazione_ia(p_id, prompt) 
