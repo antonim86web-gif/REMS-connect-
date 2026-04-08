@@ -404,10 +404,11 @@ elif nav == "📊 Monitoraggio":
             c1, c2 = st.columns([2, 1])
             with c1:
                 st.write("**Ultime annotazioni:**")
-                diario = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (p_id,))
-                if diario:
-                    for d, o, n in diario[:5]:
-                        st.write(f"_{d}_ - **{o}**: {n}")
+                diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id,))
+        if diario:
+            # Prendiamo tutti e 5 i valori restituiti da db_run
+            for d, ruolo, o, n, esito in diario[:5]: 
+                st.write(f"**{d}** ({o}): {n}")
             with c2:
                 if st.button(f"📄 SCARICA PDF {p_nome}", key=f"pdf_{p_id}"):
                     pdf_data = genera_pdf_clinico(p_nome, diario)
