@@ -17,38 +17,37 @@ supabase = create_client(url, key)
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # --- FUNZIONE GENERAZIONE PDF CLINICO ---
-def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
+def genera_pdf_clinico(p_nome, dati_clinici):
+    from fpdf import FPDF
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # Intestazione
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "REMS-CONNECT - REPORT CLINICO", ln=True, align='C')
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, f"Paziente: {p_nome}", ln=True)
-    pdf.ln(10)
-
+    pdf.cell(0, 10, f"Report Clinico: {p_nome}", ln=True, align='C')
+    pdf.ln(5)
+    
     for riga in dati_clinici:
-        # Usiamo riga[n] perché db_run restituisce (data, ruolo, op, nota, esito)
+        # Estrazione sicura per posizione
         data = str(riga[0]) if len(riga) > 0 else ""
         op = str(riga[2]) if len(riga) > 2 else ""
         nota = str(riga[3]) if len(riga) > 3 else ""
-        
-        # Se c'è anche un esito (per le terapie), lo aggiungiamo alla nota
         esito = str(riga[4]) if len(riga) > 4 and riga[4] else ""
-        if esito:
-            nota = f"{nota} [ESITO: {esito}]"
         
+        # Formattazione riga intestazione (Data e Operatore)
         pdf.set_font("Arial", 'B', 10)
         pdf.set_fill_color(240, 240, 240)
-        pdf.cell(0, 7, f"Data: {data} | Op: {op_p}", ln=True, fill=True)
-        pdf.set_font("Arial", size=10)
-        pdf.multi_cell(0, 7, nota_p)
-        pdf.ln(4)
+        # CORREZIONE QUI: Usiamo 'op' invece di 'op_p'
+        pdf.cell(0, 7, f"Data: {data} | Operatore: {op}", ln=True, fill=True)
         
-    pdf_output = pdf.output(dest='S').encode('latin-1')
-    return pdf_output
+        # Nota ed eventuale Esito
+        pdf.set_font("Arial", '', 11)
+        testo_nota = nota
+        if esito:
+            testo_nota += f" [ESITO: {esito}]"
+            
+        pdf.multi_cell(0, 7, testo_nota)
+        pdf.ln(2)
+        
+    return pdf.output(dest='S').encode('latin-1', errors='replace')
 
 # --- AGGIORNAMENTO MOTORE DATABASE (Sostituisci questa parte nel Blocco 1) ---
 def db_run(query, params=None, commit=False):
