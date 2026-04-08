@@ -431,28 +431,34 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>📊 MONITORAGGIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    # 1. Recupero pazienti
-    raw_pazienti = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
-    p_lista = raw_pazienti if raw_pazienti is not None else []
+    # 1. Recupero pazienti con paracadute
+    res_p = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
+    p_lista = res_p if res_p is not None else []
     
     # 2. Filtri
     c1, c2 = st.columns([1, 2])
     with c1:
         filtro_terapia = st.toggle("💊 Solo Terapie / Obiettivo", key="togg_ter")
     with c2:
-        cerca_t = st.text_input("Cerca parola chiave:", placeholder="Es: Clozapina, Parametri...", key="search_mon")
+        cerca_t = st.text_input("Cerca parola chiave:", placeholder="Es: Clozapina...", key="search_mon")
 
     st.divider()
 
+    # 3. Ciclo pazienti
     if p_lista:
         for p in p_lista:
             try:
-                pid, nome = (str(p[0]), str(p[1])) if isinstance(p, (list, tuple)) else (str(p.get('id')), str(p.get('nome')))
+                # Estrazione sicura ID e Nome
+                if isinstance(p, (list, tuple)) and len(p) >= 2:
+                    pid, nome = str(p[0]), str(p[1])
+                elif isinstance(p, dict):
+                    pid, nome = str(p.get('id')), str(p.get('nome', 'Paziente'))
+                else:
+                    continue
                 
                 with st.expander(f"📁 SCHEDA: {nome}"):
-                    # --- QUERY POTENZIATA: PESCA DA EVENTI + ESAME OBIETTIVO ---
+                    # Query che unisce Diario ed Esame Obiettivo
                     if filtro_terapia:
-                        # Qui cerchiamo: Simboli pillola, Esiti A/R E anche le note che contengono "Obiettivo" o "Parametri"
                         sql = f"""
                         SELECT data, ruolo, op, nota, esito 
                         FROM eventi 
@@ -460,43 +466,55 @@ elif nav == "📊 Monitoraggio":
                         AND (
                             nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' 
                             OR esito IS NOT NULL 
-                            OR nota LIKE '%Obiettivo%' OR nota LIKE '%Esame%'
+                            OR nota ILIKE '%Obiettivo%' OR nota ILIKE '%Esame%'
                         ) 
                         ORDER BY id_u DESC
                         """
                         tipo_rep = "TERAPIE_E_OBIETTIVO"
+                    elif cerca_t:
+                        sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' AND nota ILIKE '%{cerca_t}%' ORDER BY id_u DESC"
+                        tipo_rep = f"RICERCA_{cerca_t.upper()}"
                     else:
                         sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' ORDER BY id_u DESC"
                         tipo_rep = "DIARIO_COMPLETO"
                     
-                    eventi = db_run(sql)
-                    eventi = eventi if eventi is not None else []
+                    # Recupero eventi con paracadute
+                    res_e = db_run(sql)
+                    eventi = res_e if res_e is not None else []
                     
                     if eventi:
                         st.caption(f"🔍 Record trovati: {len(eventi)}")
                         testo_stampa = f"REPORT: {tipo_rep} - PAZIENTE: {nome}\n" + "="*40 + "\n\n"
                         
                         for e in eventi:
-                            d_e, r_e, o_e, n_e, s_e = e[0], e[1], e[2], e[3], e[4]
+                            # Mapping sicuro degli indici
+                            d_e = e[0] if len(e) > 0 else "-"
+                            r_e = e[1] if len(e) > 1 else "-"
+                            o_e = e[2] if len(e) > 2 else "-"
+                            n_e = e[3] if len(e) > 3 else ""
+                            s_e = e[4] if len(e) > 4 else None
                             
-                            # Logica per il BOX COLORATO
-                            # Se è un esame obiettivo (parola chiave nella nota), usiamo un colore Blu/Azzurro
-                            is_obiettivo = any(x in str(n_e).lower() for x in ['obiettivo', 'esame', 'parametri'])
+                            testo_stampa += f"[{d_e}] {o_e}: {n_e} (Esito: {s_e})\n" + "-"*20 + "\n"
+                            
+                            # Logica Visualizzazione Box
+                            nota_str = str(n_e).lower()
+                            is_obiettivo = any(x in nota_str for x in ['obiettivo', 'esame', 'parametri'])
                             
                             if s_e in ['A', 'R'] or '💊' in str(n_e):
                                 bg = "#dcfce7" if s_e == 'A' else "#fee2e2"
-                                st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'><b>{d_e}</b> | Esito: {s_e}<br>{n_e}</div>", unsafe_allow_html=True)
+                                st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'><b>{d_e}</b> | Esito: {s_e if s_e else '-'}<br>{n_e}</div>", unsafe_allow_html=True)
                             elif is_obiettivo:
-                                # Box Azzurro per l'Esame Obiettivo
                                 st.markdown(f"<div style='background-color:#e0f2fe; padding:10px; border-radius:8px; border-left:6px solid #0369a1; color:black; margin-bottom:8px;'><b>{d_e} (OBIETTIVO)</b><br>{n_e}</div>", unsafe_allow_html=True)
                             else:
                                 st.write(f"📝 **{d_e}**: {n_e}")
-                            
-                            testo_stampa += f"[{d_e}] {o_e}: {n_e}\n"
                         
                         st.download_button(label=f"📥 SCARICA {tipo_rep}", data=testo_stampa, file_name=f"Report_{nome}.txt", key=f"btn_{pid}")
+                    else:
+                        st.info("Nessun dato corrispondente.")
             except Exception:
                 continue
+    else:
+        st.warning("Nessun paziente attivo o database non raggiungibile.")
                 
 
 elif nav == "📅 Agenda Dinamica":
