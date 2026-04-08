@@ -529,9 +529,9 @@ elif nav == "👥 Modulo Equipe":
                             use_container_width=True
                         )
                     except Exception as e:
-        st.error(f"Errore tecnico PDF: {e}")
-    else:
-        st.warning("Nessun dato trovato per questa selezione.")
+                        st.error(f"Errore tecnico PDF: {e}")
+                    else:
+                        st.warning("Nessun dato trovato per questa selezione.")
 
 # Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso bene
 elif ruolo_corr == "Infermiere":
