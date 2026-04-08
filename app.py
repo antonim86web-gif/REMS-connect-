@@ -439,12 +439,12 @@ elif nav == "👥 Modulo Equipe":
                 """, (p_id,))
                 res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_sel])
                 if 'res_smarc' in locals() and res_smarc:
-            try:
-                dati_corretti = []
-                for r in res_smarc:
-                    row = list(r)
-                    while len(row) < 3: row.append("-")
-                    dati_corretti.append(row[:3])
+                    try:
+                        dati_corretti = []
+                        for r in res_smarc:
+                            row = list(r)
+                            while len(row) < 3: row.append("-")
+                                dati_corretti.append(row[:3])
                 
                 df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
                 st.table(df_smarc)
