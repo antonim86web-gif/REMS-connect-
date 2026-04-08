@@ -63,17 +63,13 @@ def db_run(query, params=None, commit=False):
         # 3. GESTIONE EVENTI / DIARIO / LOGS
         if "FROM EVENTI" in q or "FROM DIARIO" in q:
             if "JOIN PAZIENTI" in q:
-                # Corretto id_u -> id
                 res = supabase.table("eventi").select("*, pazienti(nome)").order("id", desc=True).limit(100).execute()
                 return [(r['data'], r['ruolo'], r['op'], r['nota'], r['pazienti']['nome'], r['id']) for r in res.data]
             
             p_id = params[0]
-            # Corretto id_u -> id
             res = supabase.table("eventi").select("*").eq("id", p_id).order("id", desc=True)
-            
             if params and len(params) > 1 and isinstance(params[1], str) and "%" in params[1]:
                 res = res.ilike("nota", f"%{params[1].replace('%', '')}%")
-                
             data = res.limit(50).execute()
             return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in data.data]
 
@@ -81,23 +77,30 @@ def db_run(query, params=None, commit=False):
         if "FROM TERAPIE" in q:
             p_id = params[0]
             res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
-            # Qui usiamo id_u perché l'abbiamo creata noi prima con l'SQL editor
             return [(r['id_u'], r['farmaco'], r['dose'], r['mat_nuovo'], r['pom_nuovo'], r['al_bisogno']) for r in res.data]
 
-        # 5. AZIONI DI SCRITTURA (COMMIT)
+        # 5. AZIONI DI SCRITTURA (COMMIT) - QUESTA È LA PARTE CHE MI HAI CHIESTO
         if commit:
             if "INSERT INTO EVENTI" in q:
-                payload = {"id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
-                if len(params) > 5: payload["esito"] = params[5]
+                payload = {
+                    "id": params[0], 
+                    "data": params[1], 
+                    "nota": params[2], 
+                    "ruolo": params[3], 
+                    "op": params[4]
+                }
+                if len(params) > 5: 
+                    payload["esito"] = params[5]
                 supabase.table("eventi").insert(payload).execute()
             
             elif "INSERT INTO TERAPIE" in q:
-                payload = {"p_id": params[0], "farmaco": params[1], "dose": params[2], 
-                           "mat_nuovo": int(params[3]), "pom_nuovo": int(params[4]), "al_bisogno": int(params[5])}
+                payload = {
+                    "p_id": params[0], "farmaco": params[1], "dose": params[2], 
+                    "mat_nuovo": int(params[3]), "pom_nuovo": int(params[4]), "al_bisogno": int(params[5])
+                }
                 supabase.table("terapie").insert(payload).execute()
             
             elif "DELETE FROM TERAPIE" in q:
-                # Qui usiamo id_u come da creazione tabella terapie
                 supabase.table("terapie").delete().eq("id_u", params[0]).execute()
             
             elif "UPDATE PAZIENTI" in q:
