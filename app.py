@@ -373,7 +373,10 @@ elif nav == "👥 Modulo Equipe":
     st.markdown("<div class='section-banner'><h2>MODULO OPERATIVO EQUIPE</h2></div>", unsafe_allow_html=True)
     ruolo_corr = u.get('qualifica', u.get('ruolo', 'OSS'))
 
-    if u['ruolo'] == "Admin": ruolo_corr = st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
+       # Usiamo .get per evitare il crash se 'ruolo' non esiste
+    if u.get('qualifica') == "Admin" or u.get('user') == "admin":
+        ruolo_corr = st.selectbox("Simula Figura:", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
+ 
     p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
     
     if p_lista:
