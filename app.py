@@ -437,14 +437,21 @@ elif nav == "👥 Modulo Equipe":
                     WHERE id=? AND (esito='A' OR esito='R' OR nota LIKE '✔️%' OR nota LIKE '❌%') 
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
-                if res_smarc:
-                    try:
-                # Questo deve avere PIÙ spazi rispetto all'if sopra
-                        dati_puliti = [r[:3] for r in res_smarc]
-                        df_smarc = pd.DataFrame(dati_puliti, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
-                        st.table(df_smarc)
-                    except Exception as e:
-                        st.error(f"Errore: {e}")
+                res_smarc = db_run("FROM EVENTI SOMM", [p_id])
+
+if res_smarc:
+    try:
+        # Questo sistema le colonne: se ne mancano, aggiunge un trattino
+        dati_corretti = []
+        for r in res_smarc:
+            row = list(r)
+            while len(row) < 3: row.append("-") # Aggiunge colonne se mancano
+            dati_corretti.append(row[:3]) # Prende solo le prime 3
+            
+        df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
+        st.table(df_smarc)
+    except Exception as e:
+        st.error(f"Errore visualizzazione: {e}")
                     else:
             # Anche questo deve essere allineato sotto il 'try'
                         st.info("Nessuna somministrazione trovata.")
