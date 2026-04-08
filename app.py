@@ -257,14 +257,19 @@ if not st.session_state.user_session:
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
             rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
-            if st.form_submit_button("REGISTRA"):
+                        if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
                     try:
-                        supabase.table("utenti").insert(nuovo).execute()
-                        st.success(f"Creato! Accedi a sinistra.")
-                    except:
-                        st.error("Username già esistente.")
+                        # Chiediamo a Supabase di scriverci l'esito
+                        risposta = supabase.table("utenti").insert(nuovo).execute()
+                        st.success(f"Profilo creato! Dati inviati: {risposta.data}")
+                    except Exception as e:
+                        # QUI vedremo il vero motivo del fallimento
+                        st.error(f"Errore tecnico Supabase: {e}")
+                else:
+                    st.warning("Compila tutti i campi.")
+
     st.stop()
 
 u = st.session_state.user_session
