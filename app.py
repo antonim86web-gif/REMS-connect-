@@ -79,13 +79,25 @@ def db_run(query, params=None, commit=False):
 
         # --- GESTIONE EVENTI/SMARCO (Risolve ValueError 408) ---
         elif "FROM EVENTI" in q:
+            p_id = params[0] if params else None
             qb = supabase.table("eventi").select("*")
-            if params: qb = qb.eq("paziente_id", params[0])
-            if "SOMM" in q: qb = qb.ilike("nota", "%Somm:%")
+            if p_id:
+                qb = qb.eq("paziente_id", p_id)
             
             res = qb.order("id", desc=True).limit(100).execute()
-            # Forza ESATTAMENTE 3 colonne per il DataFrame alla riga 408
-            return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data]
+            
+            if res.data:
+                # Se la query originale chiedeva solo DATA e NOTA (riga 450)
+                if "SELECT DATA, NOTA" in q:
+                    return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data]
+                
+                # Se serve per la tabella SMARCO (riga 408 - 3 colonne)
+                if "SOMM" in q or "COLUMNS=[" in q:
+                    return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data]
+                
+                # Default per il Diario completo (5 colonne)
+                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data]
+            return []
 
         # --- SCRITTURA (COMMIT) ---
         if commit:
