@@ -122,7 +122,7 @@ def db_run(query, params=None, commit=False):
 
     except Exception as e:
         st.error(f"Errore DB: {e}")
-        return [
+        return []
             # Esegue una ricerca filtrata sulla tabella eventi
     query = supabase.table("eventi").select("*").eq("id", p_id)
             
