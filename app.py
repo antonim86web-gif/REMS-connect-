@@ -60,7 +60,11 @@ def genera_pdf_clinico(p_nome, dati_clinici):
         pdf.ln(2)
         
     # Restituisce i byte del PDF pronti per il download
-    return pdf.output(dest='S')
+    pdf_output = pdf.output(dest='S')
+    
+    if isinstance(pdf_output, str):
+        return pdf_output.encode('latin-1')
+    return bytes(pdf_output)
 
 # --- AGGIORNAMENTO MOTORE DATABASE (Sostituisci questa parte nel Blocco 1) ---
 def db_run(query, params=None, commit=False):
