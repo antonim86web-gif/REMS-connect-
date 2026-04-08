@@ -425,7 +425,7 @@ elif nav == "👥 Modulo Equipe":
                         c1, c2 = st.columns([4, 1])
                         c1.info(f"💊 {t[1]} - {t[2]} (M:{'✅' if t[3] else '❌'} | P:{'✅' if t[4] else '❌'} | Bisogno:{'✅' if t[5] else '❌'})")
                         chiave_unica = f"del_med_{t[0]}_{t[1]}"
-        if c2.button("🗑️", key=chiave_unica):
+                        if c2.button("🗑️", key=chiave_unica):
                             st.rerun()
                 
                 st.divider()
