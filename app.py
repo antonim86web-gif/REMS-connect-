@@ -5,6 +5,15 @@ import calendar
 from datetime import datetime, timedelta, timezone
 from groq import Groq
 from supabase import create_client # <--- NUOVO
+# Inizializzazione variabili di sessione mancanti
+for key, val in {
+    'cal_month': datetime.now().month,
+    'cal_year': datetime.now().year,
+    'utente': "Ospite",
+    'ruolo': "Nessuno"
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 from fpdf import FPDF
 import io
 
@@ -51,43 +60,51 @@ def db_run(query, params=None, commit=False):
         if params is None: params = []
         q = query.upper()
 
-        # TRADUTTORE AUTOMATICO PER VECCHIE QUERY
+        # --- GESTIONE PAZIENTI (Risolve ValueError 302, 350, 788) ---
         if "FROM PAZIENTI" in q:
             res = supabase.table("pazienti").select("*").order("nome").execute()
-            if "WHERE STATO='ATTIVO'" in q or "ATTIVO" in q:
+            if "ATTIVO" in q or "STATO='ATTIVO'" in q:
                 return [[r["id"], r["nome"]] for r in res.data if str(r.get("stato", "")).upper() == "ATTIVO"]
             return [[r["id"], r["nome"]] for r in res.data]
 
-        elif "FROM UTENTI" in q:
-            # params[0] di solito è lo username
-            res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
-            return res.data if res.data else []
-
+        # --- GESTIONE TERAPIE ---
         elif "FROM TERAPIE" in q:
-            res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
-            # Mappatura per non rompere il ciclo for delle terapie
-            return [[(r.get('id') or r.get('id_t')), r.get('farmaco'), r.get('dose'), 
-                     r.get('mat_nuovo',0), r.get('pom_nuovo',0), r.get('al_bisogno',0)] for r in res.data]
+            p_id = params[0] if params else None
+            if p_id:
+                res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
+                # Restituisce 6 colonne fisse per non rompere i cicli for
+                return [[r.get('id', 0), r.get('farmaco', 'Sconosciuto'), r.get('dose', '-'), 
+                         r.get('mat_nuovo', 0), r.get('pom_nuovo', 0), r.get('al_bisogno', 0)] for r in res.data]
+            return []
 
+        # --- GESTIONE EVENTI/SMARCO (Risolve ValueError 408) ---
         elif "FROM EVENTI" in q:
-            # Gestione semplificata per il diario
-            res = supabase.table("eventi").select("*").order("id", desc=True).limit(100).execute()
-            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data]
+            qb = supabase.table("eventi").select("*")
+            if params: qb = qb.eq("paziente_id", params[0])
+            if "SOMM" in q: qb = qb.ilike("nota", "%Somm:%")
+            
+            res = qb.order("id", desc=True).limit(100).execute()
+            # Forza ESATTAMENTE 3 colonne per il DataFrame alla riga 408
+            return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data]
 
-        # SEZIONE SCRITTURA (COMMIT)
+        # --- SCRITTURA (COMMIT) ---
         if commit:
-            if "INSERT INTO TERAPIE" in q:
+            if "INSERT INTO EVENTI" in q:
+                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                if len(params) > 5: pay["esito"] = params[5]
+                supabase.table("eventi").insert(pay).execute()
+            
+            elif "INSERT INTO TERAPIE" in q:
                 pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], 
                        "mat_nuovo": int(params[3]), "pom_nuovo": int(params[4]), "al_bisogno": int(params[5])}
                 supabase.table("terapie").insert(pay).execute()
-            elif "INSERT INTO EVENTI" in q:
-                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
-                supabase.table("eventi").insert(pay).execute()
+                
+            elif "DELETE" in q:
+                supabase.table("terapie").delete().eq("id", params[0]).execute()
         
         return []
     except Exception as e:
-        # Questo serve per il debug: se crasha ancora, vedrai l'errore esatto
-        st.error(f"Errore Traduzione DB: {e}")
+        st.error(f"Errore DB: {e}")
         return []
 
 # --- FUNZIONE ORARIO ITALIA ---
