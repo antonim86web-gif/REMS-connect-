@@ -481,19 +481,26 @@ elif nav == "📊 Monitoraggio":
                         pdf.ln(2)
 
                     # 3. Tasto per scaricare il PDF
-                    pdf_bytes = pdf.output(dest='S').encode('latin-1')
-                    st.divider()
-                    st.download_button(
-                        label=f"📄 Scarica PDF {nome}",
-                        data=pdf_bytes,
-                        file_name=f"Report_{nome.replace(' ', '_')}.pdf",
-                        mime="application/pdf",
-                        key=f"pdf_btn_{pid}"
-                    )
-                else:
-                    st.info(f"Nessun dato trovato per {nome} con i filtri attuali.")
-    else:
-        st.warning("Nessun paziente attivo trovato nel database.")
+                    try:
+                        # Estraiamo i byte del PDF in modo sicuro per le nuove versioni di fpdf
+                        pdf_output = pdf.output()
+                        
+                        # Se è già in formato bytes lo usiamo, altrimenti lo codifichiamo
+                        if isinstance(pdf_output, str):
+                            pdf_bytes = pdf_output.encode('latin-1', 'replace')
+                        else:
+                            pdf_bytes = pdf_output
+
+                        st.divider()
+                        st.download_button(
+                            label=f"📄 Scarica PDF {nome}",
+                            data=pdf_bytes,
+                            file_name=f"Report_{nome.replace(' ', '_')}.pdf",
+                            mime="application/pdf",
+                            key=f"pdf_btn_{pid}"
+                        )
+                    except Exception as pdf_err:
+                        st.error(f"Errore nella creazione del PDF: {pdf_err}")
                 
 
 elif nav == "📅 Agenda Dinamica":
