@@ -785,12 +785,29 @@ elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
     t_ut, t_paz_att, t_paz_dim, t_diar, t_log = st.tabs(["UTENTI", "PAZIENTI ATTIVI", "ARCHIVIO", "DIARIO EVENTI", "📜 LOG"])
     
-    with t_ut:
-        for us, un, uc, uq in db_run("SELECT user, nome, cognome, qualifica FROM utenti"):
-            c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
-            if us != "admin" and c2.button("ELIMINA", key=f"d_{us}"): 
-                db_run("DELETE FROM utenti WHERE user=?", (us,), True)
-                st.rerun()
+        with t_ut:
+        st.subheader("Gestione Utenti Registrati")
+        utenti_raw = db_run("SELECT user, nome, cognome, qualifica FROM utenti")
+        
+        if utenti_raw:
+            for riga in utenti_raw:
+                # Controlliamo che la riga abbia effettivamente i dati prima di assegnarli
+                if len(riga) >= 4:
+                    us, un, uc, uq = riga[0], riga[1], riga[2], riga[3]
+                    
+                    c1, c2 = st.columns([0.8, 0.2])
+                    c1.write(f"**{un} {uc}** ({uq}) - *@{us}*")
+                    
+                    # Evitiamo che l'admin si cancelli da solo
+                    if us != "admin":
+                        if c2.button("🗑️", key=f"del_{us}"):
+                            supabase.table("utenti").delete().eq("user", us).execute()
+                            st.rerun()
+                else:
+                    st.warning("Trovata riga utente incompleta.")
+        else:
+            st.info("Nessun utente trovato nel database.")
+
 
     with t_paz_att:
         with st.form("np"):
