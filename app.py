@@ -75,7 +75,7 @@ def db_run(query, params=(), commit=False):
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 
-    def get_italy_time():
+def get_italy_time():
     return datetime.now(timezone.utc) + timedelta(hours=2)
 
 def scrivi_log(azione, dettagli):
