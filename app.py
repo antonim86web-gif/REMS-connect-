@@ -71,7 +71,7 @@ def db_run(query, params=None, commit=False):
     try:
         q = query.upper()
         
-        try:
+    try:
         q = query.upper()
 
         # 1. GESTIONE UTENTI
