@@ -469,14 +469,22 @@ elif nav == "📊 Monitoraggio":
                     diario = [r for r in diario if r[4]]
 
                 # 6. Visualizzazione a video
+                if termine == "A":
+                    diario = [r for r in diario if r[4] and r[4].strip() != ""]
+
+                # 6. Visualizzazione a video
                 if diario:
-                    for d, ruolo, o, n, esito in diario[:30]:
-                        if esito:
-                            st.success(f"💊 **{d}** - {n} ({esito})")
+                    st.info(f"Visualizzando {len(diario)} risultati")
+                    for r in diario[:50]:
+                        d, ruolo, o, n, esito = r
+                        # Se ha un esito, è una terapia (box verde)
+                        if esito and esito.strip() != "":
+                            st.success(f"💊 **{d}** - {n} | ESITO: **{esito}**")
                         else:
-                            st.write(f"📝 {d}: {n}")
+                            # Se non ha esito, è una nota (box grigio/bianco)
+                            st.write(f"📝 {d} ({o}): {n}")
                 else:
-                    st.warning("Nessun dato trovato.")
+                    st.warning("Nessun dato trovato con questi filtri.")
 
             # --- IL TASTO PDF TORNA QUI ---
             with c2:
