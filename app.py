@@ -35,22 +35,20 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf.ln(10)
 
     for riga in dati_clinici:
-            # Estraiamo solo i primi 3 valori (Data, Operatore, Nota)
-            # Questo evita il crash se ne arrivano 5
+            # Riga 38 e 39: estraiamo i dati (allineate a 12 spazi dal bordo)
             data = riga[0]
-            op   = riga[2] # Nella db_run l'operatore è al terzo posto
-            nota = riga[3] # La nota è al quarto posto
+            op   = riga[2]
+            nota = riga[3]
             
-            # Pulizia totale caratteri (le tue vecchie righe 39-40)
+            # Riga 40: Pulizia (allineata a 12 spazi)
             nota_p = str(nota).encode('latin-1', 'replace').decode('latin-1')
-            op_p = str(op).encode('latin-1', 'replace').decode('latin-1')
-        
-        pdf.set_font("Arial", 'B', 10)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(0, 7, f"Data: {data} | Op: {op_p}", ln=True, fill=True)
-        pdf.set_font("Arial", size=10)
-        pdf.multi_cell(0, 7, nota_p)
-        pdf.ln(4)
+            
+            # Riga 48: ECCO QUELLA CHE TI DÀ ERRORE (deve essere allineata alle altre!)
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(40, 10, f"Data: {data}", 0, 0)
+            pdf.set_font("Arial", '', 10)
+            pdf.multi_cell(0, 10, f"Op: {op} - Nota: {nota_p}", 0, 1)
+            pdf.ln(2)
         
     # --- IL TRUCCO INFALLIBILE: Esporta come Byte String ---
     pdf_output = pdf.output() # In fpdf2 questo restituisce bytearray o bytes
