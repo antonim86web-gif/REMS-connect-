@@ -61,8 +61,6 @@ def db_run(query, params=(), commit=False):
                     return []
 
 
-#aggiorna_struttura_db()
-
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 
 def get_italy_time():
