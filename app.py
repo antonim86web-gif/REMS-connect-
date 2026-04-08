@@ -47,35 +47,23 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def db_run(query, params=None, commit=False):
+def db_run(query, params=None, commit=False):
     try:
-        q_up = query.upper()
-        
-        # 1. GESTIONE UTENTI (Pannello Admin)
-        if "FROM UTENTI" in q_up:
+        q = query.upper()
+        # UTENTI
+        if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
-            if res.data:
-                return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
-            return []
-
-        # 2. GESTIONE PAZIENTI (Selettori e Mappa)
-        if "FROM PAZIENTI" in q_up:
+            return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data] if res.data else []
+        # PAZIENTI
+        if "FROM PAZIENTI" in q:
             res = supabase.table("pazienti").select("*").execute()
             return res.data if res.data else []
-
-        # 3. GESTIONE DIARIO / EVENTI (Cronologia Clinica)
-        if "FROM EVENTI" in q_up or "FROM DIARIO" in q_up:
-            # Usiamo ascending=False per evitare l'errore 'descending'
-            res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(30).execute()
+        # DIARIO / EVENTI / CONSEGNE (Per tutte le figure)
+        if "FROM EVENTI" in q or "FROM DIARIO" in q or "FROM CONSEGNE" in q:
+            res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(40).execute()
             return res.data if res.data else []
-
-        # 4. GESTIONE TERAPIE / SOMMINISTRAZIONI
-        if "FROM TERAPIE" in q_up or "FROM SOMMINISTRAZIONI" in q_up:
-            res = supabase.table("terapie").select("*").execute()
-            return res.data if res.data else []
-
         return []
-    except Exception as e:
-        # Se c'è un errore l'app non diventa bianca ma restituisce una lista vuota
+    except Exception:
         return []
 
 def get_italy_time():
