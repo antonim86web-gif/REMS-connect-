@@ -419,87 +419,60 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>📊 MONITORAGGIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    # 1. Recupero lista pazienti (Usa il tuo sistema standard)
-    p_lista = db_run("FROM PAZIENTI", ["ATTIVO"])
+    # 1. Recupero pazienti
+    p_lista = db_run("FROM PAZIENTI ATTIVO")
     
-    # 2. Interfaccia Filtri
     c1, c2 = st.columns([1, 2])
     with c1:
         solo_t = st.toggle("💊 Solo Terapie / Obiettivo", key="togg_mon")
     with c2:
-        cerca_p = st.text_input("Cerca nel diario:", placeholder="Es: Clozapina, Parametri...", key="inp_mon")
+        cerca_p = st.text_input("Cerca nel diario:", placeholder="Es: Clozapina...", key="inp_mon")
 
     st.divider()
 
-    # 3. Ciclo unico pazienti
     if p_lista:
         for p in p_lista:
-            # Estrazione sicura ID e Nome dai tuoi dati [id, nome]
-            pid = p[0]
-            nome = p[1]
+            pid, nome = p[0], p[1]
             
             with st.expander(f"📁 SCHEDA: {nome}"):
-                
-                # CHIAMATA AL TUO MOTORE AGGIORNATO (FROM EVENTI_LIBERO)
+                # Chiamata al database aggiornata
                 if solo_t:
-                    # Cerca pillole, esiti e parole chiave obiettivo
-                    eventi = db_run("FROM EVENTI_LIBERO", [pid, "SOLO_TERAPIA"])
+                    eventi = db_run("FROM EVENTI", [pid, "SOLO_TERAPIA"])
                 elif cerca_p:
-                    # Cerca per parola chiave libera
-                    eventi = db_run("FROM EVENTI_LIBERO", [pid, cerca_p])
+                    eventi = db_run("FROM EVENTI", [pid, cerca_p])
                 else:
-                    # Carica tutto il diario del paziente
-                    eventi = db_run("FROM EVENTI_LIBERO", [pid])
+                    eventi = db_run("FROM EVENTI", [pid])
 
                 if eventi:
-                    st.caption(f"🔍 Record trovati: {len(eventi)}")
-                    
-                    # Preparazione testo per Report/Stampa
-                    testo_report = f"DIARIO CLINICO: {nome}\n" + "="*30 + "\n\n"
+                    # --- QUI RIGENERIAMO IL REPORT PER IL DOWNLOAD ---
+                    testo_report = f"REPORT CLINICO: {nome}\n" + "="*30 + "\n"
                     
                     for e in eventi:
-                        # Mapping dei dati restituiti dalla tua db_run:
-                        # e[0]=data, e[1]=ruolo, e[2]=op, e[3]=nota, e[4]=esito
                         d_e, r_e, o_e, n_e, s_e = e[0], e[1], e[2], e[3], e[4]
-                        
                         testo_report += f"[{d_e}] {o_e} ({r_e})\nNOTA: {n_e} | ESITO: {s_e}\n" + "-"*20 + "\n"
                         
-                        # --- LOGICA VISUALE (BOX COLORATI) ---
-                        nota_str = str(n_e).lower()
-                        is_obj = any(x in nota_str for x in ['obiettivo', 'esame', 'parametri'])
-                        
+                        # Visualizzazione Box (Verde/Rosso/Azzurro)
+                        nota_l = str(n_e).lower()
                         if s_e in ['A', 'R'] or any(sym in str(n_e) for sym in ['💊', '✔️', '❌']):
-                            # Verde per Somministrato (A), Rosso per Rifiutato (R)
                             bg = "#dcfce7" if s_e == 'A' else "#fee2e2"
-                            st.markdown(f"""
-                            <div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'>
-                                <b>{d_e}</b> | Esito: <b>{s_e if s_e else '-'}</b><br>
-                                <small>{r_e} - {o_e}</small><br>{n_e}
-                            </div>
-                            """, unsafe_allow_html=True)
-                        elif is_obj:
-                            # Box Azzurro per Esame Obiettivo
-                            st.markdown(f"""
-                            <div style='background-color:#e0f2fe; padding:10px; border-radius:8px; border-left:6px solid #0369a1; color:black; margin-bottom:8px;'>
-                                <b>{d_e} (ESAME OBIETTIVO)</b><br>{n_e}
-                            </div>
-                            """, unsafe_allow_html=True)
+                            st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'><b>{d_e}</b> | Esito: <b>{s_e}</b><br><small>{r_e} - {o_e}</small><br>{n_e}</div>", unsafe_allow_html=True)
+                        elif any(x in nota_l for x in ['obiettivo', 'esame', 'parametri']):
+                            st.markdown(f"<div style='background-color:#e0f2fe; padding:10px; border-radius:8px; border-left:6px solid #0369a1; color:black; margin-bottom:8px;'><b>{d_e} (ESAME OBIETTIVO)</b><br>{n_e}</div>", unsafe_allow_html=True)
                         else:
-                            # Diario Standard
-                            st.write(f"📝 **{d_e}** ({o_e}): {n_e}")
-                    
-                    # Tasto per scaricare solo i dati visualizzati (Filtrati)
+                            st.write(f"📝 **{d_e}**: {n_e}")
+
+                    # --- ECCO IL TASTO DOWNLOAD ---
                     st.divider()
                     st.download_button(
                         label=f"📥 Scarica Report {nome}",
                         data=testo_report,
-                        file_name=f"Diario_{nome}.txt",
+                        file_name=f"Report_{nome.replace(' ', '_')}.txt",
                         key=f"dl_{pid}"
                     )
                 else:
-                    st.info("Nessun dato trovato per i filtri selezionati.")
+                    st.info("Nessun dato per questo paziente.")
     else:
-        st.warning("Nessun paziente attivo trovato.")
+        st.warning("Nessun paziente trovato.")
                 
 
 elif nav == "📅 Agenda Dinamica":
