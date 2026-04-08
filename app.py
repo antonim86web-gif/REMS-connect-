@@ -460,9 +460,12 @@ elif nav == "📊 Monitoraggio":
                 
                 # 5. FILTRO AGGRESSIVO (Questo è quello che pulisce le note 'prova')
                 if diario:
-                    # Se il termine è "A" o "R", eliminiamo fisicamente le righe senza esito
-                    if termine.upper() in ["A", "R", "ASSUNTO", "RIFIUTATO"]:
-                        diario = [r for r in diario if r[4] and str(r[4]).strip() != ""]
+                    # Se scrivi 'A', 'R' oppure la parola 'TERAPIE'
+                    filtri_terapia = ["A", "R", "ASSUNTO", "RIFIUTATO", "TERAPIE"]
+                    
+                    if termine.upper() in filtri_terapia:
+                        # Teniamo tutte le righe che hanno UN QUALSIASI esito (A oppure R)
+                        diario = [r for r in diario if r[4] and str(r[4]).strip() != ""
                     
                     # Filtro date (se impostate)
                     if d_inizio or d_fine:
