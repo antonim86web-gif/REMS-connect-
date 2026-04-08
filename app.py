@@ -71,92 +71,63 @@ def db_run(query, params=None, commit=False):
     try:
         q = query.upper()
         
+        try:
+        q = query.upper()
+
         # 1. GESTIONE UTENTI
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
-        
-        # 2. GESTIONE PAZIENTI
-        if "FROM PAZIENTI" in q:
-            stato = "DIMESSO" if "DIMESSO" in q else "ATTIVO"
-            res = supabase.table("pazienti").select("*").eq("stato", stato).order("nome").execute()
-            return [(r['id'], r['nome']) for r in res.data]
 
-        # 3. GESTIONE EVENTI / DIARIO / LOGS
-        if "FROM EVENTI" in q:
+        # 2. GESTIONE PAZIENTI
+        elif "FROM PAZIENTI" in q:
+            stato = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
+            res = supabase.table("pazienti").select("*").eq("stato", stato).order("nome").execute()
+            return [[r["id"], r["nome"]] for r in res.data] if res.data else []
+
+        # 3. GESTIONE EVENTI / DIARIO / MONITORAGGIO (IL PEZZO CRITICO)
+        elif "FROM EVENTI" in q:
             p_id = params[0]
-            # 1. Base della query: filtra per il paziente corretto
-            query = supabase.table("eventi").select("*").eq("paziente_id", p_id)
+            query_base = supabase.table("eventi").select("*").eq("paziente_id", p_id)
             
-            # 2. Gestione Filtro Terapie o Ricerca Testuale
-            if len(params) > 1 and params[1] is not None:
+            # Controllo filtri (Terapia o Ricerca)
+            if len(params) > 1 and params[1]:
                 term = params[1]
                 if term == "SOLO_TERAPIA":
-                    # Filtro speciale per pillole, spunte ed esiti compilati
-                    query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
+                    # Filtro per simboli e esiti
+                    query_base = query_base.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                 else:
-                    # Ricerca libera per parola chiave (sia in nota che in esito)
-                    query = query.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
+                    # Ricerca testuale libera
+                    query_base = query_base.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
             
-            # 3. Esecuzione (ordine per ID decrescente per vedere i più recenti sopra)
-            res = query.order("id_u", desc=True).limit(100).execute()
-            
-            if res.data:
-                return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in res.data]
-            return []
+            res = query_base.order("id_u", desc=True).limit(100).execute()
+            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')] for r in res.data] if res.data else []
 
-        # 4. GESTIONE TERAPIE
-        if "FROM TERAPIE" in q:
+        # 4. GESTIONE TERAPIE (LISTA FARMACI)
+        elif "FROM TERAPIE" in q:
             p_id = params[0]
             res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
-            return [(r['id_u'], r['farmaco'], r['dose'], r['mat_nuovo'], r['pom_nuovo'], r['al_bisogno']) for r in res.data]
+            return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
         # 5. AZIONI DI SCRITTURA (COMMIT)
         if commit:
             if "INSERT INTO EVENTI" in q:
-                # payload corretto con 'paziente_id'
-                payload = {
-                    "paziente_id": params[0], 
-                    "data": params[1], 
-                    "nota": params[2], 
-                    "ruolo": params[3], 
-                    "op": params[4]
-                }
-                if len(params) > 5: 
-                    payload["esito"] = params[5]
+                payload = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                if len(params) > 5: payload["esito"] = params[5]
                 supabase.table("eventi").insert(payload).execute()
             
             elif "INSERT INTO TERAPIE" in q:
-                payload = {
-                    "p_id": params[0], "farmaco": params[1], "dose": params[2], 
-                    "mat_nuovo": int(params[3]), "pom_nuovo": int(params[4]), "al_bisogno": int(params[5])
-                }
+                payload = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
                 supabase.table("terapie").insert(payload).execute()
             
             elif "DELETE FROM TERAPIE" in q:
-                supabase.table("terapie").delete().eq("id_u", params[0]).execute()
-            # AGGIUNTA PER RICERCA LIBERA (MONITORAGGIO)
-        if "FROM EVENTI_LIBERO" in q:
-            p_id = params[0]
-            # 1. Puntiamo alla tabella eventi
-            query = supabase.table("eventi").select("*").eq("paziente_id", p_id)
-            
-            if len(params) > 1:
-                filtro = params[1]
-                if filtro == "SOLO_TERAPIA":
-                    # Usiamo simboli generici e controlliamo la colonna esito
-                    # IMPORTANTE: Usiamo ILIKE con i simboli e controlliamo se esito ha dati
-                    query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.eq.A,esito.eq.R")
-                else:
-                    # Ricerca testuale libera
-                    query = query.ilike("nota", f"%{filtro}%")
-            
-            res = query.order("id_u", ascending=False).execute()
-            
-            # Restituiamo i dati mappati correttamente per il ciclo for
-            if res.data:
-                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', ''), r.get('esito')] for r in res.data]
-            return []
+                supabase.table("terapie").delete().eq("id_t", params[0]).execute()
+
+        return []
+
+    except Exception as e:
+        st.error(f"Errore DB: {e}")
+        return []
             # Esegue una ricerca filtrata sulla tabella eventi
             query = supabase.table("eventi").select("*").eq("id", p_id)
             
