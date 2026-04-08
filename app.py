@@ -433,18 +433,17 @@ elif nav == "👥 Modulo Equipe":
                     WHERE id=? AND (esito='A' OR esito='R' OR nota LIKE '✔️%' OR nota LIKE '❌%') 
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
-                
                 if res_smarc:
-            try:
-                # Questo trucco evita il crash alla riga 438
-                dati_puliti = [r[:3] for r in res_smarc]
-                
-                df_smarc = pd.DataFrame(dati_puliti, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
-                st.table(df_smarc)
-            except Exception as e:
-                st.error(f"Errore nella creazione tabella: {e}")
-        else:
-            st.info("Nessuna somministrazione registrata per questo paziente.")
+                    try:
+                # Questo deve avere PIÙ spazi rispetto all'if sopra
+                        dati_puliti = [r[:3] for r in res_smarc]
+                        df_smarc = pd.DataFrame(dati_puliti, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
+                        st.table(df_smarc)
+                    except Exception as e:
+                        t.error(f"Errore: {e}")
+                    else:
+            # Anche questo deve essere allineato sotto il 'try'
+                        st.info("Nessuna somministrazione trovata.")
 
                 st.divider()
 
