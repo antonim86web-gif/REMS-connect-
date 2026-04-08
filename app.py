@@ -53,7 +53,7 @@ def db_run(query, params=(), commit=False):
     try:
         if "SELECT" in query.upper():
             table = "pazienti" if "pazienti" in query.lower() else "eventi"
-                if "FROM utenti" in query:
+            if "FROM utenti" in query:
         res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
         if res.data:
             # Creiamo una lista di tuple sicure. Se un dato manca, mettiamo "N/D"
