@@ -84,14 +84,21 @@ def db_run(query, params=None, commit=False):
             if p_id:
                 qb = qb.eq("paziente_id", p_id)
             
-            # Se la query serve per lo smarcamento (tabella a 3 colonne)
+            # 1. Caso Somministrazioni (3 colonne)
             if "SOMM" in q:
-                # Filtriamo solo le note che contengono la somministrazione
                 qb = qb.ilike("nota", "%Somm:%")
                 res = qb.order("id", desc=True).execute()
-                if res.data:
-                    # Ritorna ESATTAMENTE 3 colonne: data, nota, operatore
-                    return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data]
+                return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data] if res.data else []
+
+            # 2. Caso Diario Rapido (2 colonne) - QUESTO PRIMA ERA DOPO L'ELSE
+            elif "SELECT DATA, NOTA" in q:
+                res = qb.order("id", desc=True).execute()
+                return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data] if res.data else []
+
+            # 3. Caso Default (Tutto il resto - 5 colonne) - L'ELSE VA SEMPRE PER ULTIMO
+            else:
+                res = qb.order("id", desc=True).limit(100).execute()
+                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data] if res.data else []
                 return []
 
             # Default per il diario clinico o altro (restituisce tutto)
@@ -102,7 +109,7 @@ def db_run(query, params=None, commit=False):
                 return []
 
             # Se serve per il diario clinico (riga 450 - 2 colonne)
-            elif "SELECT DATA, NOTA" in q:
+                elif "SELECT DATA, NOTA" in q:
                 res = qb.order("id", desc=True).execute()
                 return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data] if res.data else []
 
