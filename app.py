@@ -84,16 +84,21 @@ def db_run(query, params=None, commit=False):
             if p_id:
                 qb = qb.eq("paziente_id", p_id)
             
-            # 1. Caso Somministrazioni (3 colonne)
+            # Controllo per SMARCO (3 colonne)
             if "SOMM" in q:
                 qb = qb.ilike("nota", "%Somm:%")
                 res = qb.order("id", desc=True).execute()
-                return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data] if res.data else []
-
-            # 2. Caso Diario Rapido (2 colonne) - QUESTO PRIMA ERA DOPO L'ELSE
+                return [[r.get('data','-'), r.get('nota','-'), r.get('op','-')] for r in res.data] if res.data else []
+            
+            # Controllo per DIARIO RAPIDO (2 colonne)
             elif "SELECT DATA, NOTA" in q:
                 res = qb.order("id", desc=True).execute()
-                return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data] if res.data else []
+                return [[r.get('data','-'), r.get('nota','-')] for r in res.data] if res.data else []
+            
+            # DEFAULT (5 colonne) - L'else deve essere allineato agli IF/ELIF sopra
+            else:
+                res = qb.order("id", desc=True).limit(100).execute()
+                return [[r.get('data','-'), r.get('ruolo','-'), r.get('op','-'), r.get('nota','-'), r.get('esito','-')] for r in res.data] if res.data else []
 
             # 3. Caso Default (Tutto il resto - 5 colonne) - L'ELSE VA SEMPRE PER ULTIMO
             else:
