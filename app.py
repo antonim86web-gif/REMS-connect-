@@ -428,48 +428,58 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>CENTRO MONITORAGGIO CLINICO</h2></div>", unsafe_allow_html=True)
     p_lista = db_run("SELECT id, nome FROM pazienti")
+    
     for p_id, p_nome in p_lista:
         with st.expander(f"📁 CARTELLA: {p_nome}"):
             c1, c2 = st.columns([2, 1])
             with c1:
-                st.write("**🔍 Filtra Storico:**")
-                # Tasti rapidi
-                c_btn1, c_btn2 = st.columns(2)
-                filtro_rapido = ""
-                if c_btn1.button("💊 Solo Terapie", key=f"t_{p_id}"):
-                    termine = "A" # Questo cercherà tutti gli 'Assunti' e 'Rifiutati' se usiamo la logica OR
+                st.write("**🔍 Filtri di Ricerca:**")
                 
-                termine = st.text_input("Cerca farmaco o esito (A/R):", value=termine if 'termine' in locals() else "", key=f"txt_{p_id}")
+                # 1. Aggiungiamo i selettori di data (fondamentali per evitare NameError)
+                cd1, cd2 = st.columns(2)
+                d_inizio = cd1.date_input("Dal:", value=None, key=f"start_{p_id}")
+                d_fine = cd2.date_input("Al:", value=None, key=f"end_{p_id}")
+                
+                # 2. Gestione termine di ricerca e tasto rapido
+                termine = ""
+                if st.button("💊 Mostra Solo Terapie (A/R)", key=f"t_{p_id}"):
+                    termine = "A" # Funziona se nel DB cerchiamo in OR su nota/esito
 
-                # Chiamata al DB
+                termine = st.text_input("Cerca farmaco o esito (A/R):", value=termine, key=f"txt_{p_id}")
+
+                # 3. Chiamata al DB
                 t_search = f"%{termine}%" if termine else None
                 diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, t_search))
-
-                # Chiamata al DB con il filtro opzionale del termine
-                diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, f"%{termine}%" if termine else None))
                 
-                # Filtro temporale lato Python
+                # 4. Filtro temporale lato Python
                 if diario and (d_inizio or d_fine):
                     from datetime import datetime
                     filtered = []
                     for r in diario:
                         try:
+                            # Assumiamo che r[0] sia la data in formato stringa 'YYYY-MM-DD...'
                             dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
                             if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
                                 filtered.append(r)
-                        except: filtered.append(r)
+                        except: 
+                            filtered.append(r)
                     diario = filtered
 
+                # 5. Visualizzazione Risultati
                 if diario:
-                    for d, ruolo, o, n, esito in diario:
+                    st.write(f"Record trovati: {len(diario)}")
+                    for d, ruolo, o, n, esito in diario[:50]: # Limite 50 per fluidità
                         if esito:
                             st.success(f"💊 **{d}** - {n} | Esito: **{esito}** ({o})")
                         else:
                             st.write(f"📝 {d} ({o}): {n}")
+                else:
+                    st.warning("Nessun dato trovato per i filtri selezionati.")
 
             with c2:
                 st.write("**📄 Esportazione:**")
                 if diario:
+                    # Il PDF conterrà esattamente la lista 'diario' filtrata
                     pdf_data = genera_pdf_clinico(p_nome, diario)
                     st.download_button(
                         label=f"📥 SCARICA PDF FILTRATO",
