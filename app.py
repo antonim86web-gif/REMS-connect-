@@ -426,92 +426,57 @@ if nav == "👥 Modulo Equipe":
                         st.rerun()
 
 elif nav == "📊 Monitoraggio":
-    st.markdown("<div class='section-banner'><h2>CENTRO MONITORAGGIO CLINICO</h2></div>", unsafe_allow_html=True)
-    p_lista = db_run("SELECT id, nome FROM pazienti")
+    st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    for p_id, p_nome in p_lista:
-        with st.expander(f"📁 CARTELLA: {p_nome}"):
-            c1, c2 = st.columns([2, 1])
-            with c1:
-                st.write("**🔍 Filtri di Ricerca:**")
-                
-                # 1. Inizializziamo lo stato se non esiste
-                if f"filter_{p_id}" not in st.session_state:
-                    st.session_state[f"filter_{p_id}"] = ""
+    # 1. Recupero lista pazienti
+    p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
+    
+    # 2. Interfaccia Filtri (Sopra le schede)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        solo_terapia = st.button("💊 Solo Terapie")
+    with c2:
+        cerca_testo = st.text_input("Cerca farmaco o nota:", placeholder="Scrivi qui...")
 
-                # 2. Selettori di data
-                cd1, cd2 = st.columns(2)
-                d_inizio = cd1.date_input("Dal:", value=None, key=f"s_{p_id}")
-                d_fine = cd2.date_input("Al:", value=None, key=f"e_{p_id}")
-                
-                # 3. I Tasti e l'Input
-                col_btn, col_txt = st.columns([1, 2])
-                if col_btn.button("💊 Solo Terapie", key=f"btn_t_{p_id}"):
-                    st.session_state[f"filter_{p_id}"] = "A"
-                
-                termine = col_txt.text_input("Cerca farmaco o nota:", 
-                                            value=st.session_state[f"filter_{p_id}"], 
-                                            key=f"input_{p_id}")
-                st.session_state[f"filter_{p_id}"] = termine
+    st.divider()
 
-                # 4. Recupero dati
-                t_search = f"%{termine}%" if termine else None
-                diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, t_search))
-                
-                # 5. FILTRO AGGRESSIVO (Questo è quello che pulisce le note 'prova')
-                if diario:
-                    # Se scrivi 'A', 'R' oppure la parola 'TERAPIE'
-                    filtri_terapia = ["A", "R", "ASSUNTO", "RIFIUTATO", "TERAPIE"]
-                    
-                    if termine.upper() in filtri_terapia:
-                        # Teniamo tutte le righe che hanno UN QUALSIASI esito (A oppure R)
-                        diario = [r for r in diario if r[4] and str(r[4]).strip() != ""]
-                    
-                    # Filtro date (se impostate)
-                    if d_inizio or d_fine:
-                        from datetime import datetime
-                        temp_list = []
-                        for r in diario:
-                            try:
-                                dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
-                                if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
-                                    temp_list.append(r)
-                            except: temp_list.append(r)
-                        diario = temp_list
-
-                # 6. Visualizzazione
-                if diario:
-                    st.info(f"Record visualizzati: {len(diario)}")
-                    for d, ruolo, o, n, esito in diario:
-                        if esito and str(esito).strip() != "":
-                            st.success(f"💊 **{d}** - {n} (Esito: {esito})")
-                        else:
-                            st.write(f"📝 {d}: {n}")
-                else:
-                    st.warning("Nessun dato trovato.")
-
-                # 5. Filtro per STAMPA SOLO TERAPIA
-                if termine in ["A", "R"]:
-                    diario = [r for r in diario if r[4]]
-
-                # 6. Visualizzazione a video
-                if termine in ["A", "R"]:
-                    # Teniamo solo i record dove la colonna esito (r[4]) NON è vuota e NON è None
-                    diario = [r for r in diario if r[4] and str(r[4]).strip() != ""]
-
-                # 6. Visualizzazione a video
-                if diario:
-                    st.info(f"Visualizzando {len(diario)} risultati")
-                    for r in diario[:50]:
-                        d, ruolo, o, n, esito = r
-                        # Se ha un esito, è una terapia (box verde)
-                        if esito and esito.strip() != "":
-                            st.success(f"💊 **{d}** - {n} | ESITO: **{esito}**")
-                        else:
-                            # Se non ha esito, è una nota (box grigio/bianco)
-                            st.write(f"📝 {d} ({o}): {n}")
-                else:
-                    st.warning("Nessun dato trovato con questi filtri.")
+    # 3. Ciclo unico per ogni paziente (EVITA IL DOPPIO RISULTATO)
+    for pid, nome in p_lista:
+        with st.expander(f"📁 SCHEDA: {nome}"):
+            
+            # --- LOGICA DI FILTRO ---
+            if solo_terapia:
+                # Cerca i simboli delle terapie O gli esiti A/R
+                res = supabase.table("eventi").select("*").eq("id", pid).or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None").order("id_u", ascending=False).execute()
+            elif cerca_testo:
+                # Cerca il testo scritto dall'utente
+                res = supabase.table("eventi").select("*").eq("id", pid).ilike("nota", f"%{cerca_testo}%").order("id_u", ascending=False).execute()
+            else:
+                # Carica tutto il diario normale
+                res = supabase.table("eventi").select("*").eq("id", pid).order("id_u", ascending=False).execute()
+            
+            eventi = res.data if res.data else []
+            
+            # 4. Visualizzazione Risultati
+            if eventi:
+                st.info(f"Record visualizzati: {len(eventi)}")
+                for e in eventi:
+                    # Stile Card per le Terapie
+                    esito = e.get('esito', '-')
+                    if esito in ['A', 'R'] or '💊' in e['nota']:
+                        colore_box = "#dcfce7" if esito == 'A' else "#fee2e2"
+                        icona = "✔️" if esito == 'A' else "❌"
+                        st.markdown(f"""
+                        <div style='background-color: {colore_box}; padding: 10px; border-radius: 10px; border-left: 5px solid #22c55e; margin-bottom: 5px;'>
+                            💊 <b>{e['data']}</b> - {icona} {e['nota']} (Esito: {esito})
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        # Stile normale per il diario
+                        st.write(f"📝 **{e['data']}**: {e['nota']}")
+                st.divider()
+            else:
+                st.warning("Nessun dato trovato per questo filtro.")
 
             # --- IL TASTO PDF TORNA QUI ---
             with c2:
