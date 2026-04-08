@@ -330,7 +330,7 @@ if nav == "📍 Mappa Posti":
                 dsid, dl = dest.split("-L")
                 db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid_sel,), True)
                 db_run("INSERT INTO assegnazioni (p_id, stanza_id, letto, data_ass) VALUES (?,?,?,?)", (pid_sel, dsid, int(dl), get_now_it().strftime("%Y-%m-%d")), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid_sel, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 TRASFERIMENTO: Spostato in {dsid} Letto {dl}. Motivo: {mot}", u['ruolo'], firma_op), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid_sel, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 TRASFERIMENTO: Spostato in {dsid} Letto {dl}. Motivo: {mot}", u.get('qualifica', 'Operatore') , firma_op), True)
                 st.rerun()
 
 elif nav == "📊 Monitoraggio":
@@ -532,7 +532,7 @@ elif nav == "👥 Modulo Equipe":
             # --- IDENTIFICAZIONE DINAMICA DAL TUO LOGIN ---
             u = st.session_state.user_session
             nome_reale = f"{u['nome']} {u['cognome']}"
-            ruolo_reale = u['ruolo']
+            ruolo_reale = u.get('qualifica', 'Operatore')
 
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
@@ -781,7 +781,7 @@ elif nav == "📅 Agenda Dinamica":
                 for nome_p in ps_sel:
                     pid = [p[0] for p in p_l if p[1]==nome_p][0]
                     db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u['ruolo'], firma_op), True)
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u.get('qualifica', 'Operatore') , firma_op), True)
                 st.rerun()
         
         st.divider()
