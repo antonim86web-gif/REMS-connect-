@@ -47,7 +47,7 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def db_run(query, params=None, commit=False):
-def db_run(query, params=None, commit=False):
+
     try:
         q = query.upper()
         # --- GESTIONE UTENTI ---
