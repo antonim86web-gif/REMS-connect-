@@ -216,9 +216,9 @@ def render_postits(p_id, limit=50):
     res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
     for d, r, o, nt in res:
         role_map = {"Psichiatra":"psichiatra", # --- SESSIONE E LOGIN ---
-                    if 'user_session' not in st.session_state: st.session_state.user_session = None
-                    if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
-                    if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
+            if 'user_session' not in st.session_state: st.session_state.user_session = None
+            if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
+            if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
                         if not st.session_state.user_session:
     st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
     c_l, c_r = st.columns(2)
