@@ -44,55 +44,66 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf_output = pdf.output(dest='S').encode('latin-1')
     return pdf_output
 
-# --- MOTORE DATABASE UNIFICATO (Bridge SQL -> Supabase) ---
+# --- AGGIORNAMENTO MOTORE DATABASE (Sostituisci questa parte nel Blocco 1) ---
 def db_run(query, params=None, commit=False):
     try:
         q = query.upper()
+        
         # 1. GESTIONE UTENTI
         if "FROM UTENTI" in q:
-            res = supabase.table("utenti").select("*")
-            if params: res = res.eq("user", params[0])
-            data = res.execute()
-            return data.data if data.data else []
+            res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
+            return res.data if res.data else []
         
         # 2. GESTIONE PAZIENTI
         if "FROM PAZIENTI" in q:
-            if "WHERE STATO='DIMESSO'" in q:
-                res = supabase.table("pazienti").select("*").eq("stato", "DIMESSO").order("nome").execute()
-            else:
-                res = supabase.table("pazienti").select("*").eq("stato", "ATTIVO").order("nome").execute()
-            return [(r['id'], r['nome']) for r in res.data] if res.data else []
+            stato = "DIMESSO" if "DIMESSO" in q else "ATTIVO"
+            res = supabase.table("pazienti").select("*").eq("stato", stato).order("nome").execute()
+            return [(r['id'], r['nome']) for r in res.data]
 
-        # 3. GESTIONE EVENTI / DIARIO
+        # 3. GESTIONE EVENTI / DIARIO / LOGS
         if "FROM EVENTI" in q or "FROM DIARIO" in q:
-            p_id = params[0] if params else None
+            # Se la query contiene una JOIN (per l'Admin)
+            if "JOIN PAZIENTI" in q:
+                res = supabase.table("eventi").select("*, pazienti(nome)").order("id_u", ascending=False).limit(100).execute()
+                return [(r['data'], r['ruolo'], r['op'], r['nota'], r['pazienti']['nome'], r['id_u']) for r in res.data]
+            
+            # Query standard per paziente singolo
+            p_id = params[0]
             res = supabase.table("eventi").select("*").eq("id", p_id).order("id_u", ascending=False)
-            if params and len(params) > 1 and "%" in str(params[1]):
-                res = res.ilike("nota", params[1].replace("%", ""))
-            data = res.limit(40).execute()
+            if params and len(params) > 1 and isinstance(params[1], str) and "%" in params[1]:
+                res = res.ilike("nota", f"%{params[1].replace('%', '')}%")
+            data = res.limit(50).execute()
             return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in data.data]
 
-        # 4. GESTIONE TERAPIE
+        # 4. GESTIONE TERAPIE (Questa è la parte che mancava!)
         if "FROM TERAPIE" in q:
-            p_id = params[0] if params else None
+            p_id = params[0]
             res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
+            # Restituisce: (id_univoco, farmaco, dose, mattina, pomeriggio, al_bisogno)
             return [(r['id_u'], r['farmaco'], r['dose'], r['mat_nuovo'], r['pom_nuovo'], r['al_bisogno']) for r in res.data]
 
-        # 5. COMMIT (INSERT / UPDATE / DELETE)
+        # 5. AZIONI DI SCRITTURA (COMMIT)
         if commit:
             if "INSERT INTO EVENTI" in q:
                 payload = {"id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
                 if len(params) > 5: payload["esito"] = params[5]
                 supabase.table("eventi").insert(payload).execute()
+            
             elif "INSERT INTO TERAPIE" in q:
-                payload = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "mat_nuovo": params[3], "pom_nuovo": params[4], "al_bisogno": params[5]}
+                payload = {"p_id": params[0], "farmaco": params[1], "dose": params[2], 
+                           "mat_nuovo": int(params[3]), "pom_nuovo": int(params[4]), "al_bisogno": int(params[5])}
                 supabase.table("terapie").insert(payload).execute()
-            elif "UPDATE PAZIENTI" in q:
-                supabase.table("pazienti").update({"stato": "ATTIVO" if "ATTIVO" in q else "DIMESSO"}).eq("id", params[0]).execute()
+            
             elif "DELETE FROM TERAPIE" in q:
                 supabase.table("terapie").delete().eq("id_u", params[0]).execute()
+            
+            elif "UPDATE PAZIENTI" in q:
+                new_status = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
+                supabase.table("pazienti").update({"stato": new_status}).eq("id", params[0]).execute()
+                
         return []
-    except Exception:
+    except Exception as e:
+        st.error(f"Errore DB: {e}")
         return []
 
 # --- FUNZIONI ORARIO ---
