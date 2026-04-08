@@ -94,7 +94,7 @@ def db_run(query, params=(), commit=False):
     conn.commit()
     conn.close()
 
-aggiorna_struttura_db()
+#aggiorna_struttura_db()
 
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 def get_now_it():
