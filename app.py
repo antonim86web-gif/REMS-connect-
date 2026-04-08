@@ -21,33 +21,46 @@ def genera_pdf_clinico(p_nome, dati_clinici):
     from fpdf import FPDF
     pdf = FPDF()
     pdf.add_page()
+    
+    # Intestazione
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, f"Report Clinico: {p_nome}", ln=True, align='C')
     pdf.ln(5)
     
     for riga in dati_clinici:
-        # Estrazione sicura per posizione
+        # Estrazione dati
         data = str(riga[0]) if len(riga) > 0 else ""
         op = str(riga[2]) if len(riga) > 2 else ""
         nota = str(riga[3]) if len(riga) > 3 else ""
         esito = str(riga[4]) if len(riga) > 4 and riga[4] else ""
         
-        # Formattazione riga intestazione (Data e Operatore)
+        # --- PULIZIA TESTO PER PDF (Anti-Crash) ---
+        # Sostituiamo i simboli come 💊 o caratteri speciali che Arial non legge
+        def pulisci(testo):
+            return testo.encode('latin-1', 'replace').decode('latin-1')
+
+        data = pulisci(data)
+        op = pulisci(op)
+        nota = pulisci(nota)
+        esito = pulisci(esito)
+        # ------------------------------------------
+
+        # Riga Grigia Intestazione Nota
         pdf.set_font("Arial", 'B', 10)
         pdf.set_fill_color(240, 240, 240)
-        # CORREZIONE QUI: Usiamo 'op' invece di 'op_p'
-        pdf.cell(0, 7, f"Data: {data} | Operatore: {op}", ln=True, fill=True)
+        pdf.cell(0, 7, f"Data: {data} | Op: {op}", ln=True, fill=True)
         
-        # Nota ed eventuale Esito
+        # Testo della nota
         pdf.set_font("Arial", '', 11)
-        testo_nota = nota
+        testo_finale = nota
         if esito:
-            testo_nota += f" [ESITO: {esito}]"
+            testo_finale += f" [ESITO: {esito}]"
             
-        pdf.multi_cell(0, 7, testo_nota)
+        pdf.multi_cell(0, 7, testo_finale)
         pdf.ln(2)
         
-    return pdf.output(dest='S').encode('latin-1', errors='replace')
+    # Restituisce i byte del PDF pronti per il download
+    return pdf.output(dest='S')
 
 # --- AGGIORNAMENTO MOTORE DATABASE (Sostituisci questa parte nel Blocco 1) ---
 def db_run(query, params=None, commit=False):
