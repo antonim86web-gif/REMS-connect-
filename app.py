@@ -215,11 +215,7 @@ def render_postits(p_id, limit=50):
         params.extend(scelta_ruolo)
     res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
     for d, r, o, nt in res:
-        role_map = {"Psichiatra":"psichiatra", "Infermiere":"infermiere", "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", "Assistente Sociale":"sociale", "OPSI":"opsi"}
-        cls = f"role-{role_map.get(r, 'oss')}"
-        st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div><div>{nt}</div></div>', unsafe_allow_html=True)
-
-# --- SESSIONE E LOGIN ---
+        role_map = {"Psichiatra":"psichiatra", # --- SESSIONE E LOGIN ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
 if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
 if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
@@ -233,14 +229,12 @@ if not st.session_state.user_session:
             u_i = st.text_input("Username").lower().strip()
             p_i = st.text_input("Password", type="password")
             if st.form_submit_button("ACCEDI"):
-               res = supabase.table("utenti").select("*").eq("user", u_i).execute()
-            if res.data and res.data[0]['pwd'] == p_i:
-                st.session_state.user_session = res.data[0]
-                scrivi_log("LOGIN", "Accesso eseguito")
-                st.rerun()
-            else:
-                st.error("Errore login: Credenziali errate.")
-
+                res = supabase.table("utenti").select("*").eq("user", u_i).execute()
+                if res.data and res.data[0]['pwd'] == p_i:
+                    st.session_state.user_session = res.data[0]
+                    st.rerun()
+                else:
+                    st.error("Credenziali errate")
     with c_r:
         st.subheader("Registrazione")
         with st.form("reg_main"):
@@ -248,16 +242,28 @@ if not st.session_state.user_session:
             rp = st.text_input("Scegli Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
-            rq = st.selectbox("Qualifica Professionale", ["Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"])
-            
+            # Lista qualifiche aggiornata
+            rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
+            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+                if ru and rp and rn and rc:
+                    nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
+                    try:
+                        # Questo è il comando che scrive davvero sul Database!
+                        supabase.table("utenti").insert(nuovo).execute()
                         st.success(f"Profilo {rq} creato! Accedi a sinistra.")
-                    else: st.error("Username già in uso.")
-                else: st.warning("Compila tutti i campi.")
+                    except:
+                        st.error("Errore: Username già esistente o problema DB.")
+                else:
+                    st.warning("Compila tutti i campi.")
     st.stop()
 
+# --- DATI UTENTE LOGGATO ---
 u = st.session_state.user_session
-firma_op = f"{u['nome']} {u['cognome']} ({u['ruolo']})"
-oggi_iso = get_now_it().strftime("%Y-%m-%d")
+"Infermiere":"infermiere", "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", "Assistente Sociale":"sociale", "OPSI":"opsi"}
+        cls = f"role-{role_map.get(r, 'oss')}"
+        st.markdown(f'<div class="postit {cls}"><div class="postit-header"><span>👤 {o} ({r})</span><span>📅 {d}</span></div><div>{nt}</div></div>', unsafe_allow_html=True)
+
+
 
 # --- SIDEBAR ---
 st.sidebar.markdown("<div class='sidebar-title'>Rems-connect</div>", unsafe_allow_html=True)
