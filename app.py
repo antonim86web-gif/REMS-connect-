@@ -382,7 +382,7 @@ elif nav == "👥 Modulo Equipe":
     if p_lista:
         p_sel = st.selectbox("Seleziona Paziente", [p[1] for p in p_lista])
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
-        now = get_now_it(); oggi = now.strftime("%d/%m/%Y")
+            now = get_italy_time(); oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
             # 1. DEFINIZIONE TAB MEDICO
