@@ -437,7 +437,7 @@ elif nav == "👥 Modulo Equipe":
                     WHERE id=? AND (esito='A' OR esito='R' OR nota LIKE '✔️%' OR nota LIKE '❌%') 
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
-                res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_sel])
+                res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [sel_paz])
 
         if res_smarc:
             try:
