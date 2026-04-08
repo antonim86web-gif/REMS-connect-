@@ -464,11 +464,12 @@ elif nav == "📊 Monitoraggio":
                             filtered.append(r)
                     diario = filtered
 
-                # 5. Filtro per STAMPA SOLO TERAPIA (La correzione dell'errore)
+                # 5. FILTRO TERAPIE (La parte che ti dava errore)
                 if termine in ["A", "R"]:
+                    # Questa riga DEVE essere rientrata (indentata) rispetto all'if sopra
                     diario = [r for r in diario if r[4]]
 
-                # 6. Visualizzazione Risultati
+                # 6. VISUALIZZAZIONE DEI RISULTATI (Se non aggiungi questo, non vedi nulla!)
                 if diario:
                     st.write(f"Record trovati: {len(diario)}")
                     for d, ruolo, o, n, esito in diario[:50]:
@@ -476,7 +477,8 @@ elif nav == "📊 Monitoraggio":
                             st.success(f"💊 **{d}** - {n} | Esito: **{esito}** ({o})")
                         else:
                             st.write(f"📝 {d} ({o}): {n}")
-
+                else:
+                    st.warning("Nessun dato trovato con questi filtri.")
                 # 5. Visualizzazione Risultati
                 
 
