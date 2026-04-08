@@ -428,71 +428,61 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>DIARIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    # 1. Recupero lista pazienti
+    # 1. Recupero lista pazienti usando la nostra funzione sicura
     p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
     
-    # 2. Interfaccia Filtri (Sopra le schede)
+    # 2. Interfaccia Filtri
     c1, c2 = st.columns([1, 2])
     with c1:
-        solo_terapia = st.button("💊 Solo Terapie")
+        # Usiamo un checkbox o radio invece del button per mantenere il filtro attivo
+        filtro_attivo = st.toggle("💊 Solo Terapie/Esiti")
     with c2:
-        cerca_testo = st.text_input("Cerca farmaco o nota:", placeholder="Scrivi qui...")
+        cerca_testo = st.text_input("Cerca nella nota:", placeholder="Es: clozapina...")
 
     st.divider()
 
-    # 3. Ciclo unico per ogni paziente (EVITA IL DOPPIO RISULTATO)
-    for pid, nome in p_lista:
-        with st.expander(f"📁 SCHEDA: {nome}"):
+    # 3. Ciclo unico per ogni paziente
+    if p_lista:
+        for p in p_lista:
+            # Gestione sicura dei dati (sia che arrivino come lista o dizionario)
+            pid = p[0] if isinstance(p, list) else p.get('id')
+            nome = p[1] if isinstance(p, list) else p.get('nome')
             
-            # --- LOGICA DI FILTRO ---
-            if solo_terapia:
-                # Cerca i simboli delle terapie O gli esiti A/R
-                res = supabase.table("eventi").select("*").eq("id", pid).or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None").order("id_u", ascending=False).execute()
-            elif cerca_testo:
-                # Cerca il testo scritto dall'utente
-                res = supabase.table("eventi").select("*").eq("id", pid).ilike("nota", f"%{cerca_testo}%").order("id_u", ascending=False).execute()
-            else:
-                # Carica tutto il diario normale
-                res = supabase.table("eventi").select("*").eq("id", pid).order("id_u", ascending=False).execute()
-            
-            eventi = res.data if res.data else []
-            
-            # 4. Visualizzazione Risultati
-            if eventi:
-                st.info(f"Record visualizzati: {len(eventi)}")
-                for e in eventi:
-                    # Stile Card per le Terapie
-                    esito = e.get('esito', '-')
-                    if esito in ['A', 'R'] or '💊' in e['nota']:
-                        colore_box = "#dcfce7" if esito == 'A' else "#fee2e2"
-                        icona = "✔️" if esito == 'A' else "❌"
-                        st.markdown(f"""
-                        <div style='background-color: {colore_box}; padding: 10px; border-radius: 10px; border-left: 5px solid #22c55e; margin-bottom: 5px;'>
-                            💊 <b>{e['data']}</b> - {icona} {e['nota']} (Esito: {esito})
-                        </div>
-                        """, unsafe_allow_html=True)
+            with st.expander(f"📁 SCHEDA: {nome}"):
+                try:
+                    # Chiamata pulita a Supabase
+                    query = supabase.table("eventi").select("*").eq("id", pid)
+                    
+                    if filtro_attivo:
+                        # Filtro millimetrico per icone ed esiti
+                        query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
+                    
+                    if cerca_testo:
+                        query = query.ilike("nota", f"%{cerca_testo}%")
+                        
+                    res = query.order("id_u", ascending=False).limit(50).execute()
+                    eventi = res.data if res.data else []
+                    
+                    if eventi:
+                        st.caption(f"Trovati {len(eventi)} record")
+                        for e in eventi:
+                            esito = e.get('esito', '-')
+                            # Se è una terapia, usiamo il box colorato
+                            if esito in ['A', 'R'] or any(x in e.get('nota', '') for x in ['💊', '✔️', '❌']):
+                                bg = "#dcfce7" if esito == 'A' else "#fee2e2"
+                                st.markdown(f"""
+                                <div style='background-color: {bg}; padding: 8px; border-radius: 5px; border-left: 5px solid #1e3a8a; margin-bottom: 5px; color: black;'>
+                                    <b>{e['data']}</b> - {e['nota']} (Esito: {esito})
+                                </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.write(f"📝 **{e['data']}**: {e['nota']}")
                     else:
-                        # Stile normale per il diario
-                        st.write(f"📝 **{e['data']}**: {e['nota']}")
-                st.divider()
-            else:
-                st.warning("Nessun dato trovato per questo filtro.")
-
-            # --- IL TASTO PDF TORNA QUI ---
-            with c2:
-                st.write("**📄 Esportazione:**")
-                if diario:
-                    # Usiamo la lista 'diario' già filtrata sopra
-                    pdf_bytes = genera_pdf_clinico(p_nome, diario)
-                    st.download_button(
-                        label="📥 SCARICA PDF FILTRATO",
-                        data=pdf_bytes,
-                        file_name=f"Report_{p_nome}.pdf",
-                        mime="application/pdf",
-                        key=f"dl_btn_{p_id}"
-                    )
-                else:
-                    st.info("Applica filtri per generare il PDF.")
+                        st.info("Nessun dato per questo filtro.")
+                except Exception as e:
+                    st.error(f"Errore nel caricamento dati di {nome}")
+    else:
+        st.warning("Nessun paziente attivo trovato.")
                 
 
 elif nav == "📅 Agenda Dinamica":
