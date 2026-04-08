@@ -529,14 +529,13 @@ elif nav == "👥 Modulo Equipe":
                             use_container_width=True
                         )
                     except Exception as e:
-                        st.error(f"Errore tecnico PDF: {e}")
-                else:
-                    st.warning("Nessun dato trovato per questa selezione.")
-        
+        st.error(f"Errore tecnico PDF: {e}")
+    else:
+        st.warning("Nessun dato trovato per questa selezione.")
 
-
-        elif ruolo_corr == "Infermiere":
-            import calendar 
+# Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso bene
+elif ruolo_corr == "Infermiere":
+    import calendar
             from datetime import timedelta
             t1, t2, t3, t4 = st.tabs(["💊 KEEP TERAPIA", "💓 PARAMETRI", "📝 CONSEGNE", "📋 BRIEFING IA"])
             
