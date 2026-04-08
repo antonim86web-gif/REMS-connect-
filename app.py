@@ -77,16 +77,21 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 2. GESTIONE PAZIENTI
+        # 2. GESTIONE PAZIENTI (Sbloccata: prende tutti per capire dove è l'errore)
         elif "FROM PAZIENTI" in q:
-            st_p = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
-            res = supabase.table("pazienti").select("*").eq("stato", st_p).order("nome").execute()
-            return [[r["id"], r["nome"]] for r in res.data] if res.data else []
+            # Prendiamo TUTTI i pazienti senza filtri per testare
+            res = supabase.table("pazienti").select("*").order("nome").execute()
+            if res.data:
+                # Proviamo a filtrare in modo morbido (non case-sensitive)
+                if "ATTIVO" in q:
+                    return [[r["id"], r["nome"]] for r in res.data if str(r.get("stato", "")).upper() == "ATTIVO"]
+                return [[r["id"], r["nome"]] for r in res.data]
+            return []
 
         # 3. GESTIONE EVENTI (MONITORAGGIO E DIARIO)
         elif "FROM EVENTI" in q:
             p_id = params[0]
-            # Usiamo paziente_id (se dà errore qui, cambieremo in "id")
+            # Usiamo paziente_id (se dà errore qui, prova a cambiarlo in "id")
             qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
             
             if len(params) > 1 and params[1]:
@@ -96,7 +101,7 @@ def db_run(query, params=None, commit=False):
                 else:
                     qb = qb.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
             
-            # CORREZIONE: Usiamo "id" invece di "id_u" come suggerito dal database
+            # Ordinamento corretto suggerito dal DB (id)
             res = qb.order("id", desc=True).limit(100).execute()
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
@@ -105,7 +110,7 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
             return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
-        # 5. AZIONI DI SCRITTURA (COMMIT)
+        # 5. AZIONI DI SCRITTURA
         if commit:
             if "INSERT INTO EVENTI" in q:
                 pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
@@ -120,7 +125,7 @@ def db_run(query, params=None, commit=False):
         return []
 
     except Exception as e:
-        st.error(f"Errore DB: {e}")
+        st.error(f"Errore critico DB: {e}")
         return []
 
 # --- FUNZIONI ORARIO ---
