@@ -457,16 +457,25 @@ elif nav == "📊 Monitoraggio":
                     filtered = []
                     for r in diario:
                         try:
-                            # Assumiamo che r[0] sia la data in formato stringa 'YYYY-MM-DD...'
                             dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
                             if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
                                 filtered.append(r)
                         except: 
                             filtered.append(r)
                     diario = filtered
-                    if termine in ["A", "R"]:
-            # Filtriamo la lista: teniamo solo le righe che hanno un valore nella colonna esito (r[4])
-            diario = [r for r in diario if r[4]]
+
+                # 5. Filtro per STAMPA SOLO TERAPIA (La correzione dell'errore)
+                if termine in ["A", "R"]:
+                    diario = [r for r in diario if r[4]]
+
+                # 6. Visualizzazione Risultati
+                if diario:
+                    st.write(f"Record trovati: {len(diario)}")
+                    for d, ruolo, o, n, esito in diario[:50]:
+                        if esito:
+                            st.success(f"💊 **{d}** - {n} | Esito: **{esito}** ({o})")
+                        else:
+                            st.write(f"📝 {d} ({o}): {n}")
 
                 # 5. Visualizzazione Risultati
                 
