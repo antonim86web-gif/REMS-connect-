@@ -84,20 +84,24 @@ def db_run(query, params=None, commit=False):
             if p_id:
                 qb = qb.eq("paziente_id", p_id)
             
-            res = qb.order("id", desc=True).limit(100).execute()
-            
-            if res.data:
-                # Se la query originale chiedeva solo DATA e NOTA (riga 450)
-                if "SELECT DATA, NOTA" in q:
-                    return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data]
-                
-                # Se serve per la tabella SMARCO (riga 408 - 3 colonne)
-                if "SOMM" in q or "COLUMNS=[" in q:
+            # Se la query serve per lo smarcamento (tabella a 3 colonne)
+            if "SOMM" in q:
+                qb = qb.ilike("nota", "%Somm:%")
+                res = qb.order("id", desc=True).execute()
+                if res.data:
+                    # Ritorna ESATTAMENTE 3 colonne: data, nota, operatore
                     return [[r.get('data', '-'), r.get('nota', '-'), r.get('op', '-')] for r in res.data]
-                
-                # Default per il Diario completo (5 colonne)
-                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data]
-            return []
+                return []
+
+            # Se serve per il diario clinico (riga 450 - 2 colonne)
+            elif "SELECT DATA, NOTA" in q:
+                res = qb.order("id", desc=True).execute()
+                return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data] if res.data else []
+
+            # Default per tutto il resto (5 colonne)
+            else:
+                res = qb.order("id", desc=True).limit(100).execute()
+                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data] if res.data else []
 
         # --- SCRITTURA (COMMIT) ---
         if commit:
