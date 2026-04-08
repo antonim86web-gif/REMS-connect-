@@ -403,7 +403,7 @@ elif nav == "👥 Modulo Equipe":
         
         if ruolo_corr == "Psichiatra":
             # 1. DEFINIZIONE TAB MEDICO
-            t1, t2, t3, t4, t5 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "💉 SOMMINISTRAZIONI", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
+            t1, t2, t3, t4, t5 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "💉 SOMMINISTRAZIONI", "🤖 ANALISI CLINICA IA"])
             with t1:
                 st.subheader("Inserimento Nota in Diario Clinico")
                 with st.form("form_diario_med"):
@@ -468,7 +468,7 @@ elif nav == "👥 Modulo Equipe":
                                 st.rerun()
 
             with t3:
-                st.subheader("🩺 Esame Obiettivo e Parametri")
+                st.subheader("🤖 ANALISI CLINICA IA")
                 # Recupero ultimi parametri inseriti
                 ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id_u DESC LIMIT 5", (p_id,))
                 if ultimi_p:
