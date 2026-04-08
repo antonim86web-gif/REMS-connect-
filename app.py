@@ -368,9 +368,8 @@ if nav == "👥 Modulo Equipe":
                     if st.form_submit_button("SALVA CONSEGNA"):
                         db_run("INSERT INTO eventi", (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📝 {txt_c}", "Infermiere", firma_op), True)
                         st.rerun()
-
-with t_inf4:
-                st.subheader("📋 Briefing Infermieristico IA")
+                        with t_inf4:
+                            st.subheader("📋 Briefing Infermieristico IA")
                 # Recupera gli eventi delle ultime 24 ore per il briefing
                 b_logs = db_run("SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC", (p_id,))
                 if b_logs:
