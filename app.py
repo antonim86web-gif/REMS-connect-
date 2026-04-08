@@ -86,7 +86,7 @@ def db_run(query, params=None, commit=False):
         if "FROM EVENTI" in q or "FROM DIARIO" in q:
             if "JOIN PAZIENTI" in q:
                 # Usiamo paziente_id invece di id
-                res = supabase.table("eventi").select("*, pazienti(nome)").order("id", desc=True).limit(100).execute()
+                res = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("data", desc=True)
                 return [(r['data'], r['ruolo'], r['op'], r['nota'], r['pazienti']['nome'], r['id']) for r in res.data]
             
             p_id = params[0]
