@@ -441,7 +441,7 @@ elif nav == "👥 Modulo Equipe":
         res_smarc = []
         
         # 2. Proviamo a riempirla con i dati (usando p_id che è quella giusta)
-        res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_id])
+        res_smarc = db_run("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_id])
 
         if res_smarc:
             try:
