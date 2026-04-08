@@ -482,14 +482,13 @@ elif nav == "📊 Monitoraggio":
 
                     # 3. Tasto per scaricare il PDF
                     try:
-                        # Estraiamo i byte del PDF in modo sicuro per le nuove versioni di fpdf
                         pdf_output = pdf.output()
                         
-                        # Se è già in formato bytes lo usiamo, altrimenti lo codifichiamo
-                        if isinstance(pdf_output, str):
-                            pdf_bytes = pdf_output.encode('latin-1', 'replace')
+                        # Se è un bytearray (come dice l'errore), lo trasformiamo in bytes puri
+                        if isinstance(pdf_output, (bytearray, bytes)):
+                            pdf_bytes = bytes(pdf_output)
                         else:
-                            pdf_bytes = pdf_output
+                            pdf_bytes = str(pdf_output).encode('latin-1', 'replace')
 
                         st.divider()
                         st.download_button(
