@@ -205,25 +205,37 @@ def db_run(query, params=(), commit=False):
     return []
 
 
-def render_postits(p_id, limit=50):
-    ruoli_disp = ["Tutti", "Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"]
-    scelta_ruolo = st.multiselect("Filtra per Figura Professionale", ruoli_disp, default="Tutti", key=f"filt_{p_id}")
-    query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
-    params = [p_id]
-    if "Tutti" not in scelta_ruolo and scelta_ruolo:
-        query += f" AND ruolo IN ({','.join(['?']*len(scelta_ruolo))})"
-        params.extend(scelta_ruolo)
-    res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
-    for d, r, o, nt in res:
+def render_postits(reparto_filtro):
+    # Logica per i colori dei post-it in base alla qualifica
+    role_map = {
+        "Psichiatra":"psichiatra", "Infermiere":"infermiere", 
+        "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", 
+        "Assistente Sociale":"sociale", "OPSI":"opsi", "Coordinatore":"coordinatore"
+    }
+    
+    # Recupero dati (esempio basato sulla tua struttura)
+    paz_reparto = db_run("SELECT nome, cognome, qualifica FROM utenti") 
+    
+    for p in paz_reparto:
+        r = p[2] # qualifica
+        cls = f"role-{role_map.get(r, 'oss')}"
+        st.markdown(f"""
+            <div class="postit {cls}">
+                <b>{p[0]} {p[1]}</b><br>
+                <small>{r}</small>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # --- SESSIONE E LOGIN ---
-if 'user_session' not in st.session_state: st.session_state.user_session = None
-if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
-if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
+# --- FINE FUNZIONE: Da qui in poi il codice torna a MARGINE SINISTRO ---
+
+# --- SESSIONE E LOGIN ---
+if 'user_session' not in st.session_state: 
+    st.session_state.user_session = None
 
 if not st.session_state.user_session:
     st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
     c_l, c_r = st.columns(2)
+    
     with c_l:
         st.subheader("Login")
         with st.form("login_main"):
@@ -236,27 +248,27 @@ if not st.session_state.user_session:
                     st.rerun()
                 else:
                     st.error("Credenziali errate")
+
     with c_r:
         st.subheader("Registrazione")
         with st.form("reg_main"):
-            ru = st.text_input("Scegli Username").lower().strip()
-            rp = st.text_input("Scegli Password", type="password")
+            ru = st.text_input("Username").lower().strip()
+            rp = st.text_input("Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
             rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
-            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+            if st.form_submit_button("REGISTRA"):
                 if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
                     try:
                         supabase.table("utenti").insert(nuovo).execute()
-                        st.success(f"Profilo {rq} creato! Accedi a sinistra.")
+                        st.success(f"Creato! Accedi a sinistra.")
                     except:
-                        st.error("Errore: Username già in uso.")
-                else:
-                    st.warning("Compila tutti i campi.")
+                        st.error("Username già esistente.")
     st.stop()
 
 u = st.session_state.user_session
+
 
         
 
