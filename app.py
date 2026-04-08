@@ -260,10 +260,11 @@ if nav == "👥 Modulo Equipe":
 
             with t3:
                 st.subheader("🩺 Esame Obiettivo e Parametri")
-                # Cerchiamo i parametri registrati in precedenza
-                ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id_u DESC", (p_id,))
+                ultimi_p = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓 Parametri:%' ORDER BY id DESC", (p_id,))
+                
                 if ultimi_p:
-                    for d, n in ultimi_p[:5]:
+                    # Modifica questa riga aggiungendo gli underscore per i valori extra
+                    for d, ruolo, op, n, esito in ultimi_p[:5]: 
                         st.write(f"**{d}**: {n}")
                 
                 with st.form("esame_ob_med"):
