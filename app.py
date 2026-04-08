@@ -134,7 +134,22 @@ def db_run(query, params=None, commit=False):
             
             elif "DELETE FROM TERAPIE" in q:
                 supabase.table("terapie").delete().eq("id_u", params[0]).execute()
-                
+            # AGGIUNTA PER RICERCA LIBERA (MONITORAGGIO)
+        if "FROM EVENTI_LIBERO" in q:
+            p_id = params[0]
+            # Esegue una ricerca filtrata sulla tabella eventi
+            query = supabase.table("eventi").select("*").eq("id", p_id)
+            
+            # Se ci sono altri parametri (filtro terapia o testo)
+            if len(params) > 1:
+                filtro = params[1]
+                if filtro == "SOLO_TERAPIA":
+                    query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
+                else:
+                    query = query.ilike("nota", f"%{filtro}%")
+            
+            res = query.order("id_u", ascending=False).execute()
+            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito', '-')] for r in res.data] if res.data else []    
         return []
     except Exception as e:
         st.error(f"Errore DB: {e}")
