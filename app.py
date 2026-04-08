@@ -451,7 +451,7 @@ elif nav == "👥 Modulo Equipe":
             except Exception as e:
                 st.error(f"Errore nella visualizzazione tabella: {e}")
         else:
-            st.warning("Nessuna somministrazione registrata per questo paziente.")
+            st.info("Nessun dato di somministrazione trovato.")
 
                 # --- FORM NUOVA PRESCRIZIONE ---
         with st.expander("➕ Prescrivi Nuovo Farmaco"):
