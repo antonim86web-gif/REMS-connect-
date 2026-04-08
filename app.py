@@ -441,34 +441,41 @@ elif nav == "📊 Monitoraggio":
 
     st.divider()
 
-    # 3. Ciclo unico per ogni paziente
+    # 3. CICLO PAZIENTI - SOSTITUISCI DA QUI (RIGA 448 CIRCA)
     if p_lista:
         for p in p_lista:
-            # Gestione sicura dei dati (sia che arrivino come lista o dizionario)
-            pid = p[0] if isinstance(p, list) else p.get('id')
-            nome = p[1] if isinstance(p, list) else p.get('nome')
-            
-            with st.expander(f"📁 SCHEDA: {nome}"):
-                try:
-                    # Chiamata pulita a Supabase
+            # --- ESTRAZIONE SICURA ID E NOME (RISOLVE ATTRIBUTEERROR) ---
+            try:
+                if isinstance(p, dict):
+                    pid = p.get('id')
+                    nome = p.get('nome', 'Paziente')
+                elif isinstance(p, (list, tuple)):
+                    pid = p[0]
+                    nome = p[1]
+                else:
+                    # Se arriva un oggetto strano, saltiamo per evitare il crash
+                    continue 
+
+                with st.expander(f"📁 SCHEDA: {nome}"):
+                    # --- QUERY SUPABASE ---
                     query = supabase.table("eventi").select("*").eq("id", pid)
                     
                     if filtro_attivo:
-                        # Filtro millimetrico per icone ed esiti
+                        # Cerca pillole o esiti A/R
                         query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                     
                     if cerca_testo:
                         query = query.ilike("nota", f"%{cerca_testo}%")
                         
-                    res = query.order("id_u", ascending=False).limit(50).execute()
+                    res = query.order("id_u", ascending=False).limit(40).execute()
                     eventi = res.data if res.data else []
                     
                     if eventi:
                         st.caption(f"Trovati {len(eventi)} record")
                         for e in eventi:
                             esito = e.get('esito', '-')
-                            # Se è una terapia, usiamo il box colorato
-                            if esito in ['A', 'R'] or any(x in e.get('nota', '') for x in ['💊', '✔️', '❌']):
+                            # Box colorato se è una terapia
+                            if esito in ['A', 'R'] or any(x in str(e.get('nota', '')) for x in ['💊', '✔️', '❌']):
                                 bg = "#dcfce7" if esito == 'A' else "#fee2e2"
                                 st.markdown(f"""
                                 <div style='background-color: {bg}; padding: 8px; border-radius: 5px; border-left: 5px solid #1e3a8a; margin-bottom: 5px; color: black;'>
@@ -478,9 +485,9 @@ elif nav == "📊 Monitoraggio":
                             else:
                                 st.write(f"📝 **{e['data']}**: {e['nota']}")
                     else:
-                        st.info("Nessun dato per questo filtro.")
-                except Exception as e:
-                    st.error(f"Errore nel caricamento dati di {nome}")
+                        st.info("Nessun dato trovato.")
+            except Exception as e_paz:
+                st.error(f"Errore caricamento per un paziente.")
     else:
         st.warning("Nessun paziente attivo trovato.")
                 
