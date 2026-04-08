@@ -437,8 +437,13 @@ elif nav == "👥 Modulo Equipe":
                     WHERE id=? AND (esito='A' OR esito='R' OR nota LIKE '✔️%' OR nota LIKE '❌%') 
                     ORDER BY id_u DESC LIMIT 15
                 """, (p_id,))
-                res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_id])
+                # 1. Definiamo la variabile vuota per evitare il NameError a prescindere
+        res_smarc = []
+        
+        # 2. Proviamo a riempirla con i dati (usando p_id che è quella giusta)
+        res_smarc = db_query("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", [p_id])
 
+        # 3. Ora controlliamo se contiene qualcosa
         if res_smarc:
             try:
                 dati_corretti = []
@@ -449,7 +454,7 @@ elif nav == "👥 Modulo Equipe":
                 st.write("### 📋 Diario Somministrazioni")
                 st.table(df_smarc)
             except Exception as e:
-                st.error(f"Errore nella visualizzazione tabella: {e}")
+                st.error(f"Errore tecnico tabella: {e}")
         else:
             st.info("Nessun dato di somministrazione trovato.")
 
