@@ -76,12 +76,13 @@ def db_run(query, params=(), commit=False):
 # --- FUNZIONE ORARIO ITALIA (UTC+2) ---
 
     def get_italy_time():
-        return datetime.now(timezone.utc) + timedelta(hours=2)
-        
+    return datetime.now(timezone.utc) + timedelta(hours=2)
 
-# --- FUNZIONE SCRITTURA LOG ---
+def scrivi_log(azione, dettagli):
+    # Log disattivato per compatibilità Cloud
     pass
-    def scrivi_log(azione, dettagli):
+
+
     user_log = st.session_state.user_session['uid'] if st.session_state.user_session else "SISTEMA"
     data_log = get_italy_time().strftime("%Y-%m-%d %H:%M:%S")
     # Log disattivato per compatibilità Cloud
