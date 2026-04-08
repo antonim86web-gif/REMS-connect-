@@ -440,7 +440,7 @@ elif nav == "👥 Modulo Equipe":
                         df_smarc = pd.DataFrame(dati_puliti, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
                         st.table(df_smarc)
                     except Exception as e:
-                        t.error(f"Errore: {e}")
+                        st.error(f"Errore: {e}")
                     else:
             # Anche questo deve essere allineato sotto il 'try'
                         st.info("Nessuna somministrazione trovata.")
