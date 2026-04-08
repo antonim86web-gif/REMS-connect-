@@ -247,10 +247,12 @@ if not st.session_state.user_session:
             if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
-                    try:
-                        # Questo è il comando che scrive davvero sul Database!
-                        supabase.table("utenti").insert(nuovo).execute()
-                        st.success(f"Profilo {rq} creato! Accedi a sinistra.")
+                                    try:
+                    supabase.table("utenti").insert(nuovo).execute()
+                    st.success(f"Profilo {rq} creato! Accedi a sinistra.")
+                except:
+                    st.error("Errore: Username già in uso.")
+
                     except:
                         st.error("Errore: Username già esistente o problema DB.")
                 else:
@@ -281,17 +283,10 @@ if st.sidebar.button("LOGOUT"):
 st.sidebar.markdown(f"<br><br><br><div class='sidebar-footer'><b>Antony</b><br>Webmaster<br>ver. 28.9 Elite</div>", unsafe_allow_html=True)
 
 # --- LOGICA NAVIGAZIONE ---
-if nav == "🗺️ Mappa Pos        if st.form_submit_button("REGISTRA NUOVO UTENTE"):
-            if ru and rp and rn and rc:
-                nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
-                try:
-                    supabase.table("utenti").insert(nuovo).execute()
-                    st.success(f"Profilo {rq} creato! Accedi sopra.")
-                except:
-                    st.error("Errore nel salvataggio o username esistente.")
-            else:
-                st.warning("Compila tutti i campi.")
-ti Letto":
+# --- LOGICA NAVIGAZIONE ---
+if nav == "📍 Mappa Posti":
+    st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
+
     st.markdown("<div class='section-banner'><h2>TABELLONE VISIVO POSTI LETTO</h2></div>", unsafe_allow_html=True)
     stanze_db = db_run("SELECT id, reparto, tipo FROM stanze ORDER BY id")
     paz_db = db_run("SELECT p.id, p.nome, a.stanza_id, a.letto FROM pazienti p LEFT JOIN assegnazioni a ON p.id = a.p_id WHERE p.stato='ATTIVO'")
