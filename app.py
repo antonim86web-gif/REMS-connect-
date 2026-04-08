@@ -428,93 +428,68 @@ if nav == "👥 Modulo Equipe":
 elif nav == "📊 Monitoraggio":
     st.markdown("<div class='section-banner'><h2>📊 MONITORAGGIO CLINICO GENERALE</h2></div>", unsafe_allow_html=True)
     
-    # 1. Recupero lista pazienti (Puro SQL Cloud)
+    # 1. Recupero lista pazienti con controllo di sicurezza
     p_lista = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
     
-    # 2. Interfaccia Filtri Superiore
+    # 2. Interfaccia Filtri
     c1, c2 = st.columns([1, 2])
     with c1:
-        # Toggle per attivare il filtro Terapie (Simboli + Esiti)
         filtro_terapia = st.toggle("💊 Solo Terapie/Esiti", key="togg_ter")
     with c2:
-        # Ricerca testuale libera
-        cerca_t = st.text_input("Cerca parola chiave o farmaco:", placeholder="Es: Clozapina, Rifiuto...", key="search_mon")
+        cerca_t = st.text_input("Cerca parola chiave:", placeholder="Es: Clozapina...", key="search_mon")
 
     st.divider()
 
-    # 3. Ciclo unico pazienti (Blindato contro AttributeError)
-    if p_lista:
+    # --- CONTROLLO ANTI-NONETYPE ---
+    if p_lista is not None and len(p_lista) > 0:
         for p in p_lista:
-            # Estrazione sicura: p[0] è l'ID, p[1] è il Nome
             try:
-                pid = p[0]
-                nome = p[1]
+                # Estrazione sicura: gestisce sia liste che dizionari
+                if isinstance(p, (list, tuple)):
+                    pid, nome = p[0], p[1]
+                else:
+                    pid, nome = p.get('id'), p.get('nome')
                 
                 with st.expander(f"📁 SCHEDA: {nome}"):
-                    # Costruiamo la query SQL in base ai filtri attivati
+                    # Costruiamo la query
                     if filtro_terapia:
-                        # Filtro Elite: Simboli Pillola OPPURE Colonna Esito compilata (A/R)
                         sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' AND (nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' OR esito IS NOT NULL) ORDER BY id_u DESC"
                         tipo_rep = "SOLO_TERAPIE"
                     elif cerca_t:
-                        # Filtro per testo specifico
                         sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' AND nota LIKE '%{cerca_t}%' ORDER BY id_u DESC"
                         tipo_rep = f"RICERCA_{cerca_t.upper()}"
                     else:
-                        # Tutto il diario
                         sql = f"SELECT data, ruolo, op, nota, esito FROM eventi WHERE id='{pid}' ORDER BY id_u DESC"
                         tipo_rep = "DIARIO_COMPLETO"
                     
-                    # Esecuzione query tramite db_run
                     eventi = db_run(sql)
                     
-                    if eventi:
+                    # --- CONTROLLO EVENTI ---
+                    if eventi is not None and len(eventi) > 0:
                         st.caption(f"🔍 Record trovati: {len(eventi)}")
                         
-                        # --- PREPARAZIONE TESTO PER STAMPA ---
-                        testo_stampa = f"REMS-CONNECT - REPORT: {tipo_rep}\nPAZIENTE: {nome}\nDATA ESTRAZIONE: {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
-                        testo_stampa += "="*50 + "\n\n"
+                        testo_stampa = f"REPORT: {tipo_rep} - PAZIENTE: {nome}\n" + "="*40 + "\n"
                         
                         for e in eventi:
-                            # Mappa dei dati: 0=Data, 1=Ruolo, 2=Op, 3=Nota, 4=Esito
+                            # d=data, r=ruolo, o=op, n=nota, s=esito
                             d_e, r_e, o_e, n_e, s_e = e[0], e[1], e[2], e[3], e[4]
+                            testo_stampa += f"[{d_e}] {o_e}: {n_e} (Esito: {s_e})\n"
                             
-                            # Aggiunta al report di stampa
-                            testo_stampa += f"[{d_e}] {o_e} ({r_e})\nESITO: {s_e} | NOTA: {n_e}\n"
-                            testo_stampa += "-"*30 + "\n"
-                            
-                            # --- VISUALIZZAZIONE A SCHERMO ---
-                            # Box colorato se è una terapia o ha un esito
+                            # BOX COLORATO
                             if s_e in ['A', 'R'] or any(sym in str(n_e) for sym in ['💊', '✔️', '❌']):
-                                bg_color = "#dcfce7" if s_e == 'A' else "#fee2e2"
-                                icona_status = "✔️" if s_e == 'A' else "❌"
-                                st.markdown(f"""
-                                <div style='background-color: {bg_color}; padding: 10px; border-radius: 8px; border-left: 6px solid #1e3a8a; color: black; margin-bottom: 8px;'>
-                                    <b>{d_e}</b> | {icona_status} Esito: <b>{s_e}</b><br>
-                                    <small>{r_e} - {o_e}</small><br>
-                                    {n_e}
-                                </div>
-                                """, unsafe_allow_html=True)
+                                bg = "#dcfce7" if s_e == 'A' else "#fee2e2"
+                                st.markdown(f"<div style='background-color:{bg}; padding:10px; border-radius:8px; border-left:6px solid #1e3a8a; color:black; margin-bottom:8px;'><b>{d_e}</b> | Esito: {s_e}<br>{n_e}</div>", unsafe_allow_html=True)
                             else:
-                                # Diario normale (Consegne)
-                                st.write(f"📝 **{d_e}** ({o_e}): {n_e}")
+                                st.write(f"📝 **{d_e}**: {n_e}")
                         
-                        # --- TASTO DOWNLOAD PDF (VERSIONE FILTRATA) ---
-                        st.divider()
-                        st.download_button(
-                            label=f"📥 SCARICA REPORT {tipo_rep}",
-                            data=testo_stampa,
-                            file_name=f"Report_{nome}_{tipo_rep}.txt",
-                            mime="text/plain",
-                            key=f"btn_stampa_{pid}"
-                        )
+                        st.download_button(f"📥 Scarica {tipo_rep}", testo_stampa, f"{nome}_{tipo_rep}.txt", key=f"dl_{pid}")
                     else:
-                        st.info("Nessun dato corrispondente ai filtri impostati.")
-                        
-            except Exception as e_paz:
-                st.error(f"⚠️ Errore nel caricamento della scheda di un paziente.")
+                        st.info("Nessun dato trovato per questo filtro.")
+            except Exception as e_int:
+                st.error(f"Errore tecnico su una scheda.")
     else:
-        st.warning("Nessun paziente attivo trovato nel database.")
+        # Se p_lista è None o vuota
+        st.warning("⚠️ Database non raggiungibile o nessun paziente attivo. Prova a ricaricare la pagina.")
                 
 
 elif nav == "📅 Agenda Dinamica":
