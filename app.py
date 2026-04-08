@@ -191,31 +191,38 @@ DB_NAME = "rems_final_v12.db"
 def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
 
 def db_run(query, params=(), commit=False):
-    with sqlite3.connect(DB_NAME, check_same_thread=False) as conn:
-        cur = conn.cursor()
-        try:
-            cur.execute("CREATE TABLE IF NOT EXISTS utenti (user TEXT PRIMARY KEY, pwd TEXT, nome TEXT, cognome TEXT, qualifica TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS pazienti (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT UNIQUE, stato TEXT DEFAULT 'ATTIVO')")
-            cur.execute("CREATE TABLE IF NOT EXISTS eventi (id INTEGER, data TEXT, nota TEXT, ruolo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, figura_professionale TEXT, esito TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS terapie (p_id INTEGER, farmaco TEXT, dose TEXT, mat INTEGER, pom INTEGER, nott INTEGER, medico TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT, mat_nuovo INTEGER DEFAULT 0, pom_nuovo INTEGER DEFAULT 0, al_bisogno INTEGER DEFAULT 0)")
-            cur.execute("CREATE TABLE IF NOT EXISTS cassa (p_id INTEGER, data TEXT, causale TEXT, importo REAL, tipo TEXT, op TEXT, id_u INTEGER PRIMARY KEY AUTOINCREMENT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS appuntamenti (id_u INTEGER PRIMARY KEY AUTOINCREMENT, p_id INTEGER, data TEXT, ora TEXT, nota TEXT, stato TEXT, autore TEXT, tipo_evento TEXT, mezzo TEXT, accompagnatore TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS stanze (id TEXT PRIMARY KEY, reparto TEXT, tipo TEXT)")
-            cur.execute("CREATE TABLE IF NOT EXISTS assegnazioni (p_id INTEGER UNIQUE, stanza_id TEXT, letto INTEGER, data_ass TEXT, FOREIGN KEY(p_id) REFERENCES pazienti(id))")
-            
-            if cur.execute("SELECT COUNT(*) FROM utenti WHERE user='admin'").fetchone()[0] == 0:
-                cur.execute("INSERT INTO utenti VALUES (?,?,?,?,?)", ("admin", hash_pw("perito2026"), "SUPER", "USER", "Admin"))
-            
-            if cur.execute("SELECT COUNT(*) FROM stanze").fetchone()[0] == 0:
-                for i in range(1, 7): cur.execute("INSERT INTO stanze VALUES (?,?,?)", (f"A{i}", "A", "ISOLAMENTO" if i==6 else "STANDARD"))
-                for i in range(1, 11): cur.execute("INSERT INTO stanze VALUES (?,?,?)", (f"B{i}", "B", "ISOLAMENTO" if i==10 else "STANDARD"))
-            
-            cur.execute(query, params)
-            if commit: conn.commit()
-            return cur.fetchall()
-        except Exception as e:
-            st.error(f"Errore DB: {e}")
+    try:
+        # 1. LOGIN UTENTI
+        if "FROM utenti" in query:
+            user_input = params[0]
+            pwd_input = params[1]
+            res = supabase.table("utenti").select("*").eq("user", user_input).eq("pwd", pwd_input).execute()
+            if res.data:
+                # Restituiamo il formato che il tuo codice si aspetta: [[nome, cognome, qualifica]]
+                return [[res.data[0]['nome'], res.data[0]['cognome'], res.data[0]['qualifica']]]
             return []
+
+        # 2. SELEZIONE PAZIENTI
+        elif "FROM pazienti" in query:
+            res = supabase.table("pazienti").select("id, nome").eq("stato", "ATTIVO").execute()
+            return [[r['id'], r['nome']] for r in res.data]
+
+        # 3. INSERIMENTO NUOVO PAZIENTE
+        elif "INSERT INTO pazienti" in query:
+            supabase.table("pazienti").insert({"nome": params[0], "stato": "ATTIVO"}).execute()
+            return []
+
+        # 4. LOGICA PER EVENTI/DIARIO
+        elif "FROM eventi" in query:
+            # Qui filtriamo per l'ID del paziente (params[0])
+            res = supabase.table("eventi").select("*").eq("id", params[0]).order("id", descending=True).execute()
+            return [[r['data'], r['ruolo'], r['op'], r['nota']] for r in res.data]
+
+    except Exception as e:
+        st.error(f"Errore Cloud Supabase: {e}")
+        return []
+    return []
+
 
 def render_postits(p_id, limit=50):
     ruoli_disp = ["Tutti", "Psichiatra", "Infermiere", "Educatore", "OSS", "Psicologo", "Assistente Sociale", "OPSI"]
