@@ -63,11 +63,13 @@ def db_run(query, params=None, commit=False):
         # 3. GESTIONE EVENTI / DIARIO / LOGS
         if "FROM EVENTI" in q or "FROM DIARIO" in q:
             if "JOIN PAZIENTI" in q:
+                # Usiamo paziente_id invece di id
                 res = supabase.table("eventi").select("*, pazienti(nome)").order("id", desc=True).limit(100).execute()
                 return [(r['data'], r['ruolo'], r['op'], r['nota'], r['pazienti']['nome'], r['id']) for r in res.data]
             
             p_id = params[0]
-            res = supabase.table("eventi").select("*").eq("id", p_id).order("id", desc=True)
+            # Usiamo paziente_id per filtrare
+            res = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("id", desc=True)
             if params and len(params) > 1 and isinstance(params[1], str) and "%" in params[1]:
                 res = res.ilike("nota", f"%{params[1].replace('%', '')}%")
             data = res.limit(50).execute()
@@ -79,11 +81,12 @@ def db_run(query, params=None, commit=False):
             res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
             return [(r['id_u'], r['farmaco'], r['dose'], r['mat_nuovo'], r['pom_nuovo'], r['al_bisogno']) for r in res.data]
 
-        # 5. AZIONI DI SCRITTURA (COMMIT) - QUESTA È LA PARTE CHE MI HAI CHIESTO
+        # 5. AZIONI DI SCRITTURA (COMMIT)
         if commit:
             if "INSERT INTO EVENTI" in q:
+                # payload corretto con 'paziente_id'
                 payload = {
-                    "id": params[0], 
+                    "paziente_id": params[0], 
                     "data": params[1], 
                     "nota": params[2], 
                     "ruolo": params[3], 
@@ -102,10 +105,6 @@ def db_run(query, params=None, commit=False):
             
             elif "DELETE FROM TERAPIE" in q:
                 supabase.table("terapie").delete().eq("id_u", params[0]).execute()
-            
-            elif "UPDATE PAZIENTI" in q:
-                new_status = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
-                supabase.table("pazienti").update({"stato": new_status}).eq("id", params[0]).execute()
                 
         return []
     except Exception as e:
