@@ -729,12 +729,12 @@ elif nav == "👥 Modulo Equipe":
                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📝 {txt_edu}", "Educatore", firma_op), True)
                         st.rerun()
                         def render_postits(p_id):
-    st.markdown("### 📌 Note Rapide")
-    res = db_run("SELECT data, nota FROM eventi WHERE paziente_id = ?", [p_id])
-    if res:
-        for r in res:
-            d, n = r[:2] # Prende solo Data e Nota
-            st.info(f"**{d}**: {n}")
+                            st.markdown("### 📌 Note Rapide")
+                            res = db_run("SELECT data, nota FROM eventi WHERE paziente_id = ?", [p_id])
+                            if res:
+                                for r in res:
+                                    d, n = r[:2] # Prende solo Data e Nota
+                                    st.info(f"**{d}**: {n}")
 
 elif nav == "📅 Agenda Dinamica":
     st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
