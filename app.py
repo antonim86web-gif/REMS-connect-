@@ -447,14 +447,12 @@ elif nav == "👥 Modulo Equipe":
                     while len(row) < 3: row.append("-")
                     dati_corretti.append(row[:3])
                 
-                # Queste righe devono avere 16 spazi a sinistra (sotto il for)
                 df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
                 st.table(df_smarc)
             except Exception as e:
                 st.error(f"Errore visualizzazione: {e}")
         else:
             st.info("Nessuna somministrazione trovata.")
-    st.divider()
 
                 # --- FORM NUOVA PRESCRIZIONE ---
                 with st.expander("➕ Prescrivi Nuovo Farmaco"):
