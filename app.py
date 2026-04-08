@@ -99,7 +99,7 @@ def db_run(query, params=None, commit=False):
             else:
                 res = qb.order("id", desc=True).limit(100).execute()
                 return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data] if res.data else []
-                return []
+            return []
 
             # Default per il diario clinico o altro (restituisce tutto)
             else:
