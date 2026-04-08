@@ -206,11 +206,10 @@ def db_run(query, params=(), commit=False):
 
 
 def render_postits(reparto_filtro):
-    # Logica per i colori dei post-it in base alla qualifica
-    def render_postits(reparto_filtro):
-    # Funzione resettata per evitare conflitti
+    # Nota: ci devono essere 4 spazi prima di st.write
     st.write(f"Visualizzazione post-it per: {reparto_filtro}")
     pass
+
 
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 if 'user_session' not in st.session_state:
