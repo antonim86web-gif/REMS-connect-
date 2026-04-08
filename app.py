@@ -466,28 +466,7 @@ elif nav == "📊 Monitoraggio":
                     diario = filtered
 
                 # 5. Visualizzazione Risultati
-                if diario:
-                    st.write(f"Record trovati: {len(diario)}")
-                    for d, ruolo, o, n, esito in diario[:50]: # Limite 50 per fluidità
-                        if esito:
-                            st.success(f"💊 **{d}** - {n} | Esito: **{esito}** ({o})")
-                        else:
-                            st.write(f"📝 {d} ({o}): {n}")
-                else:
-                    st.warning("Nessun dato trovato per i filtri selezionati.")
-
-            with c2:
-                st.write("**📄 Esportazione:**")
-                if diario:
-                    # Il PDF conterrà esattamente la lista 'diario' filtrata
-                    pdf_data = genera_pdf_clinico(p_nome, diario)
-                    st.download_button(
-                        label=f"📥 SCARICA PDF FILTRATO",
-                        data=pdf_data,
-                        file_name=f"Report_{p_nome}.pdf",
-                        mime="application/pdf",
-                        key=f"btn_{p_id}"
-                    )
+                
 
 elif nav == "📅 Agenda Dinamica":
     st.markdown("<div class='section-banner'><h2>AGENDA REPARTO</h2></div>", unsafe_allow_html=True)
