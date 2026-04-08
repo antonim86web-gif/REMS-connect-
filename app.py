@@ -80,12 +80,13 @@ def db_run(query, params=(), commit=False):
         
 
 # --- FUNZIONE SCRITTURA LOG ---
-pass
+    pass
+    def scrivi_log(azione, dettagli):
     user_log = st.session_state.user_session['uid'] if st.session_state.user_session else "SISTEMA"
-    with sqlite3.connect('rems_final_v12.db') as conn:
-        conn.execute("INSERT INTO logs_sistema (data_ora, utente, azione, dettaglio) VALUES (?,?,?,?)", 
-                     (get_now_it().strftime("%d/%m/%Y %H:%M:%S"), user_log, azione, dettaglio))
-        conn.commit()
+    data_log = get_italy_time().strftime("%Y-%m-%d %H:%M:%S")
+    # Log disattivato per compatibilità Cloud
+    pass
+
 
 # --- FUNZIONE GENERATORE RELAZIONE IA ---
 def genera_relazione_ia(p_id, p_sel, g_rel):
