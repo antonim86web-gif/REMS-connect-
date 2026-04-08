@@ -221,8 +221,8 @@ def render_postits(p_id, limit=50):
 
 # --- SESSIONE E LOGIN ---
 if 'user_session' not in st.session_state: st.session_state.user_session = None
-if 'cal_month' not in st.session_state: st.session_state.cal_month = get_now_it().month
-if 'cal_year' not in st.session_state: st.session_state.cal_year = get_now_it().year
+if 'cal_month' not in st.session_state: st.session_state.cal_month = get_italy_time().month
+if 'cal_year' not in st.session_state: st.session_state.cal_year = get_italy_time().year
 
 if not st.session_state.user_session:
     st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
