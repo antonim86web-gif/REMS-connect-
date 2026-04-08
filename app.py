@@ -72,18 +72,24 @@ def db_run(query, params=None, commit=False):
         if params is None: params = []
         q = query.upper()
 
-        # 1. UTENTI
+        # 1. GESTIONE UTENTI
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 2. PAZIENTI
+        # 2. GESTIONE PAZIENTI (Semplificata per evitare il "Nessun paziente trovato")
         elif "FROM PAZIENTI" in q:
-            st_p = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
-            res = supabase.table("pazienti").select("*").eq("stato", st_p).order("nome").execute()
-            return [[r["id"], r["nome"]] for r in res.data] if res.data else []
+            # Cerchiamo tutti i pazienti, poi filtriamo per stato
+            res = supabase.table("pazienti").select("id, nome, stato").order("nome").execute()
+            if res.data:
+                # Se nella query c'è "ATTIVO", filtriamo solo quelli attivi
+                if "ATTIVO" in q:
+                    return [[r["id"], r["nome"]] for r in res.data if r.get("stato") == "ATTIVO"]
+                # Altrimenti tutti (o dimessi)
+                return [[r["id"], r["nome"]] for r in res.data]
+            return []
 
-        # 3. EVENTI / MONITORAGGIO
+        # 3. GESTIONE EVENTI / MONITORAGGIO
         elif "FROM EVENTI" in q:
             p_id = params[0]
             qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
@@ -95,12 +101,12 @@ def db_run(query, params=None, commit=False):
             res = qb.order("id_u", desc=True).limit(100).execute()
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
-        # 4. TERAPIE
+        # 4. GESTIONE TERAPIE
         elif "FROM TERAPIE" in q:
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
             return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
-        # 5. SCRITTURA (COMMIT)
+        # 5. COMMIT (INSERIMENTI / CANCELLAZIONI)
         if commit:
             if "INSERT INTO EVENTI" in q:
                 pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
@@ -115,7 +121,7 @@ def db_run(query, params=None, commit=False):
         return []
 
     except Exception as e:
-        st.error(f"Errore DB: {e}")
+        st.error(f"Errore critico DB: {e}")
         return []
 
 # --- FUNZIONI ORARIO ---
