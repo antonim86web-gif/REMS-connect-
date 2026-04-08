@@ -99,31 +99,24 @@ def db_run(query, params=None, commit=False):
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
         # 4. TERAPIE
+        # 4. GESTIONE TERAPIE (Versione Ultra-Resistente)
         elif "FROM TERAPIE" in q:
             res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
-            # Se id_t non esiste, usa id. Questo evita l'errore che hai visto.
-            return [[(r.get('id_t') if r.get('id_t') is not None else r.get('id')), r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
-
-        # 5. SCRITTURA (COMMIT)
-        if commit:
-            if "INSERT INTO EVENTI" in q:
-                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
-                if len(params) > 5: pay["esito"] = params[5]
-                supabase.table("eventi").insert(pay).execute()
-            
-            elif "INSERT INTO TERAPIE" in q:
-                pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
-                supabase.table("terapie").insert(pay).execute()
-            
-            elif "DELETE FROM TERAPIE" in q:
-                # Prova a eliminare usando id_t, se fallisce prova id
-                t_id = params[0]
-                try:
-                    supabase.table("terapie").delete().eq("id_t", t_id).execute()
-                except:
-                    supabase.table("terapie").delete().eq("id", t_id).execute()
-
-        return []
+            if res.data:
+                final_data = []
+                for r in res.data:
+                    # Recupero sicuro delle colonne: se non esistono, mette 0 o "-"
+                    t_id = r.get('id_t') or r.get('id')
+                    farmaco = r.get('farmaco', 'Sconosciuto')
+                    dose = r.get('dose', '-')
+                    # Qui gestiamo l'errore 'not_somm'
+                    n_somm = r.get('not_somm') or r.get('not_som') or 0
+                    p_nuovo = r.get('pax_nuovo') or 0
+                    al_bis = r.get('al_bisogno') or 0
+                    
+                    final_data.append([t_id, farmaco, dose, n_somm, p_nuovo, al_bis])
+                return final_data
+            return []
 
     except Exception as e:
         st.error(f"Errore DB: {e}")
