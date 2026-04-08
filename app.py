@@ -210,7 +210,7 @@ def render_postits(p_id, limit=50):
     scelta_ruolo = st.multiselect("Filtra per Figura Professionale", ruoli_disp, default="Tutti", key=f"filt_{p_id}")
     query = "SELECT data, ruolo, op, nota FROM eventi WHERE id=?"
     params = [p_id]
-    if "Tutti" not in scelta_ruolo and scelta_ruolo:
+if "Tutti" not in scelta_ruolo and scelta_ruolo:
         query += f" AND ruolo IN ({','.join(['?']*len(scelta_ruolo))})"
         params.extend(scelta_ruolo)
     res = db_run(query + " ORDER BY id_u DESC LIMIT ?", tuple(params + [limit]))
