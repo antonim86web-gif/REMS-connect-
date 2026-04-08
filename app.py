@@ -785,7 +785,7 @@ elif nav == "⚙️ Admin":
     st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
     t_ut, t_paz_att, t_paz_dim, t_diar, t_log = st.tabs(["UTENTI", "PAZIENTI ATTIVI", "ARCHIVIO", "DIARIO EVENTI", "📜 LOG"])
     
-        with t_ut:
+    with t_ut:
         st.subheader("Gestione Utenti Registrati")
         utenti_raw = db_run("SELECT user, nome, cognome, qualifica FROM utenti")
         
