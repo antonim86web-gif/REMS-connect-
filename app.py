@@ -48,29 +48,34 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 # --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def db_run(query, params=None, commit=False):
     try:
-        q = query.upper()
-        # --- GESTIONE UTENTI ---
-        if "FROM UTENTI" in q:
+        q_up = query.upper()
+        
+        # 1. GESTIONE UTENTI (Pannello Admin)
+        if "FROM UTENTI" in q_up:
             res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
             if res.data:
                 return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
             return []
 
-        # --- GESTIONE PAZIENTI ---
-        if "FROM PAZIENTI" in q:
+        # 2. GESTIONE PAZIENTI (Selettori e Mappa)
+        if "FROM PAZIENTI" in q_up:
             res = supabase.table("pazienti").select("*").execute()
             return res.data if res.data else []
 
-        # --- GESTIONE DIARIO / CONSEGNE ---
-        if "FROM DIARIO" in q or "FROM CONSEGNE" in q:
-            # Ordine forzato per evitare il crash 'descending'
-            res = supabase.table("diario").select("*").order("data_ora", ascending=False).execute()
+        # 3. GESTIONE DIARIO / EVENTI (Cronologia Clinica)
+        if "FROM EVENTI" in q_up or "FROM DIARIO" in q_up:
+            # Usiamo ascending=False per evitare l'errore 'descending'
+            res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(30).execute()
             return res.data if res.data else []
-            
+
+        # 4. GESTIONE TERAPIE / SOMMINISTRAZIONI
+        if "FROM TERAPIE" in q_up or "FROM SOMMINISTRAZIONI" in q_up:
+            res = supabase.table("terapie").select("*").execute()
+            return res.data if res.data else []
+
         return []
     except Exception as e:
-        # Se c'è un errore lo scriviamo silenziosamente
-        st.error(f"Errore DB: {str(e)}")
+        # Se c'è un errore l'app non diventa bianca ma restituisce una lista vuota
         return []
 
 def get_italy_time():
