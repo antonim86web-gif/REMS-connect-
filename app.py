@@ -207,29 +207,13 @@ def db_run(query, params=(), commit=False):
 
 def render_postits(reparto_filtro):
     # Logica per i colori dei post-it in base alla qualifica
-    role_map = {
-        "Psichiatra":"psichiatra", "Infermiere":"infermiere", 
-        "Educatore":"educatore", "OSS":"oss", "Psicologo":"psicologo", 
-        "Assistente Sociale":"sociale", "OPSI":"opsi", "Coordinatore":"coordinatore"
-    }
-    
-    # Recupero dati (esempio basato sulla tua struttura)
-    paz_reparto = db_run("SELECT nome, cognome, qualifica FROM utenti") 
-    
-    for p in paz_reparto:
-        r = p[2] # qualifica
-        cls = f"role-{role_map.get(r, 'oss')}"
-        st.markdown(f"""
-            <div class="postit {cls}">
-                <b>{p[0]} {p[1]}</b><br>
-                <small>{r}</small>
-            </div>
-        """, unsafe_allow_html=True)
+    def render_postits(reparto_filtro):
+    # Funzione resettata per evitare conflitti
+    st.write(f"Visualizzazione post-it per: {reparto_filtro}")
+    pass
 
-# --- FINE FUNZIONE: Da qui in poi il codice torna a MARGINE SINISTRO ---
-
-# --- SESSIONE E LOGIN ---
-if 'user_session' not in st.session_state: 
+# --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
+if 'user_session' not in st.session_state:
     st.session_state.user_session = None
 
 if not st.session_state.user_session:
@@ -248,31 +232,30 @@ if not st.session_state.user_session:
                     st.rerun()
                 else:
                     st.error("Credenziali errate")
-
+    
     with c_r:
         st.subheader("Registrazione")
         with st.form("reg_main"):
-            ru = st.text_input("Username").lower().strip()
-            rp = st.text_input("Password", type="password")
+            ru = st.text_input("Scegli Username").lower().strip()
+            rp = st.text_input("Scegli Password", type="password")
             rn = st.text_input("Nome")
             rc = st.text_input("Cognome")
             rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
-                        if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                 if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
                     try:
-                        # Chiediamo a Supabase di scriverci l'esito
-                        risposta = supabase.table("utenti").insert(nuovo).execute()
-                        st.success(f"Profilo creato! Dati inviati: {risposta.data}")
+                        supabase.table("utenti").insert(nuovo).execute()
+                        st.success("Registrato! Prova il login a sinistra.")
                     except Exception as e:
-                        # QUI vedremo il vero motivo del fallimento
-                        st.error(f"Errore tecnico Supabase: {e}")
+                        st.error(f"Errore: {e}")
                 else:
                     st.warning("Compila tutti i campi.")
-
     st.stop()
 
+# --- SE SIAMO QUI, L'UTENTE È LOGGATO ---
 u = st.session_state.user_session
+
 
 
         
