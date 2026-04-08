@@ -469,8 +469,9 @@ elif nav == "📊 Monitoraggio":
                     diario = [r for r in diario if r[4]]
 
                 # 6. Visualizzazione a video
-                if termine == "A":
-                    diario = [r for r in diario if r[4] and r[4].strip() != ""]
+                if termine in ["A", "R"]:
+                    # Teniamo solo i record dove la colonna esito (r[4]) NON è vuota e NON è None
+                    diario = [r for r in diario if r[4] and str(r[4]).strip() != ""]
 
                 # 6. Visualizzazione a video
                 if diario:
