@@ -645,40 +645,39 @@ elif ruolo_corr == "Infermiere":
                     )
                             
                             # USIAMO SOLO I 3 PARAMETRI CHE LA TUA FUNZIONE CONOSCE
-                            try:
+                    try:
                                 # p_id, il nostro testo speciale, 1 giorno
-                                sunto = genera_relazione_ia(p_id, istruzioni_ia, 1)
+                        sunto = genera_relazione_ia(p_id, istruzioni_ia, 1)
                                 
-                                st.info("### 📝 Riassunto IA (Ultime 20 attività)")
-                                st.write(sunto)
-                                st.divider()
-                            except Exception as e:
-                                st.error(f"Errore nella generazione: {e}")
+                        st.info("### 📝 Riassunto IA (Ultime 20 attività)")
+                        st.write(sunto)
+                        st.divider()
+                    except Exception as e:
+                        st.error(f"Errore nella generazione: {e}")
                     
                     # Visualizzazione note per sicurezza
-                    with st.expander("🔍 Controlla i dati originali (Ultime 20)"):
-                        for d, o, n in b_logs:
-                            st.markdown(f"**{d}** - *{o}*<br>{n}", unsafe_allow_html=True)
-                            st.divider()
-                else:
-                    st.warning("⚠️ Nessun dato trovato nel diario eventi.")
-        
-        elif ruolo_corr == "Psicologo":
-            t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
-            with t1:
-                with st.form("f_psi"):
-                    txt = st.text_area("Sintesi Colloquio")
-                    if st.form_submit_button("SALVA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧠 {txt}", "Psicologo", firma_op), True)
-                        st.rerun()
-            with t2:
-                with st.form("f_test"):
-                    test_n = st.text_input("Nome Test"); test_r = st.text_area("Risultato")
-                    if st.form_submit_button("REGISTRA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
-                        st.rerun()
-
-        elif ruolo_corr == "Assistente Sociale":
+                        with st.expander("🔍 Controlla i dati originali (Ultime 20)"):
+                            for d, o, n in b_logs:
+                                st.markdown(f"**{d}** - *{o}*<br>{n}", unsafe_allow_html=True)
+                                st.divider()
+                    else:
+                        st.warning("⚠️ Nessun dato trovato nel diario eventi.")
+            elif ruolo_corr == "Psicologo":
+                t1, t2 = st.tabs(["🧠 COLLOQUIO", "📝 TEST"])
+                with t1:
+                    with st.form("f_psi"):
+                        txt = st.text_area("Sintesi Colloquio")
+                        if st.form_submit_button("SALVA"): 
+                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🧠 {txt}", "Psicologo", firma_op), True)
+                            st.rerun()
+                            with t2:
+                                with st.form("f_test"):
+                                    test_n = st.text_input("Nome Test"); test_r = st.text_area("Risultato")
+                                    if st.form_submit_button("REGISTRA"): 
+                                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
+                                        st.rerun()
+                                    
+                                    elif ruolo_corr == "Assistente Sociale":
             t1, t2 = st.tabs(["🤝 RETE", "🏠 PROGETTO"])
             with t1:
                 with st.form("f_soc"):
