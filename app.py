@@ -600,22 +600,21 @@ elif ruolo_corr == "Infermiere":
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "R"), True)
                                 st.rerun()
                         st.divider()
-
-            with t2:
-                st.subheader("💓 Rilevazione Parametri Vitali")
-                with st.form("form_p_inf"):
-                    c1, c2, c3 = st.columns(3)
-                    p_v = c1.text_input("PA (Pressione)")
-                    f_v = c2.text_input("FC (Frequenza)")
-                    s_v = c3.text_input("SatO2")
-                    if st.form_submit_button("REGISTRA PARAMETRI"):
-                        nota_p = f"💓 Parametri: PA {p_v}, FC {f_v}, Sat {s_v}"
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                               (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_p, ruolo_reale, nome_reale), True)
-                        st.success("Parametri salvati!")
-                        st.rerun()
-
-            with t3:
+                        with t2:
+                            st.subheader("💓 Rilevazione Parametri Vitali")
+                            with st.form("form_p_inf"):
+                                c1, c2, c3 = st.columns(3)
+                                p_v = c1.text_input("PA (Pressione)")
+                                f_v = c2.text_input("FC (Frequenza)")
+                                s_v = c3.text_input("SatO2")
+                                if st.form_submit_button("REGISTRA PARAMETRI"):
+                                    nota_p = f"💓 Parametri: PA {p_v}, FC {f_v}, Sat {s_v}"
+                                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                                    (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_p, ruolo_reale, nome_reale), True)
+                                    st.success("Parametri salvati!")
+                                    st.rerun()
+                                    
+                        with t3:
                 st.subheader("📝 Consegne Cliniche")
                 with st.form("form_c_inf"):
                     txt_c = st.text_area("Inserisci diario clinico...")
