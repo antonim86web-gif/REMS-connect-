@@ -84,40 +84,21 @@ def db_run(query, params=None, commit=False):
             if p_id:
                 qb = qb.eq("paziente_id", p_id)
             
-            # Controllo per SMARCO (3 colonne)
+            # 1. Caso Somministrazioni (3 colonne)
             if "SOMM" in q:
                 qb = qb.ilike("nota", "%Somm:%")
                 res = qb.order("id", desc=True).execute()
                 return [[r.get('data','-'), r.get('nota','-'), r.get('op','-')] for r in res.data] if res.data else []
-            
-            # Controllo per DIARIO RAPIDO (2 colonne)
+
+            # 2. Caso Diario Rapido (2 colonne)
             elif "SELECT DATA, NOTA" in q:
                 res = qb.order("id", desc=True).execute()
                 return [[r.get('data','-'), r.get('nota','-')] for r in res.data] if res.data else []
-            
-            
-            # 3. Caso Default (Tutto il resto - 5 colonne) - L'ELSE VA SEMPRE PER ULTIMO
+
+            # 3. Caso Default (5 colonne) - L'unico e ultimo ELSE
             else:
                 res = qb.order("id", desc=True).limit(100).execute()
-                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data] if res.data else []
-            return []
-
-            # Default per il diario clinico o altro (restituisce tutto)
-            else:
-                res = qb.order("id", desc=True).limit(100).execute()
-                if res.data:
-                    return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data]
-                return []
-
-            # Se serve per il diario clinico (riga 450 - 2 colonne)
-                elif "SELECT DATA, NOTA" in q:
-                res = qb.order("id", desc=True).execute()
-                return [[r.get('data', '-'), r.get('nota', '-')] for r in res.data] if res.data else []
-
-            # Default per tutto il resto (5 colonne)
-            else:
-                res = qb.order("id", desc=True).limit(100).execute()
-                return [[r.get('data', '-'), r.get('ruolo', '-'), r.get('op', '-'), r.get('nota', '-'), r.get('esito', '-')] for r in res.data] if res.data else []
+                return [[r.get('data','-'), r.get('ruolo','-'), r.get('op','-'), r.get('nota','-'), r.get('esito','-')] for r in res.data] if res.data else []
 
         # --- SCRITTURA (COMMIT) ---
         if commit:
