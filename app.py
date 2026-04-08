@@ -71,8 +71,8 @@ def db_run(query, params=None, commit=False):
     try:
         q = query.upper()
         
-    try:
-        q = query.upper()
+        try:
+            q = query.upper()
 
         # 1. GESTIONE UTENTI
         if "FROM UTENTI" in q:
