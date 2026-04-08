@@ -72,67 +72,48 @@ def db_run(query, params=None, commit=False):
         if params is None: params = []
         q = query.upper()
 
-        # 1. GESTIONE UTENTI
+        # 1. UTENTI
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("*").eq("user", params[0]).execute()
             return res.data if res.data else []
 
-        # 2. GESTIONE PAZIENTI
+        # 2. PAZIENTI
         elif "FROM PAZIENTI" in q:
-            stato = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
-            res = supabase.table("pazienti").select("*").eq("stato", stato).order("nome").execute()
+            st_p = "ATTIVO" if "ATTIVO" in q else "DIMESSO"
+            res = supabase.table("pazienti").select("*").eq("stato", st_p).order("nome").execute()
             return [[r["id"], r["nome"]] for r in res.data] if res.data else []
 
-        # 3. GESTIONE EVENTI (MONITORAGGIO E DIARIO)
+        # 3. EVENTI / MONITORAGGIO
         elif "FROM EVENTI" in q:
             p_id = params[0]
-            query_base = supabase.table("eventi").select("*").eq("paziente_id", p_id)
-            
+            qb = supabase.table("eventi").select("*").eq("paziente_id", p_id)
             if len(params) > 1 and params[1]:
-                term = params[1]
-                if term == "SOLO_TERAPIA":
-                    query_base = query_base.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
+                if params[1] == "SOLO_TERAPIA":
+                    qb = qb.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
                 else:
-                    query_base = query_base.or_(f"nota.ilike.%{term}%,esito.ilike.%{term}%")
-            
-            res = query_base.order("id_u", desc=True).limit(100).execute()
+                    qb = qb.or_(f"nota.ilike.%{params[1]}%,esito.ilike.%{params[1]}%")
+            res = qb.order("id_u", desc=True).limit(100).execute()
             return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','-')] for r in res.data] if res.data else []
 
-        # 4. GESTIONE TERAPIE
+        # 4. TERAPIE
         elif "FROM TERAPIE" in q:
-            p_id = params[0]
-            res = supabase.table("terapie").select("*").eq("p_id", p_id).execute()
+            res = supabase.table("terapie").select("*").eq("p_id", params[0]).execute()
             return [[r['id_t'], r['farmaco'], r['dose'], r['not_somm'], r['pax_nuovo'], r['al_bisogno']] for r in res.data] if res.data else []
 
-        # 5. AZIONI DI SCRITTURA (COMMIT)
+        # 5. SCRITTURA (COMMIT)
         if commit:
             if "INSERT INTO EVENTI" in q:
-                payload = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
-                if len(params) > 5: payload["esito"] = params[5]
-                supabase.table("eventi").insert(payload).execute()
-            
+                pay = {"paziente_id": params[0], "data": params[1], "nota": params[2], "ruolo": params[3], "op": params[4]}
+                if len(params) > 5: pay["esito"] = params[5]
+                supabase.table("eventi").insert(pay).execute()
             elif "INSERT INTO TERAPIE" in q:
-                payload = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
-                supabase.table("terapie").insert(payload).execute()
-            
+                pay = {"p_id": params[0], "farmaco": params[1], "dose": params[2], "not_somm": int(params[3]), "pax_nuovo": int(params[4]), "al_bisogno": int(params[5])}
+                supabase.table("terapie").insert(pay).execute()
             elif "DELETE FROM TERAPIE" in q:
                 supabase.table("terapie").delete().eq("id_t", params[0]).execute()
 
         return []
-            # Esegue una ricerca filtrata sulla tabella eventi
-    query = supabase.table("eventi").select("*").eq("id", p_id)
-            
-            # Se ci sono altri parametri (filtro terapia o testo)
-            if len(params) > 1:
-                filtro = params[1]
-                if filtro == "SOLO_TERAPIA":
-                    query = query.or_("nota.ilike.%💊%,nota.ilike.%✔️%,nota.ilike.%❌%,esito.neq.None")
-                else:
-                    query = query.ilike("nota", f"%{filtro}%")
-            
-            res = query.order("id_u", ascending=False).execute()
-            return [[r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito', '-')] for r in res.data] if res.data else []    
-        return []
+
     except Exception as e:
         st.error(f"Errore DB: {e}")
         return []
