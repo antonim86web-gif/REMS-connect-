@@ -435,10 +435,16 @@ elif nav == "👥 Modulo Equipe":
                 """, (p_id,))
                 
                 if res_smarc:
-                    df_smarc = pd.DataFrame(res_smarc, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
-                    st.dataframe(df_smarc, use_container_width=True)
-                else:
-                    st.info("Nessuna somministrazione registrata nelle ultime ore.")
+            try:
+                # Questo trucco evita il crash alla riga 438
+                dati_puliti = [r[:3] for r in res_smarc]
+                
+                df_smarc = pd.DataFrame(dati_puliti, columns=["Data/Ora", "Dettaglio Somministrazione", "Infermiere"])
+                st.table(df_smarc)
+            except Exception as e:
+                st.error(f"Errore nella creazione tabella: {e}")
+        else:
+            st.info("Nessuna somministrazione registrata per questo paziente.")
 
                 st.divider()
 
