@@ -676,14 +676,15 @@ elif ruolo_corr == "Infermiere":
                                     if st.form_submit_button("REGISTRA"): 
                                         db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📊 TEST {test_n}: {test_r}", "Psicologo", firma_op), True)
                                         st.rerun()
-                                        elif ruolo_corr == "Assistente Sociale":
-            t1, t2 = st.tabs(["🤝 RETE", "🏠 PROGETTO"])
-            with t1:
-                with st.form("f_soc"):
-                    cont = st.text_input("Contatto"); txt = st.text_area("Esito")
-                    if st.form_submit_button("SALVA"): 
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🤝 CONTATTO {cont}: {txt}", "Assistente Sociale", firma_op), True)
-                        st.rerun()
+                                        
+                                        elif ruolo_corr == "Assistente Sociale")
+                                    t1, t2 = st.tabs(["🤝 RETE", "🏠 PROGETTO"])
+                                    with t1:
+                                        with st.form("f_soc"):
+                                            cont = st.text_input("Contatto"); txt = st.text_area("Esito")
+                                            if st.form_submit_button("SALVA"): 
+                                                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"🤝 CONTATTO {cont}: {txt}", "Assistente Sociale", firma_op), True)
+                                                st.rerun()
             with t2:
                 with st.form("f_prog"):
                     prog = st.text_area("Aggiornamento Progetto")
