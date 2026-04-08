@@ -444,7 +444,7 @@ elif nav == "👥 Modulo Equipe":
                         for r in res_smarc:
                             row = list(r)
                             while len(row) < 3: row.append("-")
-                                dati_corretti.append(row[:3])
+                        dati_corretti.append(row[:3])
                 
                 df_smarc = pd.DataFrame(dati_corretti, columns=["Data/Ora", "Dettaglio", "Infermiere"])
                 st.table(df_smarc)
