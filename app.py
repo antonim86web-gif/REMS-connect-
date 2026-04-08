@@ -84,10 +84,16 @@ def db_run(query, params=None, commit=False):
 
         # 3. GESTIONE EVENTI / DIARIO / LOGS
         if "FROM EVENTI" in q or "FROM DIARIO" in q:
-            if "JOIN PAZIENTI" in q:
-                # Usiamo paziente_id invece di id
-                res = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("data", desc=True)
-                return [(r['data'], r['ruolo'], r['op'], r['nota'], r['pazienti']['nome'], r['id']) for r in res.data]
+            p_id = params[0]
+            # Partiamo con la query base per il paziente
+            res = supabase.table("eventi").select("*").eq("paziente_id", p_id).order("data", desc=True)
+            
+            # Se è presente il termine di ricerca (params[1])
+            if len(params) > 1 and params[1] is not None:
+                res = res.ilike("nota", params[1])
+            
+            data = res.execute()
+            return [(r['data'], r['ruolo'], r['op'], r['nota'], r.get('esito','')) for r in data.data]
             
             p_id = params[0]
             # Usiamo paziente_id per filtrare
@@ -425,16 +431,46 @@ elif nav == "📊 Monitoraggio":
         with st.expander(f"📁 CARTELLA: {p_nome}"):
             c1, c2 = st.columns([2, 1])
             with c1:
-                st.write("**Ultime annotazioni:**")
-                diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id,))
-        if diario:
-            # Prendiamo tutti e 5 i valori restituiti da db_run
-            for d, ruolo, o, n, esito in diario[:5]: 
-                st.write(f"**{d}** ({o}): {n}")
+                st.write("**🔍 Filtra Storico Clinico:**")
+                # Selettori di data e testo
+                cd1, cd2 = st.columns(2)
+                d_inizio = cd1.date_input("Dal:", value=None, key=f"start_{p_id}")
+                d_fine = cd2.date_input("Al:", value=None, key=f"end_{p_id}")
+                termine = st.text_input("Cerca farmaco o parola chiave:", key=f"txt_{p_id}")
+
+                # Chiamata al DB con il filtro opzionale del termine
+                diario = db_run("SELECT * FROM eventi WHERE id=?", (p_id, f"%{termine}%" if termine else None))
+                
+                # Filtro temporale lato Python
+                if diario and (d_inizio or d_fine):
+                    from datetime import datetime
+                    filtered = []
+                    for r in diario:
+                        try:
+                            dt_ev = datetime.strptime(r[0][:10], "%Y-%m-%d").date()
+                            if (not d_inizio or dt_ev >= d_inizio) and (not d_fine or dt_ev <= d_fine):
+                                filtered.append(r)
+                        except: filtered.append(r)
+                    diario = filtered
+
+                if diario:
+                    for d, ruolo, o, n, esito in diario[:20]: # Mostra i primi 20 risultati
+                        esito_str = f" - **ESITO: {esito}**" if esito else ""
+                        st.write(f"**{d}** ({o}): {n}{esito_str}")
+                else:
+                    st.warning("Nessun dato trovato per questi filtri.")
+
             with c2:
-                if st.button(f"📄 SCARICA PDF {p_nome}", key=f"pdf_{p_id}"):
+                st.write("**📄 Esportazione:**")
+                if diario:
                     pdf_data = genera_pdf_clinico(p_nome, diario)
-                    st.download_button("Clicca qui per il download", data=pdf_data, file_name=f"Report_{p_nome}.pdf", mime="application/pdf")
+                    st.download_button(
+                        label=f"📥 SCARICA PDF FILTRATO",
+                        data=pdf_data,
+                        file_name=f"Report_{p_nome}.pdf",
+                        mime="application/pdf",
+                        key=f"btn_{p_id}"
+                    )
 
 elif nav == "📅 Agenda Dinamica":
     st.markdown("<div class='section-banner'><h2>AGENDA REPARTO</h2></div>", unsafe_allow_html=True)
