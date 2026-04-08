@@ -637,12 +637,12 @@ elif ruolo_corr == "Infermiere":
                 testo_note = "\n".join([f"[{d}] {o}: {n}" for d, o, n in reversed(b_logs)])
                 with st.spinner("L'IA sta analizzando i dati..."):
                             # COSTRUIAMO IL MESSAGGIO UNIFICATO (Evita il TypeError)
-                            istruzioni_ia = (
-                                "RIASSUNTO BRIEFING TURNO: "
-                                "Analizza queste ultime 20 note e crea un sunto professionale per il cambio turno, "
-                                "dividendo in: 1. Terapie e Rifiuti, 2. Parametri, 3. Note comportamentali.\n\n"
-                                f"DATI:\n{testo_note}"
-                            )
+                    istruzioni_ia = (
+                        "RIASSUNTO BRIEFING TURNO: "
+                        "Analizza queste ultime 20 note e crea un sunto professionale per il cambio turno, "
+                        "dividendo in: 1. Terapie e Rifiuti, 2. Parametri, 3. Note comportamentali.\n\n"
+                        f"DATI:\n{testo_note}"
+                    )
                             
                             # USIAMO SOLO I 3 PARAMETRI CHE LA TUA FUNZIONE CONOSCE
                             try:
