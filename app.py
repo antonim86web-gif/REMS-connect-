@@ -406,7 +406,7 @@ elif nav == "👥 Modulo Equipe":
         now = get_italy_time(); oggi = now.strftime("%d/%m/%Y")
         
         if ruolo_corr == "Psichiatra":
-            # 1. DEFINIZIONE DEI TAB
+            # 1. DEFINIZIONE TAB
             t1, t2, t3, t4, t5 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "💉 SOMMINISTRAZIONI", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"])
             
             with t1:
@@ -415,8 +415,9 @@ elif nav == "👥 Modulo Equipe":
                     nota_med = st.text_area("Valutazione clinica...", height=200)
                     if st.form_submit_button("REGISTRA NOTA CLINICA"):
                         if nota_med:
+                            data_it = get_now_it().strftime("%d/%m/%Y %H:%M")
                             db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
+                                   (p_id, data_it, f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
                             st.success("Nota registrata!")
                             st.rerun()
 
@@ -424,18 +425,20 @@ elif nav == "👥 Modulo Equipe":
                 st.subheader("💊 Gestione Terapia Farmacologica")
                 terapie_attuali = db_run("SELECT id_u, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno FROM terapie WHERE p_id=?", (p_id,))
                 if terapie_attuali:
-                    for t in terapie_attuali:
+                    for i, t in enumerate(terapie_attuali):
                         c1, c2 = st.columns([4, 1])
                         c1.info(f"💊 {t[1]} - {t[2]}")
-                        if c2.button("🗑️", key=f"del_med_{t[0]}_{t[1].replace(' ', '_')}"):
+                        # Chiave unica per il cestino
+                        if c2.button("🗑️", key=f"del_med_{t[0]}_{i}"):
                             db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
                             st.rerun()
                 
-                with st.expander("➕ Prescrivi"):
-                    with st.form("n_ter"):
-                        f_n = st.text_input("Farmaco")
-                        if st.form_submit_button("CONFERMA"):
-                            db_run("INSERT INTO terapie (p_id, farmaco) VALUES (?,?)", (p_id, f_n), True)
+                with st.expander("➕ Prescrivi Nuovo Farmaco"):
+                    with st.form("nuova_ter_med"):
+                        f_nome = st.text_input("Nome Farmaco")
+                        f_dose = st.text_input("Dosaggio")
+                        if st.form_submit_button("CONFERMA PRESCRIZIONE"):
+                            db_run("INSERT INTO terapie (p_id, farmaco, dose) VALUES (?,?,?)", (p_id, f_nome, f_dose), True)
                             st.rerun()
 
             with t3:
@@ -445,32 +448,57 @@ elif nav == "👥 Modulo Equipe":
                     df_smarc = pd.DataFrame(res_smarc, columns=["Data/Ora", "Dettaglio", "Infermiere"])
                     st.table(df_smarc)
                 else:
-                    st.info("Nessun dato.")
+                    st.info("Nessuna somministrazione registrata.")
 
             with t4:
                 st.subheader("🩺 ESAME OBIETTIVO")
-                e_o = st.text_area("Descrizione...")
-                if st.button("SALVA E.O."):
+                e_o = st.text_area("Note esame obiettivo...")
+                if st.button("SALVA E.O.", key="btn_eo_save"):
+                    data_it = get_now_it().strftime("%d/%m/%Y %H:%M")
                     db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                           (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
+                           (p_id, data_it, f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
                     st.rerun()
 
             with t5:
                 st.subheader("🤖 Analisi IA")
-                st.write("Funzione IA attiva.")
+                st.info("Sistema IA pronto per l'analisi.")
 
-            # --- AREA PDF ---
             st.divider()
             with st.expander("📄 ESPORTAZIONE PDF"):
-                tipo_rep = st.radio("Report:", ["Diario Completo", "Solo Terapie"], horizontal=True)
-                # Creiamo la variabile dati_pdf SEMPRE, così non dà NameError
                 dati_pdf = db_run("SELECT data, op, nota FROM eventi WHERE id=?", (p_id,))
                 if dati_pdf:
                     try:
-                        pdf_b = genera_pdf_clinico(p_id, dati_pdf, tipo_rep)
-                        st.download_button("📥 SCARICA PDF", data=pdf_b, file_name="report.pdf")
+                        pdf_b = genera_pdf_clinico(p_id, dati_pdf, "Report")
+                        st.download_button("📥 SCARICA PDF", data=pdf_b, file_name="report.pdf", key="dl_pdf_final")
                     except Exception as e:
                         st.error(f"Errore PDF: {e}")
+
+        elif ruolo_corr == "Infermiere":
+            st.header("💉 Area Infermieristica")
+            terapie_inf = db_run("SELECT id_u, farmaco, dose FROM terapie WHERE p_id=?", (p_id,))
+            
+            if terapie_inf:
+                # ENUMERATE risolve il DuplicateElementKey
+                for i, t in enumerate(terapie_inf):
+                    st.write(f"**{t[1]}** ({t[2]})")
+                    c1, c2 = st.columns(2)
+                    
+                    # Chiavi corrette con indice i
+                    if c1.button("✅ ASSUNTO", key=f"inf_ok_{t[0]}_{i}"):
+                        data_it = get_now_it().strftime("%d/%m/%Y %H:%M")
+                        db_run("INSERT INTO somministrazioni (id_paziente, data_ora, dettaglio, infermiere) VALUES (?,?,?,?)",
+                               (p_id, data_it, f"Assunto: {t[1]}", firma_op), True)
+                        st.success("Registrato!")
+                        st.rerun()
+                        
+                    if c2.button("❌ RIFIUTATO", key=f"inf_ref_{t[0]}_{i}"):
+                        data_it = get_now_it().strftime("%d/%m/%Y %H:%M")
+                        db_run("INSERT INTO somministrazioni (id_paziente, data_ora, dettaglio, infermiere) VALUES (?,?,?,?)",
+                               (p_id, data_it, f"RIFIUTATO: {t[1]}", firma_op), True)
+                        st.warning("Rifiuto registrato")
+                        st.rerun()
+            else:
+                st.info("Nessuna terapia prescritta.")
 # Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso ben
         elif ruolo_corr == "Infermiere":
             import calendar
