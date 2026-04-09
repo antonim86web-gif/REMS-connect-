@@ -148,23 +148,32 @@ else:
 # 1. SIDEBAR DI NAVIGAZIONE (Struttura Dinamica per Ruoli)
 with st.sidebar:
     st.markdown("<h2 style='text-align: center;'>🛡️ MENU</h2>", unsafe_allow_html=True)
+    
+    # 1. Recupero robusto del ruolo dal database
+    ruolo_db = st.session_state.user_data.get('ruolo', 'Nessun Ruolo').strip().capitalize()
+    
+    # 2. SBLOCCO ADMIN: Se sei 'antony', ti permettiamo di scegliere il ruolo per testare
+    if st.session_state.user_data['username'].lower() == "antony":
+        ruolo_utente = st.selectbox("Cambia Ruolo (Test):", 
+            ["Admin", "Psichiatra", "Infermiere", "Educatore", "Psicologo", "Sociale", "OSS", "Opsi"])
+    else:
+        ruolo_utente = ruolo_db
+
     st.write(f"👤 **Op:** {st.session_state.user_data['username']}")
-    st.write(f"🆔 **Ruolo:** {ruolo_utente}")
+    st.write(f"🆔 **Ruolo Attivo:** {ruolo_utente}")
     st.divider()
 
+    # --- RESTO DELLA TUA SIDEBAR (Menu e Selezione Paziente) ---
     voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
-    if ruolo_utente in ["Admin", "Staff", "admin", "staff"]:
+    if ruolo_utente == "Admin":
         voci_menu.append("⚙️ Pannello Admin")
 
     scelta_menu = st.radio("Seleziona Area:", voci_menu)
     st.divider()
 
-    # --- AGGIUNGI QUESTE RIGHE PER RISOLVERE L'ERRORE ---
-    # 1. Recupera i pazienti (se non l'hai già fatto sopra)
+    # Selezione Paziente (necessaria per far apparire i moduli nel Blocco 3)
     res_p = supabase.table("pazienti").select("id, nome").execute()
     lista_pazienti = {p['nome']: p['id'] for p in res_p.data}
-    
-    # 2. Crea la selectbox e assegna i valori alle variabili attese dal Blocco 3
     nome_sel = st.selectbox("Seleziona Paziente:", ["--"] + list(lista_pazienti.keys()))
     
     if nome_sel != "--":
@@ -173,11 +182,6 @@ with st.sidebar:
     else:
         paziente_attivo = None
         id_p_attivo = None
-    # ---------------------------------------------------
-
-    if st.button("🚪 Esci dal Sistema"):
-        st.session_state.logged_in = False
-        st.rerun()
 
 # 2. SELEZIONE PAZIENTE GLOBALE (Necessaria per i blocchi successivi)
 # Recupero lista pazienti da Supabase
