@@ -183,7 +183,7 @@ with st.sidebar:
             st.rerun()
 
     # --- RESTO DELLA TUA SIDEBAR (Menu e Selezione Paziente) ---
-    voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
+voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
     if ruolo_utente == "Admin":
         voci_menu.append("⚙️ Pannello Admin")
 
