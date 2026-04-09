@@ -117,8 +117,19 @@ if not st.session_state.logged_in:
 
 # --- VARIABILI GLOBALI DI FIRMA ---
 # Queste verranno usate in tutti i blocchi successivi
-firma_op = f"{st.session_state.user_data['username']} ({st.session_state.user_data['ruolo']})"
-ruolo_utente = st.session_state.user_data['ruolo']
+# --- LOGICA DI SICUREZZA PER LE VARIABILI DI SESSIONE (Sostituisce riga 120-121) ---
+if st.session_state.logged_in and st.session_state.user_data:
+    # Cerchiamo i dati sia con la minuscola che con la maiuscola
+    u_name = st.session_state.user_data.get('username') or st.session_state.user_data.get('Username', 'Utente')
+    u_role = st.session_state.user_data.get('ruolo') or st.session_state.user_data.get('Ruolo', 'Staff')
+    
+    firma_op = f"{u_name} ({u_role})"
+    ruolo_utente = u_role
+else:
+    # Se i dati mancano, resettiamo e fermiamo per sicurezza
+    st.session_state.logged_in = False
+    st.stop()
+
 
 # --- BLOCCO 2: NAVIGAZIONE, FILTRI E MONITORAGGIO ---
 
