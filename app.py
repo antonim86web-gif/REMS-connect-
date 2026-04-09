@@ -184,8 +184,8 @@ with st.sidebar:
 
     # --- RESTO DELLA TUA SIDEBAR (Menu e Selezione Paziente) ---
 voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
-    if ruolo_utente == "Admin":
-        voci_menu.append("⚙️ Pannello Admin")
+if ruolo_utente == "Admin":
+    voci_menu.append("⚙️ Pannello Admin")
 
     scelta_menu = st.radio("Seleziona Area:", voci_menu)
     st.divider()
