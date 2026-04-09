@@ -428,8 +428,8 @@ elif nav == "👥 Modulo Equipe":
                         c1, c2 = st.columns([4, 1])
                         c1.info(f"💊 {t[1]} - {t[2]}")
                         if c2.button("🗑️", key=f"del_med_{t[0]}_{t[1].replace(' ', '_')}"):
-    db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-    st.rerun()
+                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
+                            st.rerun()
                 
                 with st.expander("➕ Prescrivi"):
                     with st.form("n_ter"):
