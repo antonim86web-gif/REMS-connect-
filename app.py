@@ -30,8 +30,8 @@ if not st.session_state.get('logged_in', False):
     st.markdown('<div style="max-width:400px; margin:auto; padding-top:50px; text-align:center;">', unsafe_allow_html=True)
     st.title("🛡️ REMS-Connect Login")
     
-    u_input = st.text_input("Username").strip()
-    p_input = st.text_input("Password", type="password").strip()
+    u_input = st.text_input("username").strip()
+    p_input = st.text_input("password", type="password").strip()
     
     col1, col2 = st.columns(2)
     
