@@ -319,51 +319,79 @@ if scelta_menu == "💉 Modulo Equipe":
             st.subheader(f"Area {ruolo_utente}")
             testo_colloquio = st.text_area("Annotazioni sul colloquio / Intervento:")
             if st.button("💾 SALVA INTERVENTO"):
-                prefix = "🧠 [PSICOLOGO]" if ruolo_utente == "Psicologo" else "🏛️ [SOCIALE]"
-                supabase.table("eventi").insert({
-                    "id_paziente": p_id, "nota": f"{prefix} {testo_colloquio}", 
-                    "ruolo": ruolo_utente, "operatore": firma_op, "timestamp": get_now().isoformat()
-                }).execute()
-                st.success("Intervento salvato.")
+# --- MODULO EQUIPE AVANZATO (CLINICA & DIAGNOSTICA) ---
+if menu == "💉 Modulo Equipe":
+    if not paziente_attivo:
+        st.warning("⚠️ Seleziona un paziente dalla barra laterale.")
+    else:
+        st.header(f"💉 Centro di Comando Equipe - {paziente_attivo}")
+        
+        # 1. PSICHIATRA & MEDICO (Prescrizioni e Diagnostica)
+        if ruolo_utente in ["Admin", "Psichiatra", "Medico"]:
+            with st.expander("🩺 AREA MEDICA: PRESCRIZIONI ED ESAMI", expanded=True):
+                st.subheader("💊 Prescrizione Farmacologica")
+                farmaco = st.text_input("Farmaco e Dosaggio", placeholder="Es: Quetiapina 300mg ore 20")
+                frequenza = st.selectbox("Frequenza", ["1 volta al dì", "2 volte al dì", "3 volte al dì", "Al bisogno (al p.t.)"])
+                
+                st.subheader("🔬 Richiesta Esami e Accertamenti")
+                tipo_esame = st.multiselect("Esami richiesti:", 
+                    ["Esami Ematici Completi", "Dosaggio Litiemia", "ECG", "EEG", "TC Encefalo", "Consulenza Specialistica"])
+                note_diagnostiche = st.text_area("Note aggiuntive per la diagnostica")
+                
+                if st.button("💾 Invia Prescrizioni e Richieste"):
+                    info_med = f"PRESCRIZIONE: {farmaco} ({frequenza}) | ESAMI: {', '.join(tipo_esame)} | NOTE: {note_diagnostiche}"
+                    registra_evento(id_p_attivo, info_med, "Medico/Psichiatra", firma_op)
+                    st.success("Prescrizioni registrate e inviate al database.")
 
-        # --- 4. AREA EDUCATORE (Attività, Cassa, Tabacco) ---
-        elif ruolo_utente == "Educatore":
-            t_edu1, t_edu2, t_edu3 = st.tabs(["🧩 Attività", "💰 Gestione Cassa", "🚬 Tabacco"])
-            with t_edu1:
-                tipo_att = st.selectbox("Attività riabilitativa:", ["Individuale", "Gruppo", "Uscita", "Laboratorio"])
-                desc_att = st.text_area("Dettaglio attività:")
-                if st.button("REGISTRA ATTIVITÀ"):
-                    supabase.table("eventi").insert({
-                        "id_paziente": p_id, "nota": f"🧩 [ATTIVITÀ] {tipo_att}: {desc_att}", 
-                        "ruolo": "Educatore", "operatore": firma_op, "timestamp": get_now().isoformat()
-                    }).execute()
-            with t_edu2:
-                importo = st.number_input("Somma (€)", step=0.50)
-                causale = st.text_input("Causale (es. Spesa, Acquisto vestiti)")
-                if st.button("REGISTRA MOVIMENTO CASSA"):
-                    supabase.table("eventi").insert({
-                        "id_paziente": p_id, "nota": f"💰 [CASSA] Movimento di {importo}€ per: {causale}", 
-                        "ruolo": "Educatore", "operatore": firma_op, "timestamp": get_now().isoformat()
-                    }).execute()
-            with t_edu3:
-                qty_tab = st.text_input("Quantità tabacco/sigarette consegnata")
-                if st.button("REGISTRA CONSEGNA"):
-                    supabase.table("eventi").insert({
-                        "id_paziente": p_id, "nota": f"🚬 [TABACCO] Consegna: {qty_tab}", 
-                        "ruolo": "Educatore", "operatore": firma_op, "timestamp": get_now().isoformat()
-                    }).execute()
+        # 2. INFERMIERE (Somministrazione e Parametri)
+        if ruolo_utente in ["Admin", "Infermiere"]:
+            with st.expander("💊 AREA INFERMIERISTICA: MONITORAGGIO", expanded=False):
+                col_inf1, col_inf2, col_inf3 = st.columns(3)
+                pa = col_inf1.text_input("Pressione Art.", placeholder="120/80")
+                fc = col_inf2.number_input("Freq. Card.", value=0)
+                temp = col_inf3.number_input("Temp. °C", value=36.5, step=0.1)
+                
+                esito_esami = st.text_area("Esito Esami effettuati (se presenti)")
+                
+                col_btn1, col_btn2 = st.columns(2)
+                if col_btn1.button("✅ Terapia Somministrata"):
+                    nota_t = f"Terapia OK. Parametri: PA {pa}, FC {fc}, T {temp}. Esiti: {esito_esami}"
+                    registra_evento(id_p_attivo, nota_t, "Infermiere", firma_op)
+                if col_btn2.button("❌ Terapia Rifiutata"):
+                    registra_evento(id_p_attivo, f"RIFIUTO TERAPIA. Motivo: {esito_esami}", "Infermiere", firma_op)
 
-        # --- 5. AREA OSS / OPSI ---
-        elif ruolo_utente in ["OSS", "OPSI"]:
-            st.subheader(f"Area {ruolo_utente}")
-            nota_sic = st.text_area("Note su assistenza / Vigilanza / Sicurezza:")
-            if st.button("💾 SALVA NOTA"):
-                pref_s = "🛡️ [OSS]" if ruolo_utente == "OSS" else "🚨 [OPSI]"
-                supabase.table("eventi").insert({
-                    "id_paziente": p_id, "nota": f"{pref_s} {nota_sic}", 
-                    "ruolo": ruolo_utente, "operatore": firma_op, "timestamp": get_now().isoformat()
-                }).execute()
-                st.success("Nota salvata.")
+        # 3. PSICOLOGO & SOCIALE (Valutazione Funzionale)
+        if ruolo_utente in ["Admin", "Psicologo", "Sociale"]:
+            with st.expander("🗣️ AREA PSICOLOGO / SOCIALE", expanded=False):
+                intervento = st.selectbox("Intervento", ["Colloquio", "Test VADO/PANSS", "Relazione Magistratura", "Rete Territoriale"])
+                contenuto = st.text_area("Contenuto del colloquio o della relazione")
+                if st.button("💾 Salva Intervento"):
+                    registra_evento(id_p_attivo, f"[{intervento}] {contenuto}", "Psicologo/Sociale", firma_op)
+
+        # 4. EDUCATORE & OPSI (Riabilitazione e Sicurezza)
+        if ruolo_utente in ["Admin", "Educatore", "Opsi"]:
+            with st.expander("🎨 AREA EDUCATORE & OPSI", expanded=False):
+                col_riab1, col_riab2 = st.columns(2)
+                with col_riab1:
+                    attivita = st.text_input("Attività Riabilitativa")
+                    partecipazione = st.select_slider("Partecipazione", ["Nulla", "Minima", "Buona", "Ottima"])
+                with col_riab2:
+                    clima = st.selectbox("Comportamento", ["Adeguato", "Iperattivo", "Ritiro Sociale", "Aggressività"])
+                
+                if st.button("💾 Salva Report Riabilitativo"):
+                    nota_riab = f"ATTIVITÀ: {attivita} (Partecipazione: {partecipazione}) | COMPORTAMENTO: {clima}"
+                    # Identifichiamo il ruolo specifico per la firma
+                    r_firma = "Opsi" if "Opsi" in ruolo_utente else "Educatore"
+                    registra_evento(id_p_attivo, nota_riab, r_firma, firma_op)
+
+        # 5. OSS (Accudimento)
+        if ruolo_utente in ["Admin", "OSS"]:
+            with st.expander("🧼 AREA OSS", expanded=False):
+                igiene = st.checkbox("Cura della persona effettuata")
+                alimentazione = st.select_slider("Alimentazione", ["Scarsa", "Normale", "Eccessiva"])
+                if st.button("💾 Salva Nota OSS"):
+                    registra_evento(id_p_attivo, f"IGIENE: {'Sì' if igiene else 'No'} | PASTO: {alimentazione}", "OSS", firma_op)
+
 
 
 # --- BLOCCO 4: LOGISTICA, AGENDA, MAPPA LETTI E AMMINISTRAZIONE ---
