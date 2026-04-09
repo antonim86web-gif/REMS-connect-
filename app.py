@@ -130,72 +130,64 @@ if not st.session_state.logged_in:
 # --- VARIABILI GLOBALI DI FIRMA ---
 # Queste verranno usate in tutti i blocchi successivi
 # --- LOGICA DI SICUREZZA PER LE VARIABILI DI SESSIONE (Sostituisce riga 120-121) ---
-if st.session_state.logged_in and st.session_state.user_data:
-    # Cerchiamo i dati sia con la minuscola che con la maiuscola
-    u_name = st.session_state.user_data.get('username') or st.session_state.user_data.get('Username', 'Utente')
-    u_role = st.session_state.user_data.get('ruolo') or st.session_state.user_data.get('Ruolo', 'Staff')
-    
-    firma_op = f"{u_name} ({u_role})"
-    ruolo_utente = u_role
+if not st.session_state.get('logged_in', False):
+    # Sezione Login
+    st.markdown('<div class="login-box">', unsafe_allow_html=True)
+    st.image("https://img.icons8.com/fluency/96/shield.png", width=80)
+    st.title("REMS-Connect Elite")
+    u = st.text_input("Username", key="login_user")
+    p = st.text_input("Password", type="password", key="login_pass")
+    if st.button("ACCEDI AL SISTEMA", use_container_width=True):
+        res = supabase.table("utenti").select("*").eq("username", u).eq("password", p).execute()
+        if res.data:
+            st.session_state.logged_in = True
+            st.session_state.user_data = res.data[0]
+            st.rerun()
+        else:
+            st.error("Credenziali non valide")
+    st.markdown('</div>', unsafe_allow_html=True)
+
 else:
-    # Se i dati mancano, resettiamo e fermiamo per sicurezza
-    st.session_state.logged_in = False
-    st.stop()
-
-
-else: # Inizia da qui (Riga 203 circa del tuo file)
-    # =========================================================
-    # 1. SIDEBAR TECNOLOGIA ELITE (Gestione Ruoli e Navigazione)
-    # =========================================================
+    # --- 1. SIDEBAR TECNOLOGIA ELITE ---
     with st.sidebar:
         st.markdown('<div style="text-align: center; padding: 10px;">', unsafe_allow_html=True)
         st.image("https://img.icons8.com/fluency/96/shield.png", width=60)
         
-        # Recupero dati dall'utente loggato
         u_data = st.session_state.user_data
-        username_log = u_data.get('username', 'Utente')
-        ruolo_raw = u_data.get('ruolo', 'Nessun Ruolo')
-        # Normalizzazione ruolo per evitare errori di case-sensitivity
-        ruolo_utente = ruolo_raw.strip().capitalize()
+        ruolo_utente = str(u_data.get('ruolo', 'Nessuno')).strip().capitalize()
         
-        st.markdown(f"### {username_log}")
+        st.markdown(f"### {u_data.get('username')}")
         st.markdown(f'<p style="color: #6c757d; font-weight: 500;">🆔 RUOLO: {ruolo_utente}</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
-        # Menu di Navigazione
         voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
-        
-        # Sblocco Pannello Admin se il ruolo è "Admin"
         if ruolo_utente == "Admin":
             voci_menu.append("⚙️ Pannello Admin")
 
         scelta_menu = st.radio("Sfoglia Sezioni:", voci_menu)
         st.divider()
 
-        # 2. SELEZIONE PAZIENTE (Motore di sblocco clinico)
+        # Selezione Paziente
         try:
-            # Query a Supabase per la lista pazienti aggiornata
             res_p = supabase.table("pazienti").select("id, nome").execute()
             lista_p = {p['nome']: p['id'] for p in res_p.data}
-            
             st.markdown('<p style="font-size: 0.8em; font-weight: 700; color: #1e3a8a;">🎯 SELEZIONE PAZIENTE</p>', unsafe_allow_html=True)
             nome_sel = st.selectbox("", ["--"] + list(lista_p.keys()), key="sidebar_paz_select")
             
             if nome_sel != "--":
                 paziente_attivo = nome_sel
                 id_p_attivo = lista_p[nome_sel]
-                st.success(f"Paziente: {paziente_attivo}")
+                st.success(f"Attivo: {paziente_attivo}")
             else:
                 paziente_attivo = None
                 id_p_attivo = None
-                st.warning("⚠️ Seleziona un paziente")
-        
-        except Exception as e:
-            st.error(f"Errore caricamento database: {e}")
+                st.warning("⚠️ Seleziona paziente")
+        except:
+            st.error("Errore Database")
 
         st.divider()
-        if st.button("🚪 LOGOUT SISTEMA", use_container_width=True):
+        if st.button("🚪 LOGOUT", use_container_width=True):
             st.session_state.logged_in = False
             st.rerun()
 
