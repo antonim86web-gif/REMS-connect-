@@ -1,6 +1,9 @@
 streamlit
+pandas
 supabase
 groq
+pytz
+reportlab
 fpdf2
-pandas
+
 
