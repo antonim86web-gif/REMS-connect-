@@ -147,21 +147,40 @@ else:
 
 # 1. SIDEBAR DI NAVIGAZIONE (Struttura Dinamica per Ruoli)
 with st.sidebar:
-    st.markdown("<h2 style='text-align: center;'>🛡️ MENU</h2>", unsafe_allow_html=True)
-    
-    # 1. Recupero robusto del ruolo dal database
-    ruolo_db = st.session_state.user_data.get('ruolo', 'Nessun Ruolo').strip().capitalize()
-    
-    # 2. SBLOCCO ADMIN: Se sei 'antony', ti permettiamo di scegliere il ruolo per testare
-    if st.session_state.user_data['username'].lower() == "antony":
-        ruolo_utente = st.selectbox("Cambia Ruolo (Test):", 
-            ["Admin", "Psichiatra", "Infermiere", "Educatore", "Psicologo", "Sociale", "OSS", "Opsi"])
-    else:
-        ruolo_utente = ruolo_db
+        st.markdown("<h2 style='text-align: center;'>🛡️ MENU</h2>", unsafe_allow_html=True)
+        
+        u_data = st.session_state.user_data
+        ruolo_utente = u_data.get('ruolo', 'Nessuno').strip()
+        
+        st.write(f"👤 **Op:** {u_data.get('username')}")
+        st.write(f"🆔 **Ruolo:** {ruolo_utente}")
+        st.divider()
 
-    st.write(f"👤 **Op:** {st.session_state.user_data['username']}")
-    st.write(f"🆔 **Ruolo Attivo:** {ruolo_utente}")
-    st.divider()
+        # Menu principale
+        voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
+        if ruolo_utente == "Admin":
+            voci_menu.append("⚙️ Pannello Admin")
+
+        scelta_menu = st.radio("Seleziona Area:", voci_menu)
+        st.divider()
+
+        # SELEZIONE PAZIENTE (Carica i nomi da Supabase)
+        res_p = supabase.table("pazienti").select("id, nome").execute()
+        lista_p = {p['nome']: p['id'] for p in res_p.data}
+        
+        nome_sel = st.selectbox("🎯 Seleziona Paziente:", ["--"] + list(lista_p.keys()), key="sidebar_paz")
+        
+        if nome_sel != "--":
+            paziente_attivo = nome_sel
+            id_p_attivo = lista_p[nome_sel]
+        else:
+            paziente_attivo = None
+            id_p_attivo = None
+
+        st.divider()
+        if st.button("🚪 Esci dal Sistema", use_container_width=True):
+            st.session_state.logged_in = False
+            st.rerun()
 
     # --- RESTO DELLA TUA SIDEBAR (Menu e Selezione Paziente) ---
     voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
