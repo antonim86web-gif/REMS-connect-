@@ -492,16 +492,39 @@ elif nav == "👥 Modulo Equipe":
 
             # --- AREA PDF (Sotto i tab) ---
             st.divider()
-            with st.expander("📄 ESPORTAZIONE PDF"):
-                # ... (il tuo codice PDF rimane qui, ben allineato sotto il blocco Psichiatra
+            with st.expander("📄 ESPORTAZIONE PDF", expanded=True):
+                tipo_rep = st.radio(
+                    "Contenuto del Report:", 
+                    ["Diario Completo", "Solo Terapie", "Solo Consegne"], 
+                    horizontal=True, key="radio_pdf_final"
+                )
+
+                # Definiamo la query in base alla scelta
+                if tipo_rep == "Solo Terapie":
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (nota LIKE '%💊%' OR nota LIKE '%✔️%' OR nota LIKE '%❌%' OR op LIKE '%SOMMINISTRAZIONE%') ORDER BY id_u DESC"
+                elif tipo_rep == "Solo Consegne":
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? AND (LOWER(ruolo) LIKE '%infermiere%' OR ruolo = 'Infermiere') ORDER BY id_u DESC"
+                else:
+                    q_pdf = "SELECT data, op, nota FROM eventi WHERE id=? ORDER BY id_u DESC"
+                
+                # QUI VIENE CREATA LA VARIABILE (Assicurati che questa riga sia ben allineata)
+                dati_pdf = db_run(q_pdf, (p_id,))
+
+                # Ora il controllo non fallirà più perché dati_pdf esiste sempre (anche se vuota)
                 if dati_pdf:
                     try:
-                        pdf_b = genera_pdf_clinico(p_sel, dati_pdf, tipo_rep)
-                        st.download_button(label="SCARICA", data=pdf_b, file_name="file.pdf")
+                        pdf_b = genera_pdf_clinico(p_id, dati_pdf, tipo_rep)
+                        st.download_button(
+                            label=f"📥 SCARICA PDF",
+                            data=pdf_b,
+                            file_name=f"Report_{p_id}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
                     except Exception as e:
-                        st.error(f"Errore: {e}")
-                else: # <--- Questa è la riga 495
-                    st.warning("Nessun dato trovato.") # <--- Deve essere rientrata!
+                        st.error(f"Errore tecnico PDF: {e}")
+                else:
+                    st.warning("Nessun dato trovato per questa selezione.") # <--- Deve essere rientrata!
 # Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso ben
         elif ruolo_corr == "Infermiere":
             import calendar
