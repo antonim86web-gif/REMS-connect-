@@ -244,149 +244,136 @@ if scelta_menu == "📋 Monitoraggio & Diario":
             
 
 # =========================================================
-# BLOCCO 3: MODULO EQUIPE - CODICE INTEGRALE
+# BLOCCO 3: MODULO EQUIPE (Allineato a scelta_menu)
 # =========================================================
-if menu == "💉 Equipe":
+
+# Usiamo "scelta_menu" perché è così che l'hai definita nella tua sidebar
+if scelta_menu == "💉 Modulo Equipe":
     st.title("💉 Modulo Operativo Equipe Multidisciplinare")
     
+    # Verifica selezione paziente (Assicurati che id_p_attivo sia definito nel Blocco 2)
     if not paziente_attivo:
         st.warning("⚠️ Seleziona un paziente nella Sidebar per operare.")
     else:
-        st.subheader(f"Paziente: {paziente_attivo}")
+        st.subheader(f"Paziente in carico: {paziente_attivo}")
         
-        # ---------------------------------------------------------
-        # 🩺 AREA PSICHIATRA
-        # ---------------------------------------------------------
+        # --- 1. AREA PSICHIATRA ---
         if ruolo_utente in ["Admin", "Psichiatra"]:
             with st.expander("🩺 AREA PSICHIATRA - Gestione Clinica", expanded=True):
                 col1, col2 = st.columns([2, 1])
                 with col1:
                     st.write("### 💊 Prescrizione Terapia")
-                    f_nome = st.text_input("Farmaco")
-                    f_fascia = st.selectbox("Fascia Oraria", ["Mattina (08-13)", "Pomeriggio (14-21)", "Al bisogno (H24)"])
-                    f_dose = st.text_input("Posologia (es. 10mg)")
+                    f_nome = st.text_input("Farmaco", key="f_nome")
+                    f_fascia = st.selectbox("Fascia Oraria", ["Mattina (08-13)", "Pomeriggio (14-21)", "Al bisogno (H24)"], key="f_fascia")
+                    f_dose = st.text_input("Posologia", key="f_dose")
                     if st.button("Conferma Prescrizione"):
                         supabase.table("terapie").insert({
                             "id_paziente": id_p_attivo, "farmaco": f_nome, 
-                            "fascia": f_fascia, "dose": f_dose, "medico": firma_op
+                            "fascia": f_fascia, "dose": f_dose, "medico": st.session_state.user_data['username']
                         }).execute()
-                        registra_evento(id_p_attivo, f"Prescritto {f_nome} ({f_fascia})", "Psichiatra", "[PRESC]", firma_op)
-                
+                        registra_evento(id_p_attivo, f"Prescritto {f_nome} ({f_fascia})", "Psichiatra", "[PRESC]", st.session_state.user_data['username'])
+                        st.success("Terapia registrata correttamente.")
                 with col2:
-                    st.write("### 📊 Monitoraggio Assunzioni")
-                    # Tabella sola lettura per il medico
-                    storico_t = supabase.table("somministrazioni").select("*").eq("id_paziente", id_p_attivo).execute()
-                    if storico_t.data:
-                        df_s = pd.DataFrame(storico_t.data)
-                        st.dataframe(df_s[['created_at', 'farmaco', 'stato', 'operatore']], use_container_width=True)
+                    st.write("### 📊 Monitoraggio")
+                    # Tabella sola lettura per il medico (prende i dati dalle somministrazioni infermieristiche)
+                    try:
+                        storico_t = supabase.table("somministrazioni").select("*").eq("id_paziente", id_p_attivo).execute()
+                        if storico_t.data:
+                            df_s = pd.DataFrame(storico_t.data)
+                            st.dataframe(df_s[['created_at', 'farmaco', 'stato', 'operatore']], use_container_width=True)
+                        else:
+                            st.info("Nessuna somministrazione registrata.")
+                    except:
+                        st.write("Dati monitoraggio non disponibili.")
 
                 st.divider()
-                st.write("### 📝 Consegne e Relazioni")
-                cons_medica = st.text_area("Inserisci Consegna Medica")
+                cons_medica = st.text_area("Inserisci Consegna Medica o Richiesta Esami", key="cons_med")
                 c_m1, c_m2, c_m3 = st.columns(3)
-                if c_m1.button("Invia Consegna"):
-                    registra_evento(id_p_attivo, cons_medica, "Psichiatra", "[CONSEGNA MED]", firma_op)
-                if c_m2.button("Prescrizione Esami"):
-                    registra_evento(id_p_attivo, f"Richiesti esami: {cons_medica}", "Psichiatra", "[ESAMI]", firma_op)
-                if c_m3.button("🤖 Genera Relazione IA"):
-                    st.info("Generazione relazione peritale in corso...")
+                if c_m1.button("📌 Invia Consegna"): 
+                    registra_evento(id_p_attivo, cons_medica, "Psichiatra", "[CONSEGNA MED]", st.session_state.user_data['username'])
+                if c_m2.button("🔬 Richiedi Esami"): 
+                    registra_evento(id_p_attivo, f"Richiesti esami: {cons_medica}", "Psichiatra", "[ESAMI]", st.session_state.user_data['username'])
+                if c_m3.button("🤖 Relazione IA"): 
+                    st.info("Funzione IA Groq in attivazione...")
 
-        # ---------------------------------------------------------
-        # 💉 AREA INFERMIERE
-        # ---------------------------------------------------------
+        # --- 2. AREA INFERMIERE ---
         if ruolo_utente in ["Admin", "Infermiere"]:
             with st.expander("💉 AREA INFERMIERISTICA - Somministrazione", expanded=True):
                 st.write("### 🗓️ Calendario Dinamico Terapie")
+                # Recupera le terapie prescritte dai medici
                 terapie_attive = supabase.table("terapie").select("*").eq("id_paziente", id_p_attivo).execute()
                 
-                for t in terapie_attive.data:
-                    col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
-                    col_t1.write(f"**{t['farmaco']}** - {t['dose']} ({t['fascia']})")
-                    if col_t2.button(f"✅ A", key=f"A_{t['id']}"):
-                        supabase.table("somministrazioni").insert({
-                            "id_paziente": id_p_attivo, "farmaco": t['farmaco'], "stato": "A", "operatore": firma_op
-                        }).execute()
-                        registra_evento(id_p_attivo, f"Assunta terapia: {t['farmaco']}", "Infermiere", "[✅ ASSUNTO]", firma_op)
-                    if col_t3.button(f"❌ R", key=f"R_{t['id']}"):
-                        motivo = st.text_input("Motivo Rifiuto", key=f"mot_{t['id']}")
-                        if motivo:
+                if not terapie_attive.data:
+                    st.info("Nessuna terapia prescritta per questo paziente.")
+                else:
+                    for t in terapie_attive.data:
+                        col_t1, col_t2, col_t3 = st.columns([2, 1, 1])
+                        col_t1.write(f"**{t['farmaco']}** ({t['fascia']})")
+                        # Tasto ASSUNTA
+                        if col_t2.button(f"✅ A", key=f"A_{t['id']}"):
                             supabase.table("somministrazioni").insert({
-                                "id_paziente": id_p_attivo, "farmaco": t['farmaco'], "stato": "R", "operatore": firma_op, "note": motivo
+                                "id_paziente": id_p_attivo, "farmaco": t['farmaco'], "stato": "A", "operatore": st.session_state.user_data['username']
                             }).execute()
-                            registra_evento(id_p_attivo, f"Rifiutata terapia: {t['farmaco']} - Motivo: {motivo}", "Infermiere", "[❌ RIFIUTATO]", firma_op)
+                            registra_evento(id_p_attivo, f"Assunta: {t['farmaco']}", "Infermiere", "[✅ ASSUNTO]", st.session_state.user_data['username'])
+                        # Tasto RIFIUTATA
+                        if col_t3.button(f"❌ R", key=f"R_{t['id']}"):
+                            motivo = st.text_input(f"Motivo R per {t['farmaco']}", key=f"mot_{t['id']}")
+                            if motivo:
+                                supabase.table("somministrazioni").insert({
+                                    "id_paziente": id_p_attivo, "farmaco": t['farmaco'], "stato": "R", "operatore": st.session_state.user_data['username'], "note": motivo
+                                }).execute()
+                                registra_evento(id_p_attivo, f"Rifiutata: {t['farmaco']} - Motivo: {motivo}", "Infermiere", "[❌ RIFIUTATO]", st.session_state.user_data['username'])
+                                st.warning("Rifiuto registrato.")
 
                 st.divider()
-                st.write("### 📊 Parametri Vitali")
-                p1, p2, p3, p4 = st.columns(4)
-                pa = p1.text_input("P.A. (mmHg)")
-                fc = p2.text_input("F.C. (bpm)")
-                sat = p3.text_input("SatO2 (%)")
-                glic = p4.text_input("Glicemia")
-                
-                cons_inf = st.text_area("Consegne Infermieristiche")
-                if st.button("Salva Monitoraggio e Consegne"):
-                    nota_p = f"PA: {pa}, FC: {fc}, Sat: {sat}, Glic: {glic} | {cons_inf}"
-                    registra_evento(id_p_attivo, nota_p, "Infermiere", "[PARAMETRI]", firma_op)
+                st.write("### 📊 Parametri & Consegne")
+                p1, p2, p3 = st.columns(3)
+                pa = p1.text_input("Pressione A.", key="pa_val")
+                fc = p2.text_input("Freq. Card.", key="fc_val")
+                glic = p3.text_input("Glicemia", key="glic_val")
+                cons_inf = st.text_area("Relazione Infermieristica di turno", key="c_inf")
+                if st.button("💾 Salva Monitoraggio"):
+                    registra_evento(id_p_attivo, f"PA: {pa}, FC: {fc}, Glic: {glic} | {cons_inf}", "Infermiere", "[PARAMETRI]", st.session_state.user_data['username'])
 
-        # ---------------------------------------------------------
-        # 🎨 AREA EDUCATORE
-        # ---------------------------------------------------------
+        # --- 3. AREA EDUCATORE ---
         if ruolo_utente in ["Admin", "Educatore"]:
             with st.expander("🎨 AREA EDUCATIVA - Cassa e Tabacco", expanded=False):
-                st.write("### 💰 Registro Cassa")
-                col_c1, col_c2, col_c3 = st.columns(3)
-                tipo_c = col_c1.selectbox("Tipo", ["Entrata", "Uscita"])
-                importo_c = col_c2.number_input("Importo €", step=0.5)
-                causale_c = col_c3.text_input("Causale")
-                
-                if st.button("Registra Movimento"):
-                    # Calcolo saldo (logica semplificata per brevità)
+                st.write("### 💰 Gestione Cassa")
+                c1, c2, c3 = st.columns(3)
+                tipo_c = c1.selectbox("Movimento", ["Entrata", "Uscita"], key="c_tipo")
+                importo_c = c2.number_input("Euro €", step=0.5, key="c_importo")
+                causale_c = c3.text_input("Causale", key="c_causale")
+                if st.button("🧧 Registra Cassa"):
                     supabase.table("cassa").insert({
-                        "id_paziente": id_p_attivo, "tipo": tipo_c, "importo": importo_c, "causale": causale_c, "operatore": firma_op
+                        "id_paziente": id_p_attivo, "tipo": tipo_c, "importo": importo_c, "causale": causale_c, "operatore": st.session_state.user_data['username']
                     }).execute()
-                    registra_evento(id_p_attivo, f"{tipo_c}: {importo_c}€ - {causale_c}", "Educatore", "[CASSA]", firma_op)
-
-                st.divider()
-                st.write("### 🚬 Gestione Beni (Tabacco/Sigarette)")
-                qty_tab = st.number_input("Quantità consegnata", step=1)
-                cons_edu = st.text_area("Attività svolte e Consegne Educative")
-                if st.button("Salva Report Educativo"):
-                    registra_evento(id_p_attivo, f"Tabacco: {qty_tab} | Note: {cons_edu}", "Educatore", "[ATTIVITA]", firma_op)
-
-        # ---------------------------------------------------------
-        # 🧠 AREA PSICOLOGO & SOCIALE
-        # ---------------------------------------------------------
-        if ruolo_utente in ["Admin", "Psicologo", "Sociale"]:
-            with st.expander("🧠 AREA PSICOLOGICA & SOCIALE", expanded=False):
-                if ruolo_utente in ["Admin", "Psicologo"]:
-                    st.write("### 🗣️ Colloqui e Test")
-                    note_psi = st.text_area("Note Colloquio / Somministrazione Test")
-                    if st.button("Salva Nota Psicologica"):
-                        registra_evento(id_p_attivo, note_psi, "Psicologo", "[COLLOQUIO]", firma_op)
+                    registra_evento(id_p_attivo, f"CASSA {tipo_c}: {importo_c}€ - {causale_c}", "Educatore", "[CASSA]", st.session_state.user_data['username'])
+                    st.success("Movimento contabile salvato.")
                 
-                if ruolo_utente in ["Admin", "Sociale"]:
-                    st.divider()
-                    st.write("### 🏛️ Rapporti Enti / Territorio")
-                    note_soc = st.text_area("Comunicazioni UEPE, Tribunali, CSM, SERD")
-                    if st.button("Salva Nota Sociale"):
-                        registra_evento(id_p_attivo, note_soc, "Sociale", "[ENTI]", firma_op)
+                st.divider()
+                st.write("### 🚬 Consegna Tabacco")
+                qty_tab = st.number_input("Quantità sigarette/tabacco", step=1, key="tab_qty")
+                cons_edu = st.text_area("Consegna Educativa / Note Attività", key="c_edu")
+                if st.button("💾 Salva Report Educatore"):
+                    registra_evento(id_p_attivo, f"Tabacco: {qty_tab} | {cons_edu}", "Educatore", "[TABACCO]", st.session_state.user_data['username'])
 
-# ---------------------------------------------------------
-# 🛡️ AREA OSS & OPSI (CONSEGNE GENERALI)
-# ---------------------------------------------------------
-if menu == "💉 Equipe" and ruolo_utente in ["Admin", "OSS", "Opsi"]:
-    with st.container():
-        st.divider()
-        st.subheader("📢 Consegne Generali (Reparto/Vigilanza)")
-        if ruolo_utente in ["Admin", "OSS"]:
-            nota_oss_gen = st.text_area("Consegna Generale OSS (Non specifica del paziente)")
-            if st.button("Salva Consegna Generale OSS"):
-                registra_evento(0, nota_oss_gen, "OSS", "[GENERALE]", firma_op)
-        
-        if ruolo_utente in ["Admin", "Opsi"]:
-            nota_opsi_gen = st.text_area("Consegna Generale OPSI (Sicurezza/Vigilanza)")
-            if st.button("Salva Consegna Generale OPSI"):
-                registra_evento(0, nota_opsi_gen, "Opsi", "[OPSI-GEN]", firma_op)
+        # --- 4. AREA PSICOLOGO / SOCIALE ---
+        if ruolo_utente in ["Admin", "Psicologo", "Sociale"]:
+            with st.expander("🧠 AREA PSICO-SOCIALE", expanded=False):
+                st.write("### 📝 Relazioni e Colloqui")
+                nota_ps = st.text_area("Note colloquio / Rapporti UEPE-Tribunale", key="n_ps")
+                tag_ps = "[COLLOQUIO]" if ruolo_utente == "Psicologo" else "[ENTI]"
+                if st.button("💾 Salva Nota"):
+                    registra_evento(id_p_attivo, nota_ps, ruolo_utente, tag_ps, st.session_state.user_data['username'])
+
+# --- 5. CONSEGNE GENERALI (Sempre visibili in fondo al modulo per i ruoli operativi) ---
+if scelta_menu == "💉 Modulo Equipe" and ruolo_utente in ["Admin", "OSS", "Opsi"]:
+    st.divider()
+    st.subheader("📢 Consegne Generali di Reparto")
+    nota_gen = st.text_area("Inserisci nota logistica, di sicurezza o igiene ambientale", key="n_gen")
+    if st.button("💾 Salva Consegna Generale"):
+        tag_gen = "[OPSI-GEN]" if ruolo_utente == "Opsi" else "[GENERALE]"
+        registra_evento(0, nota_gen, ruolo_utente, tag_gen, st.session_state.user_data['username'])
         
 
 
