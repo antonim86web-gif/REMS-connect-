@@ -405,71 +405,39 @@ elif nav == "👥 Modulo Equipe":
         p_id = [p[0] for p in p_lista if p[1] == p_sel][0]
         now = get_italy_time(); oggi = now.strftime("%d/%m/%Y")
         
-        if ruolo_corr == "Psichiatra":
-            # 1. DEFINIZIONE DEI TAB
-            t1, t2, t3, t4, t5 = st.tabs([
-                "📋 DIARIO CLINICO", "💊 TERAPIA", "💉 SOMMINISTRAZIONI", "🩺 ESAME OBIETTIVO", "🤖 ANALISI CLINICA IA"
-            ])
-            
-            with t1:
-                st.subheader("📝 Nota Diario Clinico")
-                with st.form("form_diario_med"):
-                    nota_med = st.text_area("Valutazione...", height=150)
-                    if st.form_submit_button("REGISTRA NOTA"):
-                        if nota_med:
-                            dt = get_now_it().strftime("%d/%m/%Y %H:%M")
-                            db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                                   (p_id, dt, f"🩺 [DIARIO] {nota_med}", "Psichiatra", firma_op), True)
-                            st.rerun()
+        # --- QUESTA ERA LA VERSIONE STABILE ---
+if ruolo_corr == "Psichiatra":
+    # 3 Tab semplici (niente errori di t4 o t5)
+    t1, t2, t3 = st.tabs(["📋 DIARIO CLINICO", "💊 TERAPIA", "🤖 IA"])
+    
+    with t1:
+        st.subheader("Diario Clinico")
+        with st.form("diario_f"):
+            nota = st.text_area("Inserisci nota")
+            if st.form_submit_button("SALVA"):
+                dt = get_now_it().strftime("%d/%m/%Y %H:%M")
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
+                       (p_id, dt, f"🩺 {nota}", "Psichiatra", firma_op), True)
+                st.rerun()
 
-            with t2:
-                st.subheader("💊 Terapie Attive")
-                terapie = db_run("SELECT id_u, farmaco, dose FROM terapie WHERE p_id=?", (p_id,))
-                if terapie:
-                    for i, t in enumerate(terapie):
-                        c1, c2 = st.columns([4, 1])
-                        c1.info(f"**{t[1]}** - {t[2]}")
-                        if c2.button("🗑️", key=f"del_med_{t[0]}_{i}"):
-                            db_run("DELETE FROM terapie WHERE id_u=?", (t[0],), True)
-                            st.rerun()
-                
-                with st.expander("➕ Nuova Prescrizione"):
-                    with st.form("new_tp"):
-                        f_n = st.text_input("Farmaco")
-                        f_d = st.text_input("Dosaggio")
-                        if st.form_submit_button("SALVA"):
-                            db_run("INSERT INTO terapie (p_id, farmaco, dose) VALUES (?,?,?)", (p_id, f_n, f_d), True)
-                            st.rerun()
+    with t2:
+        st.subheader("Terapia")
+        # Visualizzazione semplice senza troppi bottoni complessi
+        terapie = db_run("SELECT id_u, farmaco FROM terapie WHERE p_id=?", (p_id,))
+        for t in terapie:
+            st.info(f"💊 {t[1]}")
 
-            with t3:
-                st.subheader("💉 Registro Somministrazioni")
-                smarc = db_run("SELECT data_ora, dettaglio, infermiere FROM somministrazioni WHERE id_paziente=?", (p_id,))
-                if smarc:
-                    st.table(pd.DataFrame(smarc, columns=["Data", "Farmaco", "Operatore"]))
-                else:
-                    st.info("Nessun dato.")
+    with t3:
+        st.write("Analisi IA pronta.")
 
-            with t4:
-                st.subheader("🩺 Esame Obiettivo e Parametri")
-                # Visualizza ultimi parametri
-                p_v = db_run("SELECT data, nota FROM eventi WHERE id=? AND nota LIKE '💓%' ORDER BY id_u DESC LIMIT 3", (p_id,))
-                for d, n in p_v: st.write(f"**{d}**: {n}")
-                
-                e_o = st.text_area("Esame obiettivo attuale...")
-                if st.button("SALVA ESAME"):
-                    dt = get_now_it().strftime("%d/%m/%Y %H:%M")
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", 
-                           (p_id, dt, f"🧠 [E.O.] {e_o}", "Psichiatra", firma_op), True)
-                    st.rerun()
-
-            with t5:
-                st.subheader("🤖 Analisi IA")
-                st.write("Modulo IA pronto per l'elaborazione.")
-
-            st.divider()
-            with st.expander("📄 Export PDF"):
-                if st.button("Genera Report"):
-                    st.success("Funzione PDF pronta.")
+elif ruolo_corr == "Infermiere":
+    st.subheader("Area Infermieristica")
+    # Qui le chiavi erano semplici e non duplicate
+    terapie_inf = db_run("SELECT id_u, farmaco FROM terapie WHERE p_id=?", (p_id,))
+    for t in terapie_inf:
+        if st.button(f"Segna {t[1]}", key=f"inf_{t[0]}"):
+            # operazione semplice
+            pass
 
         elif ruolo_corr == "Infermiere":
             st.header("💉 Gestione Terapie")
