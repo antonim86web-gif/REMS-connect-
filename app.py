@@ -143,149 +143,104 @@ else:
     st.stop()
 
 
-# --- BLOCCO 2: NAVIGAZIONE, FILTRI E MONITORAGGIO ---
-
-# 1. SIDEBAR DI NAVIGAZIONE (Struttura Dinamica per Ruoli)
-with st.sidebar:
-        st.markdown("<h2 style='text-align: center;'>🛡️ MENU</h2>", unsafe_allow_html=True)
+else: # Inizia da qui (Riga 203 circa del tuo file)
+    # =========================================================
+    # 1. SIDEBAR TECNOLOGIA ELITE (Gestione Ruoli e Navigazione)
+    # =========================================================
+    with st.sidebar:
+        st.markdown('<div style="text-align: center; padding: 10px;">', unsafe_allow_html=True)
+        st.image("https://img.icons8.com/fluency/96/shield.png", width=60)
         
-        # Recupero dati
+        # Recupero dati dall'utente loggato
         u_data = st.session_state.user_data
-        ruolo_utente = str(u_data.get('ruolo', 'Nessuno')).strip()
+        username_log = u_data.get('username', 'Utente')
+        ruolo_raw = u_data.get('ruolo', 'Nessun Ruolo')
+        # Normalizzazione ruolo per evitare errori di case-sensitivity
+        ruolo_utente = ruolo_raw.strip().capitalize()
         
-        st.write(f"👤 **Op:** {u_data.get('username')}")
-        st.write(f"🆔 **Ruolo:** {ruolo_utente}")
+        st.markdown(f"### {username_log}")
+        st.markdown(f'<p style="color: #6c757d; font-weight: 500;">🆔 RUOLO: {ruolo_utente}</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
-        # Definizione Menu
+        # Menu di Navigazione
         voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
         
-        # Aggiunta condizionale Admin (L'allineamento qui è vitale)
+        # Sblocco Pannello Admin se il ruolo è "Admin"
         if ruolo_utente == "Admin":
             voci_menu.append("⚙️ Pannello Admin")
 
-        # Creazione Radio Menu
-        scelta_menu = st.radio("Seleziona Area:", voci_menu)
+        scelta_menu = st.radio("Sfoglia Sezioni:", voci_menu)
         st.divider()
 
-        # Selezione Paziente
+        # 2. SELEZIONE PAZIENTE (Motore di sblocco clinico)
         try:
+            # Query a Supabase per la lista pazienti aggiornata
             res_p = supabase.table("pazienti").select("id, nome").execute()
             lista_p = {p['nome']: p['id'] for p in res_p.data}
             
-            nome_sel = st.selectbox("🎯 Seleziona Paziente:", ["--"] + list(lista_p.keys()), key="sidebar_paz")
+            st.markdown('<p style="font-size: 0.8em; font-weight: 700; color: #1e3a8a;">🎯 SELEZIONE PAZIENTE</p>', unsafe_allow_html=True)
+            nome_sel = st.selectbox("", ["--"] + list(lista_p.keys()), key="sidebar_paz_select")
             
             if nome_sel != "--":
                 paziente_attivo = nome_sel
                 id_p_attivo = lista_p[nome_sel]
+                st.success(f"Paziente: {paziente_attivo}")
             else:
                 paziente_attivo = None
                 id_p_attivo = None
-        except:
-            st.error("Errore caricamento pazienti")
+                st.warning("⚠️ Seleziona un paziente")
+        
+        except Exception as e:
+            st.error(f"Errore caricamento database: {e}")
 
         st.divider()
-        if st.button("🚪 Esci dal Sistema", use_container_width=True):
+        if st.button("🚪 LOGOUT SISTEMA", use_container_width=True):
             st.session_state.logged_in = False
             st.rerun()
 
-    # --- FINE SIDEBAR (Ora iniziano le pagine) ---
-
-    # --- RESTO DELLA TUA SIDEBAR (Menu e Selezione Paziente) ---
-voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
-if ruolo_utente == "Admin":
-    voci_menu.append("⚙️ Pannello Admin")
-
-    scelta_menu = st.radio("Seleziona Area:", voci_menu)
-    st.divider()
-
-    # Selezione Paziente (necessaria per far apparire i moduli nel Blocco 3)
-    res_p = supabase.table("pazienti").select("id, nome").execute()
-    lista_pazienti = {p['nome']: p['id'] for p in res_p.data}
-    nome_sel = st.selectbox("Seleziona Paziente:", ["--"] + list(lista_pazienti.keys()))
+    # =========================================================
+    # 3. LOGICA DI CARICAMENTO PAGINE (Routing)
+    # =========================================================
     
-    if nome_sel != "--":
-        paziente_attivo = nome_sel
-        id_p_attivo = lista_pazienti[nome_sel]
-    else:
-        paziente_attivo = None
-        id_p_attivo = None
-
-# 2. SELEZIONE PAZIENTE GLOBALE (Necessaria per i blocchi successivi)
-# Recupero lista pazienti da Supabase
-try:
-    res_paz = supabase.table("pazienti").select("id, nome, letto").execute()
-    diz_pazienti = {p['nome']: p['id'] for p in res_paz.data} if res_paz.data else {}
-except:
-    diz_pazienti = {}
-
-st.markdown("---")
-col_p1, col_p2 = st.columns([2, 1])
-with col_p1:
-    paz_selezionato = st.selectbox("🎯 Operazione attiva su Paziente:", ["---"] + list(diz_pazienti.keys()))
-    p_id = diz_pazienti.get(paz_selezionato)
-
-# 3. LOGICA MONITORAGGIO (Visualizzazione Cronologica)
-if scelta_menu == "📋 Monitoraggio & Diario":
-    st.header(f"🔍 Diario Clinico: {paz_selezionato}")
-    
-    if paz_selezionato == "---":
-        st.info("💡 Seleziona un paziente dal menu a tendina sopra per visualizzare la sua storia clinica.")
-    else:
-        # --- FILTRI AVANZATI ---
-        with st.expander("🔎 Filtri di Ricerca Investigativa", expanded=False):
-            f1, f2, f3 = st.columns(3)
-            f_ruolo = f1.selectbox("Filtra per Ruolo:", ["Tutti", "Psichiatra", "Infermiere", "Psicologo", "Educatore", "Sociale", "OSS", "OPSI"])
-            f_testo = f2.text_input("Cerca parola (es: 'caduta', 'rifiuto'):")
-            f_data = f3.date_input("Dalla data:", value=None)
-
-        # --- ESECUZIONE QUERY FILTRATA ---
-        query = supabase.table("eventi").select("*").eq("id_paziente", p_id).order("timestamp", desc=True)
-        
-        if f_ruolo != "Tutti":
-            query = query.eq("ruolo", f_ruolo)
-        if f_testo:
-            query = query.ilike("nota", f"%{f_testo}%")
-            
-        res_note = query.execute()
-
-        # --- AZIONI DI REPORTISTICA ---
-        c_rep1, c_rep2 = st.columns([1, 4])
-        if c_rep1.button("📄 GENERA REPORT PDF"):
-            st.toast("Preparazione PDF in corso...", icon="⏳")
-            # La logica ReportLab verrà richiamata qui nel blocco finale
-
-        # --- VISUALIZZAZIONE A TIMELINE ---
-        if res_note.data:
-            st.write(f"📝 **{len(res_note.data)}** interventi registrati in archivio.")
-            
-            # Mappa colori per identificazione rapida
-            colori = {
-                "Psichiatra": "#d1ecf1", "Infermiere": "#d4edda", 
-                "OPSI": "#f8d7da", "Psicologo": "#e2e3e5", 
-                "Educatore": "#fff3cd", "Admin": "#ffffff"
-            }
-
-            for nota in res_note.data:
-                bg = colori.get(nota['ruolo'], "#ffffff")
-                # Formattazione data
-                dt_obj = datetime.fromisoformat(nota['timestamp'])
-                data_f = dt_obj.strftime("%d/%m/%Y - %H:%M")
-                
-                st.markdown(f"""
-                    <div style="background-color:{bg}; padding:15px; border-radius:10px; border-left: 8px solid #2c3e50; margin-bottom:15px; color: #1e1e1e; box-shadow: 2px 2px 8px rgba(0,0,0,0.1);">
-                        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 5px; margin-bottom: 10px;">
-                            <span style="font-weight: bold; font-size: 0.9em;">📅 {data_f}</span>
-                            <span style="text-transform: uppercase; font-weight: 800; font-size: 0.75em; letter-spacing: 1px;">{nota['ruolo']}</span>
-                        </div>
-                        <div style="font-size: 1.1em; line-height: 1.4;">{nota['nota']}</div>
-                        <div style="text-align: right; margin-top: 10px; font-style: italic; font-size: 0.85em; color: #444;">
-                            ✍️ Firmato: {nota['operatore']}
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
+    if scelta_menu == "📋 Monitoraggio & Diario":
+        # Sezione Monitoraggio originale
+        st.markdown(f'<h1 style="color: #1e3a8a;">📋 Monitoraggio & Diario Clinico</h1>', unsafe_allow_html=True)
+        if paziente_attivo:
+            st.info(f"Paziente selezionato: **{paziente_attivo}**")
+            # --- Inserisci qui il tuo codice specifico del Monitoraggio ---
         else:
-            st.warning("⚠️ Nessuna nota trovata con i filtri selezionati.")
+            st.warning("Seleziona un paziente nella Sidebar per visualizzare i dati clinici.")
+
+    elif scelta_menu == "💉 Modulo Equipe":
+        # Sezione Modulo Equipe (Blocco 3)
+        if not paziente_attivo:
+            st.warning("⚠️ Seleziona un paziente nella Sidebar per operare nel Modulo Equipe.")
+        else:
+            st.markdown(f'<h1 style="color: #1e3a8a;">💉 Modulo Equipe: {paziente_attivo}</h1>', unsafe_allow_html=True)
+            # Qui il codice richiama le funzioni medico/infermiere/educatore
+            # basandosi sulla variabile 'ruolo_utente'
+
+    elif scelta_menu == "🗓️ Agenda Uscite":
+        st.title("🗓️ Agenda Uscite & Permessi")
+        # Inserisci qui il codice per l'agenda uscite
+
+    elif scelta_menu == "🛏️ Mappa Letti":
+        st.title("🛏️ Gestione Mappa Letti")
+        # Inserisci qui il codice per la mappa letti
+
+    elif scelta_menu == "📖 Diario di Bordo":
+        st.title("📖 Diario di Bordo (Consegne Reparto)")
+        # Inserisci qui il codice per le consegne generali
+
+    elif scelta_menu == "⚙️ Pannello Admin":
+        if ruolo_utente == "Admin":
+            st.title("⚙️ Pannello Amministrazione Sistema")
+            # Inserisci qui il codice per l'approvazione utenti e log
+        else:
+            st.error("Accesso negato. Autorizzazioni insufficienti.")
+
+# --- FINE DEL FILE ---
             
 
 # =========================================================
