@@ -493,8 +493,15 @@ elif nav == "👥 Modulo Equipe":
             # --- AREA PDF (Sotto i tab) ---
             st.divider()
             with st.expander("📄 ESPORTAZIONE PDF"):
-                # ... (il tuo codice PDF rimane qui, ben allineato sotto il blocco Psichiatra)
-
+                # ... (il tuo codice PDF rimane qui, ben allineato sotto il blocco Psichiatra
+                if dati_pdf:
+                    try:
+                        pdf_b = genera_pdf_clinico(p_sel, dati_pdf, tipo_rep)
+                        st.download_button(label="SCARICA", data=pdf_b, file_name="file.pdf")
+                    except Exception as e:
+                        st.error(f"Errore: {e}")
+                else: # <--- Questa è la riga 495
+                    st.warning("Nessun dato trovato.") # <--- Deve essere rientrata!
 # Ora l'elif (riga 538) sarà felice perché il blocco sopra è chiuso ben
         elif ruolo_corr == "Infermiere":
             import calendar
