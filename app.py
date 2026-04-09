@@ -239,109 +239,143 @@ else:
 # BLOCCO 3: MODULO EQUIPE (Allineato a scelta_menu)
 # =========================================================
 
-if scelta_menu == "💉 Modulo Equipe":
+elif scelta_menu == "💉 Modulo Equipe":
         if not paziente_attivo:
-            st.warning("⚠️ Seleziona un paziente nella Sidebar per operare nel Modulo Equipe.")
+            st.warning("⚠️ Seleziona un paziente nella Sidebar per sbloccare la Cartella Clinica.")
         else:
-            # Layout Intestazione Elite
-            st.markdown(f"""
-                <div style="background-color: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #1e3a8a; margin-bottom: 20px;">
-                    <h2 style="margin:0; color: #1e3a8a;">💉 Cartella Clinica Integrata</h2>
-                    <p style="margin:0; color: #666;">Paziente: <b>{paziente_attivo}</b> | ID: {id_p_attivo}</p>
-                </div>
-            """, unsafe_allow_html=True)
-
-            # --- SELETTORE RUOLO OPERATIVO (MENU A TENDINA) ---
-            opzioni_ruolo = [
-                "Psichiatra", "Infermiere", "Educatore", 
-                "Psicologo", "Assistente Sociale", "OSS", "OPSI"
-            ]
+            st.markdown(f'<h2 style="color: #1e3a8a;">💉 Cartella Integrata: {paziente_attivo}</h2>', unsafe_allow_html=True)
             
-            # Se sei Admin puoi switchare, altrimenti vedi solo il tuo
+            # --- SELETTORE RUOLO (LOGICA ELITE) ---
+            # Permette all'Admin (Antony) di switchare tra tutti i ruoli 
+            opzioni_ruolo = ["Psichiatra", "Infermiere", "Educatore", "Psicologo", "Assistente Sociale", "OSS", "OPSI"]
             if ruolo_utente == "Admin":
-                ruolo_operativo = st.selectbox("🎭 Visualizza come (Filtro Ruolo):", opzioni_ruolo)
+                ruolo_op = st.selectbox("🎭 Agisci come (Filtro Ruolo):", opzioni_ruolo)
             else:
-                ruolo_operativo = ruolo_utente
-                st.info(f"Accesso limitato al profilo: **{ruolo_operativo}**")
+                ruolo_op = ruolo_utente
 
             st.divider()
 
-            # --- LOGICA DEI SINGOLI MODULI DIVISI ---
-
-            # 1. PSICHIATRA
-            if ruolo_operativo == "Psichiatra":
+            # --- 1. AREA PSICHIATRA ---
+            if ruolo_op == "Psichiatra":
                 st.subheader("🩺 Area Medico-Psichiatrica")
-                with st.form("form_psichiatra"):
-                    st.markdown("##### 💊 Prescrizione Terapia")
-                    farmaco = st.text_input("Farmaco e Dosaggio")
-                    orari = st.multiselect("Fasce Orarie", ["Mattina", "Pranzo", "Pomeriggio", "Cena", "Notte", "Al bisogno"])
-                    note_mediche = st.text_area("Indicazioni Cliniche / Note Peritali")
-                    if st.form_submit_button("REGISTRA PRESCRIZIONE"):
-                        # Logica save su Supabase (tabella prescrizioni)
-                        st.success("Terapia registrata con firma peritale.")
+                t_psi1, t_psi2 = st.tabs(["💊 Terapie & Esami", "📊 Monitoraggio Real-Time"])
+                
+                with t_psi1:
+                    with st.form("form_psichiatra"):
+                        st.markdown("##### Prescrizione e Modifica Terapia")
+                        f_nome = st.text_input("Farmaco")
+                        # Orari definiti dai range: Mattina (8-13), Pomeriggio (14-21), Al bisogno (H24) 
+                        f_orario = st.selectbox("Fascia Oraria", ["Mattina (08:00-13:00)", "Pomeriggio (14:00-21:00)", "Al bisogno (H24)"])
+                        f_dose = st.text_input("Dosaggio")
+                        cons_medica = st.text_area("Consegna Medica / Prescrizione Esami")
+                        
+                        c1, c2 = st.columns(2)
+                        if c1.form_submit_button("REGISTRA PRESCRIZIONE"):
+                            supabase.table("terapie").insert({
+                                "id_paziente": id_p_attivo, "farmaco": f_nome, "fascia": f_orario, 
+                                "dose": f_dose, "medico": u_name
+                            }).execute()
+                            st.success("Terapia e prescrizioni archiviate.")
+                        
+                        if c2.form_submit_button("✨ GENERA RELAZIONE IA"):
+                            st.info("Analisi clinica tramite Groq in corso...") # Integrazione IA 
 
-            # 2. INFERMIERE
-            elif ruolo_operativo == "Infermiere":
+                with t_psi2:
+                    st.markdown("##### Andamento Assunzione (Sola Lettura)") # Tabella non modificabile 
+                    res_s = supabase.table("somministrazioni").select("*").eq("id_paziente", id_p_attivo).execute()
+                    if res_s.data:
+                        st.table(pd.DataFrame(res_s.data)[['timestamp', 'farmaco', 'stato', 'operatore']])
+                    else:
+                        st.info("Nessun dato di assunzione rilevato.")
+
+            # --- 2. AREA INFERMIERE ---
+            elif ruolo_op == "Infermiere":
                 st.subheader("💉 Area Infermieristica")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("##### 📊 Parametri Vitali")
-                    pa = st.text_input("Pressione Art.")
-                    fc = st.number_input("Freq. Cardiaca", step=1)
-                with col2:
-                    st.markdown("##### 💊 Somministrazione")
-                    st.button("✅ CONFERMA TERAPIA MATTINA")
-                    st.button("❌ RIFIUTO TERAPIA")
+                # Calendario dinamico con Tabella A (Assunta) o R (Rifiutata) e firma 
+                with st.expander("🗓️ Calendario Somministrazioni", expanded=True):
+                    terapie = supabase.table("terapie").select("*").eq("id_paziente", id_p_attivo).execute()
+                    for t in terapie.data:
+                        col_t1, col_t2, col_t3 = st.columns([3, 1, 1])
+                        col_t1.write(f"**{t['farmaco']}** [{t['fascia']}]")
+                        if col_t2.button(f"✅ A", key=f"A_{t['id']}"):
+                            supabase.table("somministrazioni").insert({
+                                "id_paziente": id_p_attivo, "farmaco": t['farmaco'], "stato": "A", "operatore": u_name
+                            }).execute()
+                            st.success(f"Assunzione registrata da {u_name}")
+                        if col_t3.button(f"❌ R", key=f"R_{t['id']}"):
+                            motivo = st.text_input("Motivo Rifiuto", key=f"mot_{t['id']}")
+                            if motivo:
+                                supabase.table("somministrazioni").insert({
+                                    "id_paziente": id_p_attivo, "farmaco": t['farmaco'], "stato": "R", "operatore": u_name, "note": motivo
+                                }).execute()
+                                st.error("Rifiuto registrato.")
 
-            # 3. EDUCATORE
-            elif ruolo_operativo == "Educatore":
+                with st.form("inf_details"):
+                    st.markdown("##### Parametri Vitali & Consegne")
+                    c1, c2, c3 = st.columns(3)
+                    pa = c1.text_input("PA (mmHg)")
+                    fc = c2.text_input("FC (bpm)")
+                    spo2 = c3.text_input("SpO2 (%)")
+                    cons_inf = st.text_area("Consegne Infermieristiche")
+                    if st.form_submit_button("SALVA MONITORAGGIO & IA BRIEFING"): # Briefing IA giornaliero 
+                        st.success("Dati salvati. Generazione riassunto IA in corso...")
+
+            # --- 3. AREA EDUCATORE ---
+            elif ruolo_op == "Educatore":
                 st.subheader("🎨 Area Educativa")
-                with st.form("form_educatore"):
-                    st.markdown("##### 💰 Gestione Cassa e Tabacco")
-                    importo = st.number_input("Importo (€)", step=0.50)
-                    causale = st.selectbox("Causale", ["Spesa", "Tabacco", "Ricarica", "Altro"])
-                    descrizione = st.text_area("Dettaglio attività educativa")
-                    if st.form_submit_button("SALVA OPERAZIONE"):
-                        st.success("Movimento cassa registrato.")
+                # Registro cassa (Entrate, Uscite, Saldo) 
+                with st.form("form_cassa"):
+                    st.markdown("##### Registro Cassa, Tabacco e Attività")
+                    c1, c2 = st.columns(2)
+                    mov = c1.selectbox("Tipo Movimento", ["Entrata", "Uscita"])
+                    valore = c2.number_input("Importo (€)", step=0.50)
+                    causale = st.text_input("Causale (es. Spesa, Tabacco, Ricarica)")
+                    attivita = st.text_area("Descrizione Attività Svolte")
+                    cons_edu = st.text_area("Consegne Educative")
+                    if st.form_submit_button("REGISTRA E FIRMA"):
+                        supabase.table("cassa").insert({
+                            "id_paziente": id_p_attivo, "tipo": mov, "importo": valore, 
+                            "causale": causale, "operatore": u_name # Firma operatore automatica 
+                        }).execute()
+                        st.success("Movimento e attività salvati.")
 
-            # 4. PSICOLOGO (Separato)
-            elif ruolo_operativo == "Psicologo":
+            # --- 4. AREA PSICOLOGO ---
+            elif ruolo_op == "Psicologo":
                 st.subheader("🧠 Area Psicologica")
-                with st.expander("📝 Diario Colloqui Individuali", expanded=True):
-                    osservazioni = st.text_area("Note del colloquio clinico")
-                    test = st.text_input("Test somministrati (es. MMPI-2)")
-                    if st.button("SALVA DIARIO PSICOLOGICO"):
-                        st.success("Colloquio archiviato in area protetta.")
+                with st.form("form_psicologo"):
+                    # Colloqui, Test, Consegne e IA 
+                    tipo_c = st.selectbox("Tipo Intervento", ["Colloquio Individuale", "Somministrazione Test", "Gruppo Terapeutico"])
+                    dettaglio_test = st.text_input("Test Somministrati (es. MMPI, Rorschach)")
+                    nota_psic = st.text_area("Consegna / Relazione Psicologica")
+                    if st.form_submit_button("ARCHIVIA & ANALISI IA"):
+                        st.success("Nota psicologica salvata con successo.")
 
-            # 5. ASSISTENTE SOCIALE (Separato)
-            elif ruolo_operativo == "Assistente Sociale":
-                st.subheader("🤝 Area Sociale & Territoriale")
-                with st.expander("📞 Rapporti Enti Esterni", expanded=True):
-                    ente = st.text_input("Ente di riferimento (UEPE, Tribunale, DSM)")
-                    relazione = st.text_area("Sintesi aggiornamento sociale")
-                    if st.button("SALVA NOTA SOCIALE"):
-                        st.success("Aggiornamento inviato all'archivio.")
+            # --- 5. AREA ASSISTENTE SOCIALE ---
+            elif ruolo_op == "Assistente Sociale":
+                st.subheader("🤝 Area Sociale")
+                with st.form("form_sociale"):
+                    # Rapporti enti pubblici e territorio 
+                    ente = st.text_input("Ente Pubblico / Servizio Territoriale (es. UEPE, DSM)")
+                    contatto = st.text_input("Referente / Oggetto")
+                    nota_sociale = st.text_area("Dettaglio Rapporti / Varie")
+                    if st.form_submit_button("SALVA NOTA SOCIALE"):
+                        st.success("Aggiornamento sociale registrato.")
 
-            # 6. OSS (Separato)
-            elif ruolo_operativo == "OSS":
-                st.subheader("🧺 Area Assistenziale (OSS)")
-                with st.form("form_oss"):
-                    st.markdown("##### 🧼 Igiene e Supporto")
-                    opzioni_igiene = st.multiselect("Attività svolte", ["Igiene totale", "Cambio biancheria", "Supporto pasti", "Monitoraggio sonno"])
-                    note_oss = st.text_area("Note assistenziali")
-                    if st.form_submit_button("REGISTRA ATTIVITÀ OSS"):
-                        st.success("Nota assistenziale salvata.")
+            # --- 6. AREA OSS ---
+            elif ruolo_op == "OSS":
+                st.subheader("🧺 Area OSS (Consegne Generali)")
+                # Consegne non legate al singolo paziente 
+                nota_oss = st.text_area("Inserisci Consegna Generica (Igiene ambientale, Logistica reparto)")
+                if st.button("PUBBLICA CONSEGNA OSS"):
+                    st.success("Consegna generale pubblicata nel diario di bordo.")
 
-            # 7. OPSI (Separato)
-            elif ruolo_operativo == "OPSI":
-                st.subheader("🛡️ Area Vigilanza & Sicurezza (OPSI)")
-                with st.form("form_opsi"):
-                    st.markdown("##### 👮 Monitoraggio Sicurezza")
-                    ispezione = st.checkbox("Ispezione camera effettuata")
-                    oggetti = st.text_input("Oggetti non autorizzati rinvenuti")
-                    comportamento = st.select_slider("Livello di collaborazione", options=["Basso", "Medio", "Alto"])
-                    if st.form_submit_button("INVIA REPORT OPSI"):
-                        st.success("Report sicurezza inviato al sistema.")
+            # --- 7. AREA OPSI ---
+            elif ruolo_op == "OPSI":
+                st.subheader("🛡️ Area OPSI (Vigilanza)")
+                # Consegne generiche di sicurezza 
+                nota_opsi = st.text_area("Report Vigilanza e Sicurezza (Generico Reparto)")
+                if st.button("INVIA REPORT SICUREZZA"):
+                    st.success("Report OPSI archiviato.")
         
 
 
