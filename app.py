@@ -527,16 +527,18 @@ elif nav == "👥 Modulo Equipe":
                         
                         with st.popover(f"Smarca {nome_f}"):
                             c1, c2 = st.columns(2)
-                            if c1.button("✅ ASSUNTO", key=f"ok_{t_id_univoco}_{turno_attivo}"):
+                            if c1.button("✅ ASSUNTO", key=f"inf_ok_{t_id_univoco}_{turno_attivo}_{p_id}"):
                                 nota_f = f"✔️ [{t_id_univoco}] {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "A"), True)
                                 st.rerun()
-                            if c2.button("❌ RIFIUTO", key=f"ko_{t_id_univoco}_{turno_attivo}"):
+                                pass
+                           if c2.button("❌ RIFIUTATO", key=f"inf_ref_{t_id_univoco}_{turno_attivo}_{p_id}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "R"), True)
                                 st.rerun()
+                               pass
                         st.divider()
                         with t2:
                             st.subheader("💓 Rilevazione Parametri Vitali")
