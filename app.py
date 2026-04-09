@@ -24,20 +24,51 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# 1. GESTIONE ACCESSO (LOGIN)
+# LOGIN BLINDATO CON DEBUG INTEGRATO
 # =========================================================
 if not st.session_state.get('logged_in', False):
-    st.markdown('<div style="max-width:400px; margin: 100px auto;">', unsafe_allow_html=True)
-    st.title("🛡️ REMS-Connect")
-    u = st.text_input("Username")
-    p = st.text_input("Password", type="password")
-    if st.button("ACCEDI", use_container_width=True):
-        res = supabase.table("utenti").select("*").eq("username", u).eq("password", p).execute()
-        if res.data:
-            st.session_state.logged_in = True
-            st.session_state.user_data = res.data[0]
-            st.rerun()
-        else: st.error("Accesso negato.")
+    st.markdown('<div style="max-width:400px; margin:auto; padding-top:50px; text-align:center;">', unsafe_allow_html=True)
+    st.title("🛡️ REMS-Connect Login")
+    
+    u_input = st.text_input("Username").strip()
+    p_input = st.text_input("Password", type="password").strip()
+    
+    col1, col2 = st.columns(2)
+    
+    if col1.button("ACCEDI", use_container_width=True):
+        try:
+            # Cerchiamo l'utente (usiamo il minuscolo per sicurezza)
+            res = supabase.table("utenti").select("*").execute()
+            
+            # Filtriamo manualmente per evitare problemi di Case Sensitivity
+            user_match = next((item for item in res.data if item["username"].lower() == u_input.lower()), None)
+            
+            if user_match:
+                if user_match["password"] == p_input:
+                    st.session_state.logged_in = True
+                    st.session_state.user_data = user_match
+                    st.success("Accesso in corso...")
+                    st.rerun()
+                else:
+                    st.error("❌ Password errata.")
+            else:
+                st.error(f"❌ Utente '{u_input}' non trovato nel database.")
+                
+        except Exception as e:
+            st.error(f"⚠️ Errore di connessione a Supabase: {e}")
+
+    # --- PULSANTE DI EMERGENZA (Solo se non riesci a entrare) ---
+    if col2.button("CREA ADMIN ORA", use_container_width=True):
+        try:
+            supabase.table("utenti").insert({
+                "username": "Antony", 
+                "password": "admin123", 
+                "ruolo": "Admin"
+            }).execute()
+            st.warning("✅ Utente 'Antony' con pass 'admin123' creato! Ora prova il login.")
+        except:
+            st.info("L'utente esiste già o c'è un errore di rete.")
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
