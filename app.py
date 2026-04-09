@@ -532,13 +532,13 @@ elif nav == "👥 Modulo Equipe":
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "A"), True)
                                 st.rerun()
-                                pass
-                           if c2.button("❌ RIFIUTATO", key=f"inf_ref_{t_id_univoco}_{turno_attivo}_{p_id}"):
+                                st.success("Registrato")
+                            if c2.button("❌ RIFIUTATO", key=f"inf_ref_{t_id_univoco}_{turno_attivo}_{p_id}"):
                                 nota_f = f"❌ [{t_id_univoco}] RIFIUTO {nome_f} ({turno_attivo})"
                                 db_run("INSERT INTO eventi (id, data, nota, ruolo, op, esito) VALUES (?,?,?,?,?,?)", 
                                        (p_id, get_now_it().strftime("%d/%m/%Y %H:%M"), nota_f, ruolo_reale, nome_reale, "R"), True)
                                 st.rerun()
-                               pass
+                                st.success("Rifiutato")
                         st.divider()
                         with t2:
                             st.subheader("💓 Rilevazione Parametri Vitali")
