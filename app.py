@@ -50,22 +50,34 @@ client_groq = Groq(api_key=KEY_GROQ)
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_data = None
-
 def login_user(username, password):
-    # Verifica credenziali sulla tabella 'utenti'
+    # Verifica credenziali
     res = supabase.table("utenti").select("*").eq("username", username).eq("password", password).execute()
     if res.data:
+        # Recupero i dati del primo utente trovato
+        user = res.data[0]
+        
+        # CONTROLLO ROBUSTO: Cerchiamo 'ruolo' o 'Ruolo'
+        ruolo_effettivo = user.get('ruolo') or user.get('Ruolo') or "Staff"
+        
         st.session_state.logged_in = True
-        st.session_state.user_data = res.data[0]
-        # REGISTRAZIONE ACCESSO NELLA SCATOLA NERA
-        supabase.table("logs").insert({
-            "utente": username,
-            "azione": "LOGIN_SUCCESS",
-            "timestamp": get_now().isoformat(),
-            "ruolo": res.data[0]['ruolo']
-        }).execute()
+        st.session_state.user_data = user
+        st.session_state.user_data['ruolo'] = ruolo_effettivo # Lo forziamo per i blocchi success
+        
+        # REGISTRAZIONE NEI LOG
+        try:
+            supabase.table("logs").insert({
+                "utente": username,
+                "azione": "LOGIN_SUCCESS",
+                "timestamp": get_now().isoformat(),
+                "ruolo": ruolo_effettivo
+            }).execute()
+        except:
+            pass # Evita crash se la tabella logs ha problemi
+            
         return True
     return False
+
 
 # --- 4. INTERFACCIA DI ACCESSO (LOGIN / REGISTRAZIONE) ---
 if not st.session_state.logged_in:
