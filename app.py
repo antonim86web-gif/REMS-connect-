@@ -128,7 +128,7 @@ if not st.session_state.logged_in:
     st.stop() # Blocco di sicurezza: se non sei loggato, il codice finisce qui.
 
 # =========================================================
-# 1. GESTIONE ACCESSO (LOGIN) - L'unico IF principale
+# 1. GESTIONE ACCESSO (LOGIN)
 # =========================================================
 if not st.session_state.get('logged_in', False):
     st.markdown('<div class="login-box">', unsafe_allow_html=True)
@@ -148,7 +148,7 @@ if not st.session_state.get('logged_in', False):
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================
-# 2. AREA OPERATIVA - Tutto dentro l'ELSE (Indentazione a 4 spazi)
+# 2. AREA RISERVATA (Tutto il software dentro questo ELSE)
 # =========================================================
 else:
     # --- SIDEBAR ELITE ---
@@ -157,11 +157,9 @@ else:
         st.image("https://img.icons8.com/fluency/96/shield.png", width=60)
         u_data = st.session_state.user_data
         u_name = u_data.get('username')
-        # Normalizzazione Ruolo
-        ruolo_raw = u_data.get('ruolo', 'Nessuno')
-        ruolo_utente = ruolo_raw.strip().capitalize()
+        ruolo_utente = str(u_data.get('ruolo', 'Nessuno')).strip().capitalize()
         st.markdown(f"### {u_name}")
-        st.markdown(f"🆔 **Ruolo:** {ruolo_utente}")
+        st.markdown(f"🆔 **{ruolo_utente}**")
         st.markdown('</div>', unsafe_allow_html=True)
         st.divider()
 
@@ -172,7 +170,7 @@ else:
         scelta_menu = st.radio("Seleziona Area:", voci_menu)
         st.divider()
 
-        # Selezione Paziente (Indispensabile per i moduli clinici)
+        # Selezione Paziente
         res_p = supabase.table("pazienti").select("id, nome").execute()
         lista_p = {p['nome']: p['id'] for p in res_p.data}
         nome_sel = st.selectbox("🎯 Paziente in carico:", ["--"] + list(lista_p.keys()))
@@ -180,23 +178,26 @@ else:
         paziente_attivo = nome_sel if nome_sel != "--" else None
         id_p_attivo = lista_p.get(nome_sel) if nome_sel != "--" else None
 
-        if st.button("🚪 LOGOUT", use_container_width=True):
+        if st.button("🚪 Esci dal Sistema", use_container_width=True):
             st.session_state.logged_in = False
             st.rerun()
 
-    # --- GESTIONE PAGINE (Sempre dentro l'ELSE) ---
+    # --- NAVIGAZIONE PAGINE (Indentato correttamente) ---
     
     if scelta_menu == "📋 Monitoraggio & Diario":
         st.title("📋 Monitoraggio & Diario Clinico")
-        # Inserisci qui il tuo codice originale del diario
+        if paziente_attivo:
+            st.info(f"Dati di: {paziente_attivo}")
+        else:
+            st.warning("Seleziona un paziente nella sidebar.")
 
     elif scelta_menu == "💉 Modulo Equipe":
-        st.markdown(f'<h1 style="color: #1e3a8a;">💉 Modulo Equipe Integrato</h1>', unsafe_allow_html=True)
+        st.markdown(f'<h1 style="color: #1e3a8a;">💉 Modulo Equipe</h1>', unsafe_allow_html=True)
         
-        # LOGICA RUOLI: Admin vede tutto, gli altri solo il proprio
-        opzioni_ruolo = ["Psichiatra", "Infermiere", "Educatore", "Psicologo", "Assistente Sociale", "OSS", "OPSI"]
+        # Admin switch
+        ruoli_disponibili = ["Psichiatra", "Infermiere", "Educatore", "Psicologo", "Assistente Sociale", "OSS", "OPSI"]
         if ruolo_utente == "Admin":
-            ruolo_op = st.selectbox("🎭 Cambia Profilo Operativo (Admin Mode):", opzioni_ruolo)
+            ruolo_op = st.selectbox("🎭 Visualizza come (Filtro Ruolo):", ruoli_disponibili)
         else:
             ruolo_op = ruolo_utente
 
@@ -204,107 +205,93 @@ else:
 
         # 🩺 1. PSICHIATRA
         if ruolo_op == "Psichiatra":
-            if not paziente_attivo: st.warning("Seleziona un paziente nella sidebar"); st.stop()
-            t1, t2 = st.tabs(["📝 Prescrizioni", "📊 Monitoraggio Real-Time"])
-            with t1:
-                with st.form("form_psi"):
-                    st.markdown("##### Prescrizione Terapia")
-                    farmaco = st.text_input("Nome Farmaco")
-                    fascia = st.selectbox("Orari Somministrazione", ["Mattina (08:00-13:00)", "Pomeriggio (14:00-21:00)", "Al bisogno (H24)"])
-                    consegna_med = st.text_area("Consegna Medica / Prescrizione Esami")
-                    if st.form_submit_button("REGISTRA & GENERA RELAZIONE IA"):
-                        st.success("Prescrizione inviata. Relazione IA in elaborazione...")
-            with t2:
-                st.info("Monitoraggio assunzioni (Sola Lettura)")
-                # Visualizzazione tabella da Supabase
-                st.table({"Ora": ["08:30"], "Farmaco": ["Talofen"], "Stato": ["A"], "Firma": ["Inf. Rossi"]})
+            if not paziente_attivo: st.warning("⚠️ Seleziona paziente"); st.stop()
+            tab1, tab2 = st.tabs(["📝 Prescrizioni", "📊 Monitoraggio"])
+            with tab1:
+                with st.form("f_psi"):
+                    f_nome = st.text_input("Farmaco")
+                    f_orario = st.selectbox("Range Orario", ["Mattina (08:00-13:00)", "Pomeriggio (14:00-21:00)", "Al bisogno (H24)"])
+                    f_esami = st.text_area("Prescrizione Esami / Consegna Medica")
+                    if st.form_submit_button("REGISTRA & RELAZIONE IA"):
+                        st.success("Atto medico registrato.")
+            with tab2:
+                st.subheader("Andamento Assunzioni (Sola Lettura)")
+                st.info("Tabella riassuntiva terapie somministrate in tempo reale.")
+                # Esempio tabella statica
+                st.table({"Ora": ["08:30"], "Farmaco": ["Depakin"], "Stato": ["A"], "Firma": ["Inf.1"]})
 
         # 💉 2. INFERMIERE
         elif ruolo_op == "Infermiere":
-            if not paziente_attivo: st.warning("Seleziona un paziente"); st.stop()
-            st.markdown("##### 🗓️ Calendario Dinamico Somministrazioni")
-            # Logica A (Assunta) o R (Rifiutata) con firma automatica
-            col1, col2, col3 = st.columns([3,1,1])
-            col1.write("**Terapia: Haldol 5mg** (Mattina)")
-            if col2.button("✅ A", key="btn_a"): st.success(f"Assunta - Firma: {u_name}")
-            if col3.button("❌ R", key="btn_r"): st.error(f"Rifiutata - Firma: {u_name}")
+            if not paziente_attivo: st.warning("⚠️ Seleziona paziente"); st.stop()
+            st.subheader("🗓️ Calendario Somministrazioni (A/R)")
+            # Logica pulsanti per tabella dinamica
+            c1, c2, c3 = st.columns([2,1,1])
+            c1.write("**Terapia: Haldol 5mg**")
+            if c2.button("✅ A (Assunta)"): st.success(f"Firma: {u_name}")
+            if c3.button("❌ R (Rifiutata)"): st.error(f"Firma: {u_name}")
             
             with st.form("f_inf"):
-                st.markdown("##### Parametri Vitali & Briefing")
-                st.text_input("Parametri (PA, FC, SpO2, Temp)")
+                st.text_input("Parametri Vitali")
                 st.text_area("Consegne Infermieristiche")
-                if st.form_submit_button("SALVA & BREAFING IA"):
-                    st.info("Riassunto giornaliero generato con successo.")
+                if st.form_submit_button("GENERA BREAFING IA"):
+                    st.info("Riassunto giornaliero in elaborazione...")
 
         # 🎨 3. EDUCATORE
         elif ruolo_op == "Educatore":
-            if not paziente_attivo: st.warning("Seleziona un paziente"); st.stop()
+            if not paziente_attivo: st.warning("⚠️ Seleziona paziente"); st.stop()
             with st.form("f_edu"):
-                st.markdown("##### Registro Cassa & Attività")
-                c1, c2 = st.columns(2)
-                c1.number_input("Movimento € (Entrate/Uscite)", step=0.50)
-                c2.text_input("Gestione Sigarette e Tabacco")
-                st.text_area("Attività svolte con il paziente")
-                st.text_area("Consegne Educative")
-                if st.form_submit_button("REGISTRA E FIRMA"):
-                    st.success(f"Dati educativi salvati. Firma: {u_name}")
+                st.subheader("💰 Registro Cassa & Attività")
+                col1, col2 = st.columns(2)
+                col1.number_input("Movimento € (Entrate/Uscite)", step=0.50)
+                col2.text_input("Gestione Sigarette/Tabacco")
+                st.text_area("Attività svolte / Consegne Educative")
+                if st.form_submit_button("SALVA & FIRMA"):
+                    st.success(f"Registrato da {u_name}")
 
         # 🧠 4. PSICOLOGO
         elif ruolo_op == "Psicologo":
-            if not paziente_attivo: st.warning("Seleziona un paziente"); st.stop()
+            if not paziente_attivo: st.warning("⚠️ Seleziona paziente"); st.stop()
             with st.form("f_psico"):
-                st.markdown("##### Area Psicologia")
-                st.selectbox("Tipo", ["Colloquio Individuale", "Somministrazione Test"])
+                st.selectbox("Intervento", ["Colloquio Individuale", "Somministrazione Test"])
                 st.text_area("Consegna / Relazione Psicologica")
                 if st.form_submit_button("ARCHIVIA & RELAZIONE IA"):
-                    st.success("Documentazione psicologica archiviata.")
+                    st.success("Relazione archiviata.")
 
         # 🤝 5. ASSISTENTE SOCIALE
         elif ruolo_op == "Assistente Sociale":
-            if not paziente_attivo: st.warning("Seleziona un paziente"); st.stop()
+            if not paziente_attivo: st.warning("⚠️ Seleziona paziente"); st.stop()
             with st.form("f_soc"):
-                st.markdown("##### Rapporti Territoriali")
-                st.text_input("Enti Pubblici (UEPE, Tribunale)")
-                st.text_input("Servizi del Territorio")
-                st.text_area("Varie ed Aggiornamenti")
-                if st.form_submit_button("SALVA DATI SOCIALI"):
-                    st.success("Aggiornamento salvato.")
+                st.text_input("Rapporti Enti Pubblici (UEPE, DSM, Tribunale)")
+                st.text_input("Rapporti Servizi del Territorio")
+                st.text_area("Note Varie")
+                if st.form_submit_button("SALVA"):
+                    st.success("Aggiornamento sociale salvato.")
 
         # 🧺 6. OSS
         elif ruolo_op == "OSS":
             st.subheader("🧺 Consegne Generiche OSS")
-            # Funzioni generiche, non del singolo paziente
-            nota_oss = st.text_area("Inserisci consegna (Logistica, Igiene Reparto, Varie)")
+            nota_oss = st.text_area("Consegne reparto (Logistica, Igiene, Varie)")
             if st.button("PUBBLICA CONSEGNA"):
-                st.success("Consegna generale OSS registrata.")
+                st.success("Nota OSS inserita.")
 
         # 🛡️ 7. OPSI
         elif ruolo_op == "OPSI":
-            st.subheader("🛡️ Consegne Vigilanza OPSI")
-            # Funzioni generiche di reparto
-            nota_opsi = st.text_area("Report Sicurezza e Vigilanza Reparto")
-            if st.button("INVIA REPORT VIGILANZA"):
+            st.subheader("🛡️ Report Sicurezza OPSI")
+            nota_opsi = st.text_area("Report vigilanza (Sicurezza Reparto)")
+            if st.button("INVIA REPORT"):
                 st.success("Report OPSI archiviato.")
 
     elif scelta_menu == "🗓️ Agenda Uscite":
         st.title("🗓️ Agenda Uscite")
-        # Tuo codice agenda...
 
-    # Aggiungi qui gli altri elif per Mappa Letti e Diario di Bordo
     elif scelta_menu == "🛏️ Mappa Letti":
-        st.title("🛏️ Gestione Mappa Letti")
-        # Inserisci qui il codice per la mappa letti
+        st.title("🛏️ Mappa Letti")
 
     elif scelta_menu == "📖 Diario di Bordo":
-        st.title("📖 Diario di Bordo (Consegne Reparto)")
-        # Inserisci qui il codice per le consegne generali
+        st.title("📖 Diario di Bordo")
 
     elif scelta_menu == "⚙️ Pannello Admin":
-        if ruolo_utente == "Admin":
-            st.title("⚙️ Pannello Amministrazione Sistema")
-            # Inserisci qui il codice per l'approvazione utenti e log
-        else:
-            st.error("Accesso negato. Autorizzazioni insufficienti.")
+        st.title("⚙️ Pannello Admin")
 
 # --- FINE DEL FILE ---
             
