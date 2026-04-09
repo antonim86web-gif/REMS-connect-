@@ -152,18 +152,31 @@ with st.sidebar:
     st.write(f"🆔 **Ruolo:** {ruolo_utente}")
     st.divider()
 
-    # Menu principale
     voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
-        # Sezione Admin visibile per chi ha ruolo Admin o Staff (per sbloccarti ora)
     if ruolo_utente in ["Admin", "Staff", "admin", "staff"]:
         voci_menu.append("⚙️ Pannello Admin")
 
     scelta_menu = st.radio("Seleziona Area:", voci_menu)
-    
     st.divider()
+
+    # --- AGGIUNGI QUESTE RIGHE PER RISOLVERE L'ERRORE ---
+    # 1. Recupera i pazienti (se non l'hai già fatto sopra)
+    res_p = supabase.table("pazienti").select("id, nome").execute()
+    lista_pazienti = {p['nome']: p['id'] for p in res_p.data}
+    
+    # 2. Crea la selectbox e assegna i valori alle variabili attese dal Blocco 3
+    nome_sel = st.selectbox("Seleziona Paziente:", ["--"] + list(lista_pazienti.keys()))
+    
+    if nome_sel != "--":
+        paziente_attivo = nome_sel
+        id_p_attivo = lista_pazienti[nome_sel]
+    else:
+        paziente_attivo = None
+        id_p_attivo = None
+    # ---------------------------------------------------
+
     if st.button("🚪 Esci dal Sistema"):
         st.session_state.logged_in = False
-        st.session_state.user_data = None
         st.rerun()
 
 # 2. SELEZIONE PAZIENTE GLOBALE (Necessaria per i blocchi successivi)
