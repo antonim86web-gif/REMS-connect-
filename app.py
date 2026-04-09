@@ -169,50 +169,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATABASE ENGINE ---
-DB_NAME = "rems_final_v12.db"
-def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
-
-def db_run(query, params=(), commit=False):
-    try:
-        # 1. LOGIN UTENTI
-        if "FROM utenti" in query:
-            user_input = params[0]
-            pwd_input = params[1]
-            res = supabase.table("utenti").select("*").eq("user", user_input).eq("pwd", pwd_input).execute()
-            if res.data:
-                # Restituiamo il formato che il tuo codice si aspetta: [[nome, cognome, qualifica]]
-                return [[res.data[0]['nome'], res.data[0]['cognome'], res.data[0]['qualifica']]]
-            return []
-
-        # 2. SELEZIONE PAZIENTI
-        elif "FROM pazienti" in query:
-            res = supabase.table("pazienti").select("id, nome").eq("stato", "ATTIVO").execute()
-            return [[r['id'], r['nome']] for r in res.data]
-
-        # 3. INSERIMENTO NUOVO PAZIENTE
-        elif "INSERT INTO pazienti" in query:
-            supabase.table("pazienti").insert({"nome": params[0], "stato": "ATTIVO"}).execute()
-            return []
-
-        # 4. LOGICA PER EVENTI/DIARIO
-        elif "FROM eventi" in query:
-            # Qui filtriamo per l'ID del paziente (params[0])
-            res = supabase.table("eventi").select("*").eq("id", params[0]).order("id", descending=True).execute()
-            return [[r['data'], r['ruolo'], r['op'], r['nota']] for r in res.data]
-
-    except Exception as e:
-        st.error(f"Errore Cloud Supabase: {e}")
-        return []
-    return []
-
-
-def render_postits(reparto_filtro):
-    # Nota: ci devono essere 4 spazi prima di st.write
-    st.write(f"Visualizzazione post-it per: {reparto_filtro}")
-    pass
-
-
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 if 'user_session' not in st.session_state:
     st.session_state.user_session = None
