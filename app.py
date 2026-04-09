@@ -154,9 +154,8 @@ with st.sidebar:
 
     # Menu principale
     voci_menu = ["📋 Monitoraggio & Diario", "💉 Modulo Equipe", "🗓️ Agenda Uscite", "🛏️ Mappa Letti", "📖 Diario di Bordo"]
-    
-    # Sezione Admin visibile solo agli amministratori
-    if ruolo_utente == "Admin":
+        # Sezione Admin visibile per chi ha ruolo Admin o Staff (per sbloccarti ora)
+    if ruolo_utente in ["Admin", "Staff", "admin", "staff"]:
         voci_menu.append("⚙️ Pannello Admin")
 
     scelta_menu = st.radio("Seleziona Area:", voci_menu)
