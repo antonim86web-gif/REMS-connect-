@@ -45,31 +45,34 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 
 
-# --- MOTORE DATABASE UNIFICATO ---
+# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
 def db_run(query, params=None, commit=False):
+
     try:
         q = query.upper()
-        # 1. GESTIONE UTENTI
+        # --- GESTIONE UTENTI ---
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
-            return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data] if res.data else []
-        
-        # 2. GESTIONE PAZIENTI
+            if res.data:
+                return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
+            return []
+
+        # --- GESTIONE PAZIENTI ---
         if "FROM PAZIENTI" in q:
             res = supabase.table("pazienti").select("*").execute()
             return res.data if res.data else []
 
-        # 3. GESTIONE DIARIO / EVENTI (Correzione Errore Red)
-        if "FROM EVENTI" in q or "FROM DIARIO" in q:
-            # Qui usiamo ascending=False per risolvere l'errore dello screenshot
+        # --- GESTIONE DIARIO / EVENTI / CONSEGNE (Tutte le figure) ---
+        if "FROM EVENTI" in q or "FROM DIARIO" in q or "FROM CONSEGNE" in q:
+            # Protezione 'descending' e limite per velocità
             res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(40).execute()
             return res.data if res.data else []
 
-        # 4. GESTIONE TERAPIE
-        if "FROM TERAPIE" in q:
+        # --- GESTIONE TERAPIE / SOMMINISTRAZIONI ---
+        if "FROM TERAPIE" in q or "FROM SOMMINISTRAZIONI" in q:
             res = supabase.table("terapie").select("*").execute()
             return res.data if res.data else []
-            
+
         return []
     except Exception:
         return []
@@ -168,6 +171,50 @@ st.markdown("""
     .stanza-isolamento { border-left-color: #ef4444; background-color: #fef2f2; border-width: 2px; }
 </style>
 """, unsafe_allow_html=True)
+
+# --- DATABASE ENGINE ---
+DB_NAME = "rems_final_v12.db"
+def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
+
+def db_run(query, params=(), commit=False):
+    try:
+        # 1. LOGIN UTENTI
+        if "FROM utenti" in query:
+            user_input = params[0]
+            pwd_input = params[1]
+            res = supabase.table("utenti").select("*").eq("user", user_input).eq("pwd", pwd_input).execute()
+            if res.data:
+                # Restituiamo il formato che il tuo codice si aspetta: [[nome, cognome, qualifica]]
+                return [[res.data[0]['nome'], res.data[0]['cognome'], res.data[0]['qualifica']]]
+            return []
+
+        # 2. SELEZIONE PAZIENTI
+        elif "FROM pazienti" in query:
+            res = supabase.table("pazienti").select("id, nome").eq("stato", "ATTIVO").execute()
+            return [[r['id'], r['nome']] for r in res.data]
+
+        # 3. INSERIMENTO NUOVO PAZIENTE
+        elif "INSERT INTO pazienti" in query:
+            supabase.table("pazienti").insert({"nome": params[0], "stato": "ATTIVO"}).execute()
+            return []
+
+        # 4. LOGICA PER EVENTI/DIARIO
+        elif "FROM eventi" in query:
+            # Qui filtriamo per l'ID del paziente (params[0])
+            res = supabase.table("eventi").select("*").eq("id", params[0]).order("id", descending=True).execute()
+            return [[r['data'], r['ruolo'], r['op'], r['nota']] for r in res.data]
+
+    except Exception as e:
+        st.error(f"Errore Cloud Supabase: {e}")
+        return []
+    return []
+
+
+def render_postits(reparto_filtro):
+    # Nota: ci devono essere 4 spazi prima di st.write
+    st.write(f"Visualizzazione post-it per: {reparto_filtro}")
+    pass
+
 
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 if 'user_session' not in st.session_state:
@@ -283,7 +330,7 @@ if nav == "📍 Mappa Posti":
                 dsid, dl = dest.split("-L")
                 db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid_sel,), True)
                 db_run("INSERT INTO assegnazioni (p_id, stanza_id, letto, data_ass) VALUES (?,?,?,?)", (pid_sel, dsid, int(dl), get_now_it().strftime("%Y-%m-%d")), True)
-                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid_sel, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 TRASFERIMENTO: Spostato in {dsid} Letto {dl}. Motivo: {mot}", u.get('qualifica', 'Operatore') , firma_op), True)
+                db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid_sel, get_now_it().strftime("%d/%m/%Y %H:%M"), f"🔄 TRASFERIMENTO: Spostato in {dsid} Letto {dl}. Motivo: {mot}", u['ruolo'], firma_op), True)
                 st.rerun()
 
 elif nav == "📊 Monitoraggio":
@@ -485,7 +532,7 @@ elif nav == "👥 Modulo Equipe":
             # --- IDENTIFICAZIONE DINAMICA DAL TUO LOGIN ---
             u = st.session_state.user_session
             nome_reale = f"{u['nome']} {u['cognome']}"
-            ruolo_reale = u.get('qualifica', 'Operatore')
+            ruolo_reale = u['ruolo']
 
             with t1:
                 st.subheader("Registrazione Somministrazione Farmaci")
@@ -734,7 +781,7 @@ elif nav == "📅 Agenda Dinamica":
                 for nome_p in ps_sel:
                     pid = [p[0] for p in p_l if p[1]==nome_p][0]
                     db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
-                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u.get('qualifica', 'Operatore') , firma_op), True)
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u['ruolo'], firma_op), True)
                 st.rerun()
         
         st.divider()
