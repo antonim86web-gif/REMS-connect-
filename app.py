@@ -239,7 +239,7 @@ else:
 # BLOCCO 3: MODULO EQUIPE (Allineato a scelta_menu)
 # =========================================================
 
-elif scelta_menu == "💉 Modulo Equipe":
+if scelta_menu == "💉 Modulo Equipe":
         if not paziente_attivo:
             st.warning("⚠️ Seleziona un paziente nella Sidebar per operare nel Modulo Equipe.")
         else:
