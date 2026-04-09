@@ -45,34 +45,31 @@ def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
 
 
 
-# --- FUNZIONE AGGIORNAMENTO DB (INTEGRALE) ---
+# --- MOTORE DATABASE UNIFICATO ---
 def db_run(query, params=None, commit=False):
-
     try:
         q = query.upper()
-        # --- GESTIONE UTENTI ---
+        # 1. GESTIONE UTENTI
         if "FROM UTENTI" in q:
             res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
-            if res.data:
-                return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
-            return []
-
-        # --- GESTIONE PAZIENTI ---
+            return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data] if res.data else []
+        
+        # 2. GESTIONE PAZIENTI
         if "FROM PAZIENTI" in q:
             res = supabase.table("pazienti").select("*").execute()
             return res.data if res.data else []
 
-        # --- GESTIONE DIARIO / EVENTI / CONSEGNE (Tutte le figure) ---
-        if "FROM EVENTI" in q or "FROM DIARIO" in q or "FROM CONSEGNE" in q:
-            # Protezione 'descending' e limite per velocità
+        # 3. GESTIONE DIARIO / EVENTI (Correzione Errore Red)
+        if "FROM EVENTI" in q or "FROM DIARIO" in q:
+            # Qui usiamo ascending=False per risolvere l'errore dello screenshot
             res = supabase.table("eventi").select("*").order("id_u", ascending=False).limit(40).execute()
             return res.data if res.data else []
 
-        # --- GESTIONE TERAPIE / SOMMINISTRAZIONI ---
-        if "FROM TERAPIE" in q or "FROM SOMMINISTRAZIONI" in q:
+        # 4. GESTIONE TERAPIE
+        if "FROM TERAPIE" in q:
             res = supabase.table("terapie").select("*").execute()
             return res.data if res.data else []
-
+            
         return []
     except Exception:
         return []
@@ -171,50 +168,6 @@ st.markdown("""
     .stanza-isolamento { border-left-color: #ef4444; background-color: #fef2f2; border-width: 2px; }
 </style>
 """, unsafe_allow_html=True)
-
-# --- DATABASE ENGINE ---
-DB_NAME = "rems_final_v12.db"
-def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
-
-def db_run(query, params=(), commit=False):
-    try:
-        # 1. LOGIN UTENTI
-        if "FROM utenti" in query:
-            user_input = params[0]
-            pwd_input = params[1]
-            res = supabase.table("utenti").select("*").eq("user", user_input).eq("pwd", pwd_input).execute()
-            if res.data:
-                # Restituiamo il formato che il tuo codice si aspetta: [[nome, cognome, qualifica]]
-                return [[res.data[0]['nome'], res.data[0]['cognome'], res.data[0]['qualifica']]]
-            return []
-
-        # 2. SELEZIONE PAZIENTI
-        elif "FROM pazienti" in query:
-            res = supabase.table("pazienti").select("id, nome").eq("stato", "ATTIVO").execute()
-            return [[r['id'], r['nome']] for r in res.data]
-
-        # 3. INSERIMENTO NUOVO PAZIENTE
-        elif "INSERT INTO pazienti" in query:
-            supabase.table("pazienti").insert({"nome": params[0], "stato": "ATTIVO"}).execute()
-            return []
-
-        # 4. LOGICA PER EVENTI/DIARIO
-        elif "FROM eventi" in query:
-            # Qui filtriamo per l'ID del paziente (params[0])
-            res = supabase.table("eventi").select("*").eq("id", params[0]).order("id", descending=True).execute()
-            return [[r['data'], r['ruolo'], r['op'], r['nota']] for r in res.data]
-
-    except Exception as e:
-        st.error(f"Errore Cloud Supabase: {e}")
-        return []
-    return []
-
-
-def render_postits(reparto_filtro):
-    # Nota: ci devono essere 4 spazi prima di st.write
-    st.write(f"Visualizzazione post-it per: {reparto_filtro}")
-    pass
-
 
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 if 'user_session' not in st.session_state:
