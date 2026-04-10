@@ -304,7 +304,7 @@ with st.sidebar:
     opts = ["📊 Monitoraggio", "👥 Modulo Equipe", "📅 Agenda Dinamica", "🗺️ Mappa Posti Letto"]
     
     # ATTENZIONE: Qui usiamo 'qualifica' perché è quello che salviamo nel database
-    if u.get('qualifica') == "Coordinatore" or u.get('user') == "admin":
+    if u.get('qualifica') == "Coordinatore" or u.get('user') == "Admin":
         opts.append("⚙️ Admin")
         
     nav = st.sidebar.radio("NAVIGAZIONE", opts)
