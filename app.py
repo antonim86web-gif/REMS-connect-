@@ -215,7 +215,7 @@ if not st.session_state.user_session:
             u_i = st.text_input("Username").lower().strip()
             p_i = st.text_input("Password", type="password")
             if st.form_submit_button("ACCEDI"):
-                res = supabase.table("utenti").select("*").eq("user", u_i).execute()
+                res = supabase.table("utenti").select("*").eq("username", u_i).execute()
                 if res.data and res.data[0]['pwd'] == p_i:
                     st.session_state.user_session = res.data[0]
                     st.rerun()
