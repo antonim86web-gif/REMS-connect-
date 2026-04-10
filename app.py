@@ -261,17 +261,16 @@ if not st.session_state.autenticato:
                 
         except Exception as e:
             st.error(f"Errore di connessione al database: {e}")
-    
-    with c_r:
-        st.subheader("Registrazione")
-        with st.form("reg_main"):
-            ru = st.text_input("Scegli Username").lower().strip()
-            rp = st.text_input("Scegli Password", type="password")
-            rn = st.text_input("Nome")
-            rc = st.text_input("Cognome")
-            rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
-            if st.form_submit_button("REGISTRA NUOVO UTENTE"):
-                if ru and rp and rn and rc:
+            with c_r:
+                st.subheader("Registrazione")
+                with st.form("reg_main"):
+                    ru = st.text_input("Scegli Username").lower().strip()
+                    rp = st.text_input("Scegli Password", type="password")
+                    rn = st.text_input("Nome")
+                    rc = st.text_input("Cognome")
+                    rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"]
+                                      if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+                                      if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
                     try:
                         supabase.table("utenti").insert(nuovo).execute()
