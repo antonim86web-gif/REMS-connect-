@@ -182,14 +182,28 @@ def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
 def db_run(query, params=(), commit=False):
     try:
         # 1. LOGIN UTENTI
-        if "FROM utenti" in query:
-            username_input = params[0]
-            password_input = params[1]
-            res = supabase.table("utenti").select("*").eq("user", user_input).eq("pwd", pwd_input).execute()
-            if res.data:
-                # Restituiamo il formato che il tuo codice si aspetta: [[nome, cognome, qualifica]]
-                return [[res.data[0]['nome'], res.data[0]['cognome'], res.data[0]['qualifica']]]
-            return []
+        res = None 
+
+if st.button("Accedi"):
+    h_p = hashlib.sha256(p_i.encode()).hexdigest()
+    try:
+        # 2. Esegui la query
+        res = supabase.table("utenti").select("*").eq("username", u_i).execute()
+    except Exception as e:
+        st.error(f"Errore di connessione: {e}")
+
+# 3. Ora controlliamo res SOLO se è stato creato
+if res is not None and res.data:
+    db_p = res.data[0]['password']
+    if h_p == db_p:
+        st.session_state.autenticato = True
+        st.session_state.user = res.data[0]['username']
+        st.session_state.ruolo = res.data[0]['ruolo']
+        st.rerun()
+    else:
+        st.error("Password errata")
+elif res is not None:
+    st.error("Utente non trovato")
 
         # 2. SELEZIONE PAZIENTI
         elif "FROM pazienti" in query:
