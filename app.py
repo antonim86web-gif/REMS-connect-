@@ -222,9 +222,9 @@ if not st.session_state.autenticato:
         
 
         # 2. SELEZIONE PAZIENTI
-        elif "FROM pazienti" in query:
-            res = supabase.table("pazienti").select("id, nome").eq("stato", "ATTIVO").execute()
-            return [[r['id'], r['nome']] for r in res.data]
+elif "FROM pazienti" in query:
+    res = supabase.table("pazienti").select("id, nome").eq("stato", "ATTIVO").execute()
+    return [[r['id'], r['nome']] for r in res.data]
 
         # 3. INSERIMENTO NUOVO PAZIENTE
         elif "INSERT INTO pazienti" in query:
