@@ -183,8 +183,8 @@ def db_run(query, params=(), commit=False):
     try:
         # 1. LOGIN UTENTI
         if "FROM utenti" in query:
-            user_input = params[0]
-            pwd_input = params[1]
+            username_input = params[0]
+            password_input = params[1]
             res = supabase.table("utenti").select("*").eq("user", user_input).eq("pwd", pwd_input).execute()
             if res.data:
                 # Restituiamo il formato che il tuo codice si aspetta: [[nome, cognome, qualifica]]
@@ -229,10 +229,15 @@ if 'user' not in st.session_state:
     
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 # --- LOGICA DI LOGIN ---
-if not st.session_state.autenticato:
-    st.title("🔐 REMS-Connect - Accesso")
-    u_i = st.text_input("Username")
-    p_i = st.text_input("Password", type="password")
+if res.data and len(res.data) > 0:
+    # Salviamo tutto quello che serve in session_state
+    utente_db = res.data[0]
+    st.session_state.autenticato = True
+    st.session_state.user = utente_db.get('username')
+    st.session_state.ruolo = utente_db.get('ruolo')
+    # Creiamo un dizionario 'u' per compatibilità con il tuo vecchio codice
+    st.session_state.u = utente_db 
+    st.rerun()
     
     if st.button("Accedi"):
         # 1. Criptiamo la password per il confronto
