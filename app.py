@@ -8,10 +8,28 @@ from supabase import create_client # <--- NUOVO
 from fpdf import FPDF
 import io
 
+# --- INIZIALIZZAZIONE SESSION STATE ---
+# Questo evita l'AttributeError perché crea le variabili se non esistono
+if 'autenticato' not in st.session_state:
+    st.session_state.autenticato = False
+if 'ruolo' not in st.session_state:
+    st.session_state.ruolo = None
+if 'user' not in st.session_state:
+    st.session_state.user = None
+
 # --- CONNESSIONE CLOUD (Mettile subito sotto gli import) ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
+
+# --- INIZIALIZZAZIONE SESSION STATE ---
+# Questo evita l'AttributeError perché crea le variabili se non esistono
+if 'autenticato' not in st.session_state:
+    st.session_state.autenticato = False
+if 'ruolo' not in st.session_state:
+    st.session_state.ruolo = None
+if 'user' not in st.session_state:
+    st.session_state.user = None
 
 def genera_pdf_clinico(p_nome, dati_clinici, tipo_rep="Report"):
     pdf = FPDF()
@@ -200,7 +218,15 @@ def render_postits(reparto_filtro):
     st.write(f"Visualizzazione post-it per: {reparto_filtro}")
     pass
 
-
+# --- INIZIALIZZAZIONE SESSION STATE ---
+# Questo evita l'AttributeError perché crea le variabili se non esistono
+if 'autenticato' not in st.session_state:
+    st.session_state.autenticato = False
+if 'ruolo' not in st.session_state:
+    st.session_state.ruolo = None
+if 'user' not in st.session_state:
+    st.session_state.user = None
+    
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
 # --- LOGICA DI LOGIN ---
 if not st.session_state.autenticato:
