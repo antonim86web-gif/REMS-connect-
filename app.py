@@ -80,6 +80,51 @@ def _as_01(v):
     return 1 if v else 0
 
 
+def _coerce_patient_id(p_id):
+    """Allinea il tipo di p_id a quello usato in Supabase (int se numerico)."""
+    if p_id is None:
+        return p_id
+    if isinstance(p_id, int):
+        return p_id
+    if isinstance(p_id, str) and p_id.strip().isdigit():
+        return int(p_id.strip())
+    return p_id
+
+
+def insert_terapia_prescrizione(p_id, farmaco, dose, mattina, pomeriggio, al_bisogno):
+    """
+    Inserisce una riga in terapie e restituisce (ok, messaggio_errore).
+    Usa interi 0/1 per i flag (compatibile con colonne INTEGER su Postgres).
+    """
+    row = {
+        "p_id": _coerce_patient_id(p_id),
+        "farmaco": (farmaco or "").strip(),
+        "dose": (dose or "").strip() or "-",
+        "mat_nuovo": 1 if mattina else 0,
+        "pom_nuovo": 1 if pomeriggio else 0,
+        "al_bisogno": 1 if al_bisogno else 0,
+    }
+    if not row["farmaco"]:
+        return False, "Inserisci il nome del farmaco."
+    try:
+        supabase.table("terapie").insert(row).execute()
+        return True, None
+    except Exception as e:
+        err = str(e)
+        if "row-level security" in err.lower() or "42501" in err:
+            return (
+                False,
+                "Permesso negato (RLS su Supabase): abilita INSERT sulla tabella "
+                "`terapie` per la chiave usata dall'app, oppure usa la Service Role Key solo lato server.",
+            )
+        if "column" in err.lower() and "does not exist" in err.lower():
+            return (
+                False,
+                f"Schema DB non allineato: {err}. Verifica i nomi delle colonne in `terapie` (es. p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno).",
+            )
+        return False, err
+
+
 def db_run(query, params=None, _commit=False, *, params_tuple=None):
     """Adattatore SQL-stile → Supabase PostgREST. Il terzo argomento (commit) è ignorato, solo compatibilità."""
     if params_tuple is not None:
@@ -435,16 +480,14 @@ def db_run(query, params=None, _commit=False, *, params_tuple=None):
 
         # --- INSERT terapie ---
         if qu.startswith("INSERT INTO TERAPIE"):
-            supabase.table("terapie").insert(
-                {
-                    "p_id": params[0],
-                    "farmaco": params[1],
-                    "dose": params[2],
-                    "mat_nuovo": bool(params[3]),
-                    "pom_nuovo": bool(params[4]),
-                    "al_bisogno": bool(params[5]),
-                }
-            ).execute()
+            ok, _err = insert_terapia_prescrizione(
+                params[0],
+                params[1],
+                params[2],
+                bool(params[3]),
+                bool(params[4]),
+                bool(params[5]),
+            )
             return []
 
         # --- INSERT pazienti ---
@@ -921,6 +964,8 @@ elif nav == "👥 Modulo Equipe":
         oggi = now.strftime("%d/%m/%Y")
 
         if ruolo_corr == "Psichiatra":
+            if st.session_state.pop("_flash_terapia_ok", False):
+                st.success("Prescrizione registrata.")
             t1, t2, t3, t4 = st.tabs(
                 [
                     "📋 DIARIO CLINICO",
@@ -1007,19 +1052,19 @@ elif nav == "👥 Modulo Equipe":
                         p_n = col2.checkbox("Pomeriggio")
                         a_b = col3.checkbox("Al bisogno")
                         if st.form_submit_button("CONFERMA PRESCRIZIONE"):
-                            if f_nome:
-                                db_run(
-                                    "INSERT INTO terapie (p_id, farmaco, dose, mat_nuovo, pom_nuovo, al_bisogno) VALUES (?,?,?,?,?,?)",
-                                    (
-                                        p_id,
-                                        f_nome,
-                                        f_dose,
-                                        1 if m_n else 0,
-                                        1 if p_n else 0,
-                                        1 if a_b else 0,
-                                    ),
-                                )
+                            ok_t, err_t = insert_terapia_prescrizione(
+                                p_id,
+                                f_nome,
+                                f_dose,
+                                m_n,
+                                p_n,
+                                a_b,
+                            )
+                            if ok_t:
+                                st.session_state["_flash_terapia_ok"] = True
                                 st.rerun()
+                            else:
+                                st.error(err_t or "Errore sconosciuto.")
 
             with t3:
                 st.subheader("🩺 Esame Obiettivo e Parametri")
