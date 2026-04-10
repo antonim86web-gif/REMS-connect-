@@ -269,17 +269,17 @@ if not st.session_state.autenticato:
                     rn = st.text_input("Nome")
                     rc = st.text_input("Cognome")
                     rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
-                                      if st.form_submit_button("REGISTRA NUOVO UTENTE"):
-                                      if ru and rp and rn and rc:
-                    nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
-                    try:
-                        supabase.table("utenti").insert(nuovo).execute()
-                        st.success("Registrato! Prova il login a sinistra.")
-                    except Exception as e:
-                        st.error(f"Errore: {e}")
-                else:
-                    st.warning("Compila tutti i campi.")
-    st.stop()
+                    if st.form_submit_button("REGISTRA NUOVO UTENTE"):
+                        if ru and rp and rn and rc:
+                            nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
+                            try:
+                                supabase.table("utenti").insert(nuovo).execute()
+                                st.success("Registrato! Prova il login a sinistra.")
+                            except Exception as e:
+                                st.error(f"Errore: {e}")
+                            else:
+                                st.warning("Compila tutti i campi.")
+                                st.stop()
 
 # --- SE SIAMO QUI, L'UTENTE È LOGGATO ---
 u = st.session_state.user_session
