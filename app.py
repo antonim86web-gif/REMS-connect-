@@ -218,15 +218,15 @@ if not st.session_state.user_session:
                 res = supabase.table("utenti").select("*").eq("username", u_i).execute()
 
 # AGGIUNGI QUESTO PER IL DEBUG:
-if not res.data:
-    st.warning(f"Il database non trova l'utente: {u_i}")
-else:
-    st.info(f"Utente trovato! Ruolo nel DB: {res.data[0]['ruolo']}")
-                if res.data and res.data[0]['password'] == p_i:
-                    st.session_state.user_session = res.data[0]
-                    st.rerun()
-                else:
-                    st.error("Credenziali errate")
+    if not res.data:
+        st.warning(f"Il database non trova l'utente: {u_i}")
+    else:
+        st.info(f"Utente trovato! Ruolo nel DB: {res.data[0]['ruolo']}")
+        if res.data and res.data[0]['password'] == p_i:
+            st.session_state.user_session = res.data[0]
+            st.rerun()
+        else:
+            st.error("Credenziali errate")
     
     with c_r:
         st.subheader("Registrazione")
