@@ -175,35 +175,51 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DATABASE ENGINE ---
-DB_NAME = "rems_final_v12.db"
-def hash_pw(p): return hashlib.sha256(str.encode(p)).hexdigest()
+# --- 1. INIZIALIZZAZIONE (Da mettere in cima al file dopo supabase = ...) ---
+if 'autenticato' not in st.session_state:
+    st.session_state.autenticato = False
+if 'user' not in st.session_state:
+    st.session_state.user = None
+if 'ruolo' not in st.session_state:
+    st.session_state.ruolo = None
 
-def db_run(query, params=(), commit=False):
-    try:
-        # 1. LOGIN UTENTI
-        res = None 
-
-if st.button("Accedi"):
-    h_p = hashlib.sha256(p_i.encode()).hexdigest()
-    try:
-        # 2. Esegui la query
-        res = supabase.table("utenti").select("*").eq("username", u_i).execute()
-    except Exception as e:
-        st.error(f"Errore di connessione: {e}")
-
-# 3. Ora controlliamo res SOLO se è stato creato
-if res is not None and res.data:
-    db_p = res.data[0]['password']
-    if h_p == db_p:
-        st.session_state.autenticato = True
-        st.session_state.user = res.data[0]['username']
-        st.session_state.ruolo = res.data[0]['ruolo']
-        st.rerun()
-    else:
-        st.error("Password errata")
-elif res is not None:
-    st.error("Utente non trovato")
+# --- 2. BLOCCO DI LOGIN ---
+if not st.session_state.autenticato:
+    st.title("🔐 REMS-Connect - Accesso")
+    
+    # Creiamo due colonne per centrare il login o gestirlo graficamente
+    u_i = st.text_input("Username (es. Admin)")
+    p_i = st.text_input("Password", type="password")
+    
+    if st.button("Accedi"):
+        if u_i and p_i:
+            # Criptiamo la password inserita
+            h_p = hashlib.sha256(p_i.encode()).hexdigest()
+            
+            try:
+                # Query su Supabase - Assicurati che la colonna sia 'username'
+                res = supabase.table("utenti").select("*").eq("username", u_i).execute()
+                
+                if res.data and len(res.data) > 0:
+                    utente = res.data[0]
+                    # Confronto tra hash (quello inserito vs quello nel DB)
+                    if utente['password'] == h_p:
+                        st.session_state.autenticato = True
+                        st.session_state.user = utente['username']
+                        st.session_state.ruolo = utente['ruolo']
+                        st.success(f"Benvenuto {u_i}!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Password errata.")
+                else:
+                    st.error("❌ Utente non trovato.")
+                    
+            except Exception as e:
+                st.error(f"⚠️ Errore di database: {e}")
+        else:
+            st.warning("Inserisci sia username che password.")
+    st.stop() # Blocca l'esecuzione qui finché non sei loggato
+        
 
         # 2. SELEZIONE PAZIENTI
         elif "FROM pazienti" in query:
