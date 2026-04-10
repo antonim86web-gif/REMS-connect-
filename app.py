@@ -268,7 +268,7 @@ if not st.session_state.autenticato:
                     rp = st.text_input("Scegli Password", type="password")
                     rn = st.text_input("Nome")
                     rc = st.text_input("Cognome")
-                    rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"]
+                    rq = st.selectbox("Qualifica", ["Psichiatra", "Infermiere", "OSS", "Educatore", "Psicologo", "Assistente Sociale", "Opsi", "Coordinatore"])
                                       if st.form_submit_button("REGISTRA NUOVO UTENTE"):
                                       if ru and rp and rn and rc:
                     nuovo = {"user": ru, "pwd": rp, "nome": rn, "cognome": rc, "qualifica": rq}
