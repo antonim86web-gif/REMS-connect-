@@ -295,7 +295,7 @@ with st.sidebar:
         conta_oggi = 0
 
     st.markdown(f"<div class='sidebar-title'>REMS Connect</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='user-logged'>👤 {u['nome']} {u['cognome']}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='user-logged'>👤 {st.session_state.user} ({st.session_state.ruolo})</div>", unsafe_allow_html=True)
     
     # Il tuo avviso scadenze
     st.sidebar.markdown(f"<div class='alert-sidebar'>⚠️ {conta_oggi} SCADENZE OGGI</div>", unsafe_allow_html=True)
