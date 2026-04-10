@@ -699,4 +699,154 @@ elif nav == "👥 Modulo Equipe":
                     tp, im, cau = st.selectbox("Tipo", ["ENTRATA", "USCITA"]), st.number_input("€"), st.text_input("Causale")
                     if st.form_submit_button("REGISTRA"):
                         db_run("INSERT INTO cassa (p_id, data, causale, importo, tipo, op) VALUES (?,?,?,?,?,?)", (p_id, oggi, cau, im, tp, firma_op), True)
-                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore 
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"💰 {tp}: {im}€ - {cau}", "Educatore", firma_op), True)
+                        st.rerun()
+            with t2:
+                with st.form("edu_cons"):
+                    txt_edu = st.text_area("Osservazioni")
+                    if st.form_submit_button("SALVA"):
+                        db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (p_id, now.strftime("%d/%m/%Y %H:%M"), f"📝 {txt_edu}", "Educatore", firma_op), True)
+                        st.rerun()
+
+        st.divider(); render_postits(p_id)
+
+elif nav == "📅 Agenda Dinamica":
+    st.markdown("<div class='section-banner'><h2>AGENDA DINAMICA REMS</h2></div>", unsafe_allow_html=True)
+    c_nav1, c_nav2, c_nav3 = st.columns([1,2,1])
+    with c_nav1: 
+        if st.button("⬅️ Mese Precedente"): 
+            st.session_state.cal_month -= 1
+            if st.session_state.cal_month < 1: st.session_state.cal_month=12; st.session_state.cal_year-=1
+            st.rerun()
+    with c_nav2: 
+        mesi_nomi = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"]
+        st.markdown(f"<h3 style='text-align:center;'>{mesi_nomi[st.session_state.cal_month-1]} {st.session_state.cal_year}</h3>", unsafe_allow_html=True)
+    with c_nav3:
+        if st.button("Mese Successivo ➡️"):
+            st.session_state.cal_month += 1
+            if st.session_state.cal_month > 12: st.session_state.cal_month=1; st.session_state.cal_year+=1
+            st.rerun()
+            
+    col_cal, col_ins = st.columns([3, 1])
+    with col_cal:
+        start_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-01"
+        end_d = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-31"
+        evs_mese = db_run("""SELECT a.data, p.nome, a.ora, a.tipo_evento, a.mezzo, a.nota, a.accompagnatore FROM appuntamenti a JOIN pazienti p ON a.p_id=p.id WHERE a.data BETWEEN ? AND ? AND a.stato='PROGRAMMATO'""", (start_d, end_d))
+        mappa_ev = {}
+        for d_ev, p_n, h_ev, t_ev, m_ev, nt_ev, acc_ev in evs_mese:
+            try:
+                g_int = int(d_ev.split("-")[2])
+                if g_int not in mappa_ev: mappa_ev[g_int] = []
+                prefix = "🚗" if t_ev == "Uscita Esterna" else "🏠"
+                tag_final = f'<div class="event-tag-html">{prefix} {p_n}<span class="tooltip-text"><b>{t_ev}</b><br>⏰ {h_ev}<br>🚗 {m_ev}<br>📝 {nt_ev}</span></div>'
+                mappa_ev[g_int].append(tag_final)
+            except: pass
+        
+        cal_html = "<table class='cal-table'><thead><tr>" + "".join([f"<th>{d}</th>" for d in ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]]) + "</tr></thead><tbody>"
+        cal_obj = calendar.Calendar(firstweekday=0)
+        for week in cal_obj.monthdayscalendar(st.session_state.cal_year, st.session_state.cal_month):
+            cal_html += "<tr>"
+            for day in week:
+                if day == 0: cal_html += "<td style='background:#f8fafc;'></td>"
+                else:
+                    d_iso = f"{st.session_state.cal_year}-{st.session_state.cal_month:02d}-{day:02d}"
+                    cls_today = "today-html" if d_iso == oggi_iso else ""
+                    cal_html += f"<td class='{cls_today}'><span class='day-num-html'>{day}</span>{''.join(mappa_ev.get(day, []))}</td>"
+            cal_html += "</tr>"
+        st.markdown(cal_html + "</tbody></table>", unsafe_allow_html=True)
+
+    with col_ins:
+        st.subheader("➕ Nuovo Appuntamento")
+        with st.form("add_app_cal"):
+            p_l = db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome")
+            ps_sel = st.multiselect("Paziente/i", [p[1] for p in p_l])
+            tipo_e = st.selectbox("Tipo", ["Uscita Esterna", "Appuntamento Interno"])
+            dat, ora = st.date_input("Giorno"), st.time_input("Ora")
+            mezzo_usato = st.selectbox("Macchina", ["Mitsubishi", "Fiat Qubo", "Nessuno"]) if tipo_e == "Uscita Esterna" else "Nessuno"
+            accomp, not_a = st.text_input("Accompagnatore"), st.text_area("Note")
+            if st.form_submit_button("REGISTRA"):
+                for nome_p in ps_sel:
+                    pid = [p[0] for p in p_l if p[1]==nome_p][0]
+                    db_run("INSERT INTO appuntamenti (p_id, data, ora, nota, stato, autore, tipo_evento, mezzo, accompagnatore) VALUES (?,?,?,?,'PROGRAMMATO',?,?,?,?)", (pid, str(dat), str(ora)[:5], not_a, firma_op, tipo_e, mezzo_usato, accomp), True)
+                    db_run("INSERT INTO eventi (id, data, nota, ruolo, op) VALUES (?,?,?,?,?)", (pid, get_now_it().strftime("%d/%m/%Y %H:%M"), f"📅 {tipo_e}: {not_a}", u['ruolo'], firma_op), True)
+                st.rerun()
+        
+        st.divider()
+        st.subheader("📋 Lista Scadenze")
+        agenda_list = db_run("SELECT a.id_u, a.data, a.ora, p.nome, a.tipo_evento FROM appuntamenti a JOIN pazienti p ON a.p_id = p.id WHERE a.data >= ? AND a.stato='PROGRAMMATO' ORDER BY a.data, a.ora", (oggi_iso,))
+        for aid, adt, ahr, apn, atev in agenda_list:
+            st.markdown(f"**{adt} {ahr}** - {apn}<br>{atev}", unsafe_allow_html=True)
+            c1, c2 = st.columns(2)
+            if c1.button("FATTO", key=f"done_{aid}"): 
+                db_run("UPDATE appuntamenti SET stato='COMPLETATO' WHERE id_u=?", (aid,), True)
+                st.rerun()
+            if c2.button("ELIMINA", key=f"del_{aid}"):
+                db_run("DELETE FROM appuntamenti WHERE id_u=?", (aid,), True)
+                st.rerun()
+            st.markdown("---")
+
+elif nav == "⚙️ Admin":
+    st.markdown("<div class='section-banner'><h2>PANNELLO AMMINISTRAZIONE</h2></div>", unsafe_allow_html=True)
+    t_ut, t_paz_att, t_paz_dim, t_diar, t_log = st.tabs(["UTENTI", "PAZIENTI ATTIVI", "ARCHIVIO", "DIARIO EVENTI", "📜 LOG"])
+    
+    with t_ut:
+        for us, un, uc, uq in db_run("SELECT user, nome, cognome, qualifica FROM utenti"):
+            c1, c2 = st.columns([0.8, 0.2]); c1.write(f"**{un} {uc}** ({uq})")
+            if us != "admin" and c2.button("ELIMINA", key=f"d_{us}"): 
+                db_run("DELETE FROM utenti WHERE user=?", (us,), True)
+                st.rerun()
+
+    with t_paz_att:
+        with st.form("np"):
+            np_val = st.text_input("Nuovo Paziente")
+            if st.form_submit_button("AGGIUNGI"): 
+                db_run("INSERT INTO pazienti (nome, stato) VALUES (?, 'ATTIVO')", (np_val.upper(),), True)
+                st.rerun()
+        for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='ATTIVO' ORDER BY nome"):
+            c1, c2, c3 = st.columns([0.6, 0.2, 0.2])
+            c1.write(f"**{pn}**")
+            if c2.button("DIMETTI", key=f"dim_{pid}"):
+                db_run("UPDATE pazienti SET stato='DIMESSO' WHERE id=?", (pid,), True)
+                db_run("DELETE FROM assegnazioni WHERE p_id=?", (pid,), True)
+                st.rerun()
+            if c3.button("ELIMINA", key=f"dp_{pid}"): 
+                db_run("DELETE FROM pazienti WHERE id=?", (pid,), True)
+                st.rerun()
+
+    with t_paz_dim:
+        for pid, pn in db_run("SELECT id, nome FROM pazienti WHERE stato='DIMESSO' ORDER BY nome"):
+            c1, c2 = st.columns([0.8, 0.2])
+            c1.write(f"📁 {pn}")
+            if c2.button("RIAMMETTI", key=f"re_{pid}"):
+                db_run("UPDATE pazienti SET stato='ATTIVO' WHERE id=?", (pid,), True)
+                st.rerun()
+
+    with t_diar:
+        lista_p = db_run("SELECT id, nome FROM pazienti ORDER BY nome")
+        filtro_p = st.selectbox("Filtra per Paziente:", ["*TUTTI*"] + [p[1] for p in lista_p])
+        
+        # Recuperiamo anche e.id_u per poter eliminare la riga specifica
+        query_log = "SELECT e.data, e.ruolo, e.op, e.nota, p.nome, e.id_u FROM eventi e JOIN pazienti p ON e.id = p.id"
+        params_log = []
+        
+        if filtro_p != "*TUTTI*":
+            query_log += " WHERE p.nome = ?"
+            params_log.append(filtro_p)
+            
+        tutti_log = db_run(query_log + " ORDER BY e.id_u DESC LIMIT 100", tuple(params_log))
+        
+        for ldt, lru, lop, lnt, lpnome, lidu in tutti_log:
+            c1, c2 = st.columns([0.85, 0.15])
+            # Mostriamo il testo dell'evento
+            c1.write(f"**[{ldt}]** {lpnome} | {lop} ({lru}): {lnt}")
+            
+            # Tasto Elimina per l'Admin
+            if c2.button("🗑️", key=f"del_adm_{lidu}"):
+                db_run("DELETE FROM eventi WHERE id_u=?", (lidu,), True)
+                st.rerun()
+            st.divider()
+
+    with t_log:
+        logs_audit = db_run("SELECT data_ora, utente, azione, dettaglio FROM logs_sistema ORDER BY id_log DESC LIMIT 200")
+        if logs_audit:
+            st.dataframe(pd.DataFrame(logs_audit, columns=["Data/Ora", "Operatore", "Azione", "Descrizione"]), use_container_width=True)
