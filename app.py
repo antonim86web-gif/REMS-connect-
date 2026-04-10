@@ -202,31 +202,39 @@ def render_postits(reparto_filtro):
 
 
 # --- SESSIONE E LOGIN (INIZIO MARGINE SINISTRO) ---
-if 'user_session' not in st.session_state:
-    st.session_state.user_session = None
-
-if not st.session_state.user_session:
-    st.markdown("<div class='section-banner'><h2>🏥 REMS CONNECT - ACCESSO PRO</h2></div>", unsafe_allow_html=True)
-    c_l, c_r = st.columns(2)
+# --- LOGICA DI LOGIN ---
+if not st.session_state.autenticato:
+    st.title("🔐 REMS-Connect - Accesso")
+    u_i = st.text_input("Username")
+    p_i = st.text_input("Password", type="password")
     
-    with c_l:
-        st.subheader("Login")
-        with st.form("login_main"):
-            u_i = st.text_input("Username").lower().strip()
-            p_i = st.text_input("Password", type="password")
-            if st.form_submit_button("ACCEDI"):
-                res = supabase.table("utenti").select("*").eq("username", u_i).execute()
-
-# AGGIUNGI QUESTO PER IL DEBUG:
-    if not res.data:
-        st.warning(f"Il database non trova l'utente: {u_i}")
-    else:
-        st.info(f"Utente trovato! Ruolo nel DB: {res.data[0]['ruolo']}")
-        if res.data and res.data[0]['password'] == p_i:
-            st.session_state.user_session = res.data[0]
-            st.rerun()
-        else:
-            st.error("Credenziali errate")
+    if st.button("Accedi"):
+        # 1. Criptiamo la password per il confronto
+        h_p = hashlib.sha256(p_i.encode()).hexdigest()
+        
+        try:
+            # 2. Eseguiamo la query (assicurati che 'username' sia il nome su Supabase)
+            res = supabase.table("utenti").select("*").eq("username", u_i).execute()
+            
+            # 3. Controlliamo se abbiamo dati
+            if res.data and len(res.data) > 0:
+                db_p = res.data[0]['password']
+                db_r = res.data[0]['ruolo']
+                
+                # 4. Confronto password criptata
+                if h_p == db_p:
+                    st.session_state.autenticato = True
+                    st.session_state.ruolo = db_r
+                    st.session_state.user = u_i
+                    st.success("Accesso eseguito!")
+                    st.rerun()
+                else:
+                    st.error("Password errata")
+            else:
+                st.error("Utente non trovato")
+                
+        except Exception as e:
+            st.error(f"Errore di connessione al database: {e}")
     
     with c_r:
         st.subheader("Registrazione")
