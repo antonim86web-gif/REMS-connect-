@@ -51,9 +51,9 @@ def db_run(query, params=None, commit=False):
         if "SELECT" in query.upper():
             # Gestione Tabella Utenti
             if "FROM utenti" in query:
-                res = supabase.table("utenti").select("user, nome, cognome, qualifica").execute()
+                res = supabase.table("utenti").select("username, nome, cognome, qualifica").execute()
                 if res.data:
-                    return [(r.get('user','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
+                    return [(r.get('username','?'), r.get('nome','?'), r.get('cognome','?'), r.get('qualifica','?')) for r in res.data]
                 return []
             
             # Gestione Tabella Pazienti (esempio)
