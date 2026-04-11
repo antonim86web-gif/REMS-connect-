@@ -87,18 +87,21 @@ elif menu == "Equipe":
     st.title(f"👥 Equipe Multidisciplinare: {p_sel}")
     t_med, t_inf, t_psi, t_soc, t_edu, t_oss = st.tabs(["Medico", "Infermiere", "Psicologo", "Sociale", "Educatore", "OSS"])
     
-    with t_med: # Funzioni Medico & Psichiatra
-        st.subheader("Diario Clinico e Terapie")
+    with t_med: # Tab Medico
+        st.subheader("Diario e Prescrizioni Mediche")
         n_clinica = st.text_area("Nota Clinica / Diagnostica:")
+        
         if st.button("Registra Atto Medico"):
-    supabase.table("eventi").insert({
-        "id": int(p_id),  # <--- AGGIUNGI int() QUI
-        "data": get_now_it().strftime("%d/%m/%Y %H:%M"), 
-        "nota": f"[MED] {n_clinica}", 
-        "op": st.session_state.u, 
-        "ruolo": "Medico"
-    }).execute()
-    st.rerun()
+            # DEVE ESSERE RIENTRATO (4 spazi o 1 TAB)
+            supabase.table("eventi").insert({
+                "id": int(p_id), 
+                "data": get_now_it().strftime("%d/%m/%Y %H:%M"), 
+                "nota": f"[MED] {n_clinica}", 
+                "op": st.session_state.u, 
+                "ruolo": "Medico"
+            }).execute()
+            st.success("Nota registrata!")
+            st.rerun()
 
     with t_inf: # Funzioni Infermieristiche
         st.subheader("Smarcatura e Somministrazione")
