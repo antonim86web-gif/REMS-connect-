@@ -61,7 +61,7 @@ with st.sidebar:
     p_data = supabase.table("pazienti").select("*").order("nome").execute().data
     df_p = pd.DataFrame(p_data)
     p_sel = st.selectbox("🎯 PAZIENTE IN CARICO:", df_p['nome'].tolist())
-    p_id = df_p[df_p['nome'] == p_sel]['id'].values[0]
+    p_id = int(df_p[df_p['nome'] == p_sel]['id'].values[0])
 
     st.markdown("<br>"*5, unsafe_allow_html=True)
     if st.button("🔓 LOGOUT"):
