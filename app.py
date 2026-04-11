@@ -91,8 +91,14 @@ elif menu == "Equipe":
         st.subheader("Diario Clinico e Terapie")
         n_clinica = st.text_area("Nota Clinica / Diagnostica:")
         if st.button("Registra Atto Medico"):
-            supabase.table("eventi").insert({"id":p_id, "data":get_now_it().strftime("%d/%m/%Y %H:%M"), "nota":f"[MED] {n_clinica}", "op":st.session_state.u, "ruolo":"Medico"}).execute()
-            st.rerun()
+    supabase.table("eventi").insert({
+        "id": int(p_id),  # <--- AGGIUNGI int() QUI
+        "data": get_now_it().strftime("%d/%m/%Y %H:%M"), 
+        "nota": f"[MED] {n_clinica}", 
+        "op": st.session_state.u, 
+        "ruolo": "Medico"
+    }).execute()
+    st.rerun()
 
     with t_inf: # Funzioni Infermieristiche
         st.subheader("Smarcatura e Somministrazione")
